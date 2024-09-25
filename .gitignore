@@ -1,0 +1,9 @@
+*.mp4
+*.key
+*.enc
+*.dec
+obj/
+bin/
+.vs/
+*.user
+publish/
