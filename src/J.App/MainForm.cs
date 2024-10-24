@@ -496,7 +496,6 @@ public sealed partial class MainForm : Form
         using var f = _serviceProvider.GetRequiredService<EditMoviesForm>();
         f.ShowDialog(this);
         _browser.Reload();
-        SyncM3u8Folder();
     }
 
     private void AddToLibraryButton_Click(object? sender, EventArgs e)
@@ -567,7 +566,6 @@ public sealed partial class MainForm : Form
             p.FormClosed += delegate
             {
                 _browser.Reload();
-                SyncM3u8Folder();
 
                 if (p.DialogResult == DialogResult.Cancel)
                     return;

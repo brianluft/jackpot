@@ -3,13 +3,12 @@ using J.Core.Data;
 
 namespace J.App;
 
-public sealed class M3u8FolderSync(
-    AccountSettingsProvider accountSettingsProvider,
-    LibraryProviderAdapter libraryProvider
-)
+public sealed class M3u8FolderSync(AccountSettingsProvider accountSettingsProvider, LibraryProvider libraryProvider)
 {
     private static readonly string _filesystemInvalidChars =
         new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+
+    private static readonly object _lock = new();
 
     public bool Enabled => accountSettingsProvider.Current.EnableLocalM3u8Folder;
 
@@ -18,37 +17,40 @@ public sealed class M3u8FolderSync(
         if (!Enabled)
             return;
 
-        var dir = accountSettingsProvider.Current.LocalM3u8FolderPath;
-
-        var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.TagId, x => x.MovieId);
-        var movies = libraryProvider.GetMovies().ToDictionary(x => x.Id);
-        HashSet<string> livingFiles = []; // locked, updated inside Sync calls below
-
-        var existingFiles = Directory
-            .GetFiles(dir, "*.m3u8", SearchOption.AllDirectories)
-            .Select(x => x.ToUpperInvariant())
-            .ToHashSet(); // read-only during Sync calls below
-
-        var moviesDir = Path.Combine(dir, "Movies");
-        Directory.CreateDirectory(moviesDir);
-        SyncMovies(moviesDir, movies.Values, existingFiles, livingFiles);
-
-        foreach (var tagType in libraryProvider.GetTagTypes())
+        lock (_lock)
         {
-            var tagDir = Path.Combine(dir, MakeFilesystemSafe(tagType.PluralName));
-            Directory.CreateDirectory(tagDir);
-            SyncTagType(tagDir, tagType, movies, movieTags, existingFiles, livingFiles);
-        }
+            var dir = accountSettingsProvider.Current.LocalM3u8FolderPath;
 
-        lock (livingFiles)
-        {
-            existingFiles.ExceptWith(livingFiles);
-            foreach (var fp in existingFiles)
-                File.Delete(fp);
+            var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.TagId, x => x.MovieId);
+            var movies = libraryProvider.GetMovies().ToDictionary(x => x.Id);
+            HashSet<string> livingFiles = []; // locked, updated inside Sync calls below
+
+            var existingFiles = Directory
+                .GetFiles(dir, "*.m3u8", SearchOption.AllDirectories)
+                .Select(x => x.ToUpperInvariant())
+                .ToHashSet(); // read-only during Sync calls below
+
+            var moviesDir = Path.Combine(dir, "Movies");
+            Directory.CreateDirectory(moviesDir);
+            SyncMovies(moviesDir, movies.Values, existingFiles, livingFiles);
+
+            foreach (var tagType in libraryProvider.GetTagTypes())
+            {
+                var tagDir = Path.Combine(dir, MakeFilesystemSafe(tagType.PluralName));
+                Directory.CreateDirectory(tagDir);
+                SyncTagType(tagDir, tagType, movies, movieTags, existingFiles, livingFiles);
+            }
+
+            lock (livingFiles)
+            {
+                existingFiles.ExceptWith(livingFiles);
+                foreach (var fp in existingFiles)
+                    File.Delete(fp);
+            }
         }
     }
 
-    public void SyncMovies(
+    private void SyncMovies(
         string dir,
         IEnumerable<Movie> movies,
         HashSet<string> existingFiles,
@@ -65,7 +67,7 @@ public sealed class M3u8FolderSync(
         );
     }
 
-    public void SyncTagType(
+    private void SyncTagType(
         string dir,
         TagType tagType,
         Dictionary<MovieId, Movie> movies,
