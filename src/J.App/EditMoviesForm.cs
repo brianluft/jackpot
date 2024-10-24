@@ -58,7 +58,7 @@ public sealed class EditMoviesForm : Form
 
             var col_name = _grid.Columns[_grid.Columns.Add("name", "Name")];
             {
-                col_name.Width = ui.GetLength(400);
+                col_name.Width = ui.GetLength(550);
                 col_name.DataPropertyName = "name";
                 col_name.Frozen = true;
             }
@@ -310,7 +310,7 @@ public sealed class EditMoviesForm : Form
         _grid.DataSource = null;
         _data.Rows.Clear();
 
-        foreach (var movie in movies)
+        foreach (var movie in movies.OrderByDescending(x => x.DateAdded).ThenBy(x => x.Filename))
         {
             var row = _data.NewRow();
             row["id"] = movie.Id;
