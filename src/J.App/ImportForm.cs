@@ -96,6 +96,7 @@ public sealed class ImportForm : Form
         ".mpeg",
         ".avi",
         ".mkv",
+        ".webm",
     }.ToFrozenSet();
 
     private void AddDirectory(string dir)

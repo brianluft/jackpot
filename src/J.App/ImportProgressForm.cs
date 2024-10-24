@@ -28,6 +28,7 @@ public sealed class ImportProgressForm : Form
     private readonly long _totalBytes;
     private readonly S3Uploader _s3Uploader;
     private readonly long _bytesUploadedAtStart;
+    private bool _done;
 
     public delegate void UpdateFileDelegate(int fileIndex, int numFiles, string filename);
 
@@ -112,6 +113,7 @@ public sealed class ImportProgressForm : Form
             }
             finally
             {
+                _done = true;
                 Close();
             }
         };
@@ -119,6 +121,23 @@ public sealed class ImportProgressForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        if (!_done)
+        {
+            var response = MessageBox.Show(
+                this,
+                "Are you sure you want to cancel this import?",
+                "Jackpot",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2
+            );
+            if (response != DialogResult.OK)
+            {
+                e.Cancel = true;
+                return;
+            }
+        }
+
         base.OnFormClosing(e);
         _cts.Cancel();
     }
@@ -131,6 +150,7 @@ public sealed class ImportProgressForm : Form
 
     protected override void Dispose(bool disposing)
     {
+        _done = true;
         base.Dispose(disposing);
 
         if (disposing)
