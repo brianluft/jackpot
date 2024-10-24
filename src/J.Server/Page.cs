@@ -49,6 +49,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="utf-8">
                 <title>{{WebUtility.HtmlEncode(Title)}}</title>
                 <style>
                     body {
