@@ -1,27 +1,33 @@
-# <img src="../src/J.App/Resources/App.png" width=24 height=24> Jackpot
+# <img src="../src/J.App/Resources/App.png" width=24 height=24> Jackpot &mdash; personal cloud media library
 
-## Personal video library stored in the cloud
+Jackpot is a Windows app for storing your media collection in S3-compatible cloud storage and streaming it to your computer.
 
-Jackpot is a free, open-source Windows app for storing and streaming your video collection directly from [Backblaze B2 cloud storage](https://www.backblaze.com/cloud-storage). No server or cloud components are needed. Jackpot runs on your local computer and talks directly to B2.
-
-You need an account with Backblaze B2 and you'll pay them for storage. Any S3-compatible storage will work, but B2 is the cheapest.
-
-Provider | Price | Monthly egress | Egress overage fee
--- | -- | -- | --
-🥇 Backblaze B2 | $6/TB | 3x total storage | $0.01/GB
-🥈 Cloudflare R2 | $15/TB | Unlimited | &mdash;
-💸 Amazon S3 | Up to $23/TB | 100GB | $0.09/GB
-
-Read more about egress fees in the Backblaze article, ["Cloud 101: Data Egress Fees Explained."](https://www.backblaze.com/blog/cloud-101-data-egress-fees-explained/)
+<img src="img/main-screenshot.jpg" width=640 height=360>
 
 ## Features
 
-- Flexible tagging.
-- Browse movies through a wall of video thumbnails.
+- Direct streaming from cloud storage. No intermediate server needed.
+- Flexible tagging and filtering.
+- Browse through a wall of moving video thumbnails.
 - Stream movies using the VLC player. Stream multiple videos at once, if you want.
 - Fullscreen, mouse-driven user interface featuring action buttons along the edges of the screen, following [Fitts's law](https://en.wikipedia.org/wiki/Fitts%27s_law).
 - Export your library as a folder of `.m3u8` playlist files for use with VLC on tvOS/iOS and other computers on your local network that don't have Jackpot. They will stream through Jackpot running on your main computer.
 - End-to-end encryption using standard AES-encrypted `.zip` files.
+
+## Pricing
+
+The Jackpot app is free, but you need an account with an S3-compatible cloud storage provider.
+You'll pay them each month per terabyte of storage.
+Some providers also charge per gigabyte downloaded ("egress") beyond a certain allotment per month.
+Uploads to the cloud are always free.
+
+Provider | Storage price | Included downloads | Extra downloads
+-- | -- | -- | --
+<nobr>🥇 [Backblaze B2](https://www.backblaze.com/cloud-storage)</nobr> | $6/TB/month | 3x total storage/month | $0.01/GB
+<nobr>🥈 [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)</nobr> | $15/TB/month | Unlimited | &mdash;
+<nobr>💸 [Amazon S3](https://aws.amazon.com/s3/)</nobr> | Up to $23/TB/month | 100 GB/month | $0.09/GB
+
+Read more about egress fees in the Backblaze article, ["Cloud 101: Data Egress Fees Explained."](https://www.backblaze.com/blog/cloud-101-data-egress-fees-explained/)
 
 ## Getting started
 
