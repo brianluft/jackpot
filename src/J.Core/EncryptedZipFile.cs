@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using ICSharpCode.SharpZipLib.Zip;
 using J.Core.Data;
@@ -101,61 +102,73 @@ public static class EncryptedZipFile
 
     private static ZipIndex GetZipIndex(string zipFilePath, Password password)
     {
-        List<ZipEntryLocation> entryLocations = [];
-
-        using TrackingFileStream fileStream = new(zipFilePath);
-        using ZipFile zipFile = new(fileStream);
-        zipFile.Password = password.Value;
-
-        foreach (ZipEntry entry in zipFile)
+        List<string> zipEntryNames;
+        long zipHeaderOffset;
+        int zipHeaderLength;
+        using (TrackingFileStream fileStream = new(zipFilePath))
         {
-            // Do nothing; we're just reading the table of contents.
-            _ = zipFile.GetEntry(entry.Name);
-        }
+            using ZipFile zipFile = new(fileStream);
+            zipFile.Password = password.Value;
 
-        if (!fileStream.ReadRange.HasValue)
-            throw new Exception("Expected to see some reads but none were issued.");
+            // Reading the TOC will ensure we capture the zip header.
+            zipEntryNames = zipFile.Cast<ZipEntry>().Select(x => x.Name).ToList();
 
-        var (zipHeaderOffset, _) = fileStream.ReadRange.Value;
-
-        // I don't know why this slop 1000 bytes is necessary.
-        zipHeaderOffset = Math.Max(0, zipHeaderOffset - 1000);
-        var zipHeaderLength = (int)(new FileInfo(zipFilePath).Length - zipHeaderOffset);
-
-        OffsetLength zipHeaderRange = new(zipHeaderOffset, zipHeaderLength);
-
-        foreach (ZipEntry entry in zipFile)
-        {
-            if (!entry.IsFile)
-                continue;
-
-            fileStream.ClearReadRange();
-
-            // Read the entire entry to ensure ranges are recorded.
-            using Stream entryStream = zipFile.GetInputStream(entry);
-            entryStream.CopyTo(Stream.Null);
+            // Call GetEntry() just in case that touches something that enumeration does not.
+            foreach (var name in zipEntryNames)
+                _ = zipFile.GetEntry(name);
 
             if (!fileStream.ReadRange.HasValue)
                 throw new Exception("Expected to see some reads but none were issued.");
 
-            var (offset, length) = fileStream.ReadRange.Value;
+            (zipHeaderOffset, _) = fileStream.ReadRange.Value;
 
-            // I don't know why *this* slop 1000 bytes is necessary, either.
-            if (offset < 1000)
-            {
-                length += (int)offset;
-                offset = 0;
-            }
-            else
-            {
-                offset -= 1000;
-                length += 1000;
-            }
-
-            entryLocations.Add(new(entry.Name, new(offset, length)));
+            // I don't know why this slop 1000 bytes is necessary.
+            zipHeaderOffset = Math.Max(0, zipHeaderOffset - 1000);
+            zipHeaderLength = (int)(new FileInfo(zipFilePath).Length - zipHeaderOffset);
         }
 
-        return new(entryLocations, zipHeaderRange);
+        ConcurrentBag<ZipEntryLocation> entryLocations = [];
+        Parallel.ForEach(
+            zipEntryNames,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
+            entryName =>
+            {
+                using TrackingFileStream fileStream = new(zipFilePath);
+                using ZipFile zipFile = new(fileStream);
+                zipFile.Password = password.Value;
+
+                var entry = zipFile.GetEntry(entryName);
+                if (!entry.IsFile)
+                    return;
+
+                fileStream.ClearReadRange();
+
+                // Read the entire entry to ensure ranges are recorded.
+                using Stream entryStream = zipFile.GetInputStream(entry);
+                entryStream.CopyTo(Stream.Null);
+
+                if (!fileStream.ReadRange.HasValue)
+                    throw new Exception("Expected to see some reads but none were issued.");
+
+                var (offset, length) = fileStream.ReadRange.Value;
+
+                // I don't know why *this* slop 1000 bytes is necessary, either.
+                if (offset < 1000)
+                {
+                    length += (int)offset;
+                    offset = 0;
+                }
+                else
+                {
+                    offset -= 1000;
+                    length += 1000;
+                }
+
+                entryLocations.Add(new(entry.Name, new(offset, length)));
+            }
+        );
+
+        return new([.. entryLocations.OrderBy(x => x.OffsetLength.Offset)], new(zipHeaderOffset, zipHeaderLength));
     }
 
     private static void AppendZipIndex(string zipFilePath, ZipIndex zipIndex)
