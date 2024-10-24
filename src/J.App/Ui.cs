@@ -1,4 +1,5 @@
-﻿using System.Drawing.Imaging;
+﻿using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Mvc;
 
@@ -493,10 +494,53 @@ public sealed partial class Ui(Control parent)
         return new(text) { UseVisualStyleBackColor = true };
     }
 
+    private sealed class DoubleBufferedDataGridView : DataGridView
+    {
+        private bool _drawVerticalResizeLine;
+        private int _verticalResizeLineX;
+
+        public DoubleBufferedDataGridView()
+        {
+            DoubleBuffered = true;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            if (_drawVerticalResizeLine)
+            {
+                using Pen pen = new(GridColor) { DashStyle = DashStyle.Dot };
+                e.Graphics.DrawLine(
+                    pen,
+                    _verticalResizeLineX,
+                    ColumnHeadersHeight,
+                    _verticalResizeLineX,
+                    ClientSize.Height
+                );
+            }
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            if (e.Button == MouseButtons.Left && Cursor == Cursors.SizeWE)
+            {
+                _drawVerticalResizeLine = true;
+                _verticalResizeLineX = e.X;
+                Invalidate();
+            }
+            else
+            {
+                _drawVerticalResizeLine = false;
+                Invalidate();
+            }
+        }
+    }
+
     public DataGridView NewDataGridView()
     {
         var font = NewListFont();
-        DataGridView grid =
+        DoubleBufferedDataGridView grid =
             new()
             {
                 Dock = DockStyle.Fill,
