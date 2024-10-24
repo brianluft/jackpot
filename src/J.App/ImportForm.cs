@@ -112,7 +112,7 @@ public sealed class ImportForm : Form
         var filenames = _libraryProvider.GetMovies().Select(x => x.Filename).ToHashSet();
         for (int i = _listBox.Items.Count - 1; i >= 0; i--)
         {
-            if (filenames.Contains(Path.GetFileName((string)_listBox.Items[i])))
+            if (filenames.Contains(Path.GetFileNameWithoutExtension((string)_listBox.Items[i])))
                 _listBox.Items.RemoveAt(i);
         }
     }
