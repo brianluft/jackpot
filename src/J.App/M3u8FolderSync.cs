@@ -29,6 +29,10 @@ public sealed class M3u8FolderSync(
             .Select(x => x.ToUpperInvariant())
             .ToHashSet(); // read-only during Sync calls below
 
+        var moviesDir = Path.Combine(dir, "Movies");
+        Directory.CreateDirectory(moviesDir);
+        SyncMovies(moviesDir, movies.Values, existingFiles, livingFiles);
+
         foreach (var tagType in libraryProvider.GetTagTypes())
         {
             var tagDir = Path.Combine(dir, MakeFilesystemSafe(tagType.PluralName));
