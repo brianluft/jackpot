@@ -44,6 +44,7 @@ public sealed partial class MainForm : Form
     private readonly System.Windows.Forms.Timer _edgeHideTimer;
     private int _pageCount;
     private bool _keepEdgeUiShowing;
+    private bool _importInProgress;
 
     public MainForm(
         IServiceProvider serviceProvider,
@@ -565,6 +566,7 @@ public sealed partial class MainForm : Form
 
             p.FormClosed += delegate
             {
+                _importInProgress = false;
                 _browser.Reload();
 
                 if (p.DialogResult == DialogResult.Cancel)
@@ -603,6 +605,20 @@ public sealed partial class MainForm : Form
                     );
                 }
             };
+
+            if (_importInProgress)
+            {
+                MessageBox.Show(
+                    this,
+                    "Another import is already in progress.",
+                    "Jackpot",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+                return;
+            }
+
+            _importInProgress = true;
 
             p.Show();
         };
@@ -931,6 +947,38 @@ public sealed partial class MainForm : Form
                 };
             }
         }
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (_importInProgress)
+        {
+            MessageBox.Show(
+                this,
+                "An import is in progress. Please wait for it to finish before exiting.",
+                "Jackpot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+            e.Cancel = true;
+            return;
+        }
+
+        var response = MessageBox.Show(
+            this,
+            "Are you sure you want to exit?",
+            "Jackpot",
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Question,
+            MessageBoxDefaultButton.Button2
+        );
+        if (response != DialogResult.OK)
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        base.OnFormClosing(e);
     }
 
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]
