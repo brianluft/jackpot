@@ -31,19 +31,6 @@ Read more about egress fees in the Backblaze article, ["Cloud 101: Data Egress F
 
 ## Getting started
 
-Install the following software first, if you don't already have it.
-
-- [**VLC**](https://www.videolan.org/vlc/)
-- [**ffmpeg**](https://ffmpeg.org/)
-    - For x64 computers:
-        1. Download `ffmpeg-release-essentials.zip` from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/). 
-        1. Extract somewhere on your PC, for example, `C:\Program Files\ffmpeg`.
-        1. Add the `bin` sub-folder to your `PATH` environment variable by pressing Start and searching for "Edit the system environment variables".
-    - For Arm64 computers:
-        1. Download `ffmpeg-wos-arm64.zip` from [dvhh/ffmpeg-wos-arm64-build](https://github.com/dvhh/ffmpeg-wos-arm64-build/releases).
-        1. Extract somewhere on your PC, for example, `C:\Program Files\ffmpeg`.
-        1. Add the extracted folder to your `PATH` environment variable by pressing Start and searching for "Edit the system environment variables".
-
 On the Backblaze website, create a bucket and an application key.
 
 Download Jackpot, extract, and run `Jackpot.exe`.
