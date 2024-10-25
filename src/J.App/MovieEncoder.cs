@@ -25,7 +25,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         ProcessStartInfo psi =
             new()
             {
-                FileName = "ffmpeg",
+                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
                 Arguments =
                     $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time 5 -hls_list_size 0 -hls_playlist_type vod -f hls \"{m3u8Path}\"",
                 WorkingDirectory = "",

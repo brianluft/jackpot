@@ -21,14 +21,8 @@ jobs:
         shell: pwsh
         run: .\ps1\Publish-Release.ps1
 
-      - name: Upload jackpot-arm64.zip
+      - name: Upload jackpot.zip
         uses: actions/upload-artifact@v4
         with:
-          name: jackpot-arm64
-          path: publish/jackpot-arm64.zip
-
-      - name: Upload jackpot-x64.zip
-        uses: actions/upload-artifact@v4
-        with:
-          name: jackpot-x64
-          path: publish/jackpot-x64.zip
+          name: jackpot
+          path: publish/jackpot.zip

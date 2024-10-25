@@ -310,12 +310,16 @@ app.MapPost(
         var query = HttpUtility.ParseQueryString("");
         query["movieId"] = movie.Id.Value;
         var url = $"http://localhost:6786/movie.m3u8?{query}";
+        var isSystemVlc = accountSettingsProvider.IsVlcInstalled.Value;
         ProcessStartInfo psi =
             new()
             {
-                FileName = "vlc.exe",
+                FileName =
+                    isSystemVlc
+                    ? "vlc.exe"
+                    : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
                 Arguments = url,
-                UseShellExecute = true,
+                UseShellExecute = isSystemVlc,
             };
         using var p = Process.Start(psi)!;
         ApplicationSubProcesses.Add(p);

@@ -22,7 +22,7 @@ public sealed class MovieExporter(AccountSettingsProvider accountSettingsProvide
         ProcessStartInfo psi =
             new()
             {
-                FileName = "ffmpeg",
+                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
                 Arguments = $"-y -i \"{m3u8Path}\" -codec copy \"{outFilePath}\"",
                 WorkingDirectory = "",
                 UseShellExecute = false,

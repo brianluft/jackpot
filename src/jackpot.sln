@@ -14,7 +14,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "J.Test", "J.Test\J.Test.csproj", "{9C86A33F-0711-4C48-AB18-B22D9BB2BEEB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "J.Test", "J.Test\J.Test.csproj", "{9C86A33F-0711-4C48-AB18-B22D9BB2BEEB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "J.Launcher", "J.Launcher\J.Launcher.csproj", "{99A29130-91D2-49DA-9C37-681141857A5E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +40,10 @@ Global
 		{9C86A33F-0711-4C48-AB18-B22D9BB2BEEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C86A33F-0711-4C48-AB18-B22D9BB2BEEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C86A33F-0711-4C48-AB18-B22D9BB2BEEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{99A29130-91D2-49DA-9C37-681141857A5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99A29130-91D2-49DA-9C37-681141857A5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99A29130-91D2-49DA-9C37-681141857A5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99A29130-91D2-49DA-9C37-681141857A5E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

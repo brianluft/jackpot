@@ -22,8 +22,6 @@ public sealed class AccountSettingsForm : Form
         _cancelButton,
         _copySettingsButton,
         _pasteSettingsButton;
-    private readonly Label _vlcLabel,
-        _ffmpegLabel;
     private readonly FlowLayoutPanel _saveCancelButtonsFlow,
         _localFlow,
         _copyPasteButtonsFlow;
@@ -96,21 +94,6 @@ public sealed class AccountSettingsForm : Form
                     {
                         _localFlow.Padding = ui.DefaultPadding;
                         Control p;
-
-                        _localFlow.Controls.Add(
-                            _ffmpegLabel = ui.NewLabel(
-                                $"{(accountSettingsProvider.IsFfmpegInstalled() ? "✔ ffmpeg installed" : "✘ ffmpeg not found")}"
-                            )
-                        );
-                        {
-                            _ffmpegLabel.Margin = ui.TopSpacingBig;
-                        }
-
-                        _localFlow.Controls.Add(
-                            _vlcLabel = ui.NewLabel(
-                                $"{(accountSettingsProvider.IsVlcInstalled() ? "✔ vlc installed" : "✘ vlc not found")}"
-                            )
-                        );
 
                         (p, _databaseFilePathText) = ui.NewLabeledOpenFileTextBox(
                             "Database file:",

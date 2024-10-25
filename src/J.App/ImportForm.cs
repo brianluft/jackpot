@@ -89,14 +89,7 @@ public sealed class ImportForm : Form
 
     private static readonly FrozenSet<string> _extensions = new[]
     {
-        ".mp4",
-        ".mov",
-        ".wmv",
-        ".mpg",
-        ".mpeg",
-        ".avi",
-        ".mkv",
-        ".webm",
+        ".mp4"
     }.ToFrozenSet();
 
     private void AddDirectory(string dir)

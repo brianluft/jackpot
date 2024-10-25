@@ -193,7 +193,7 @@ public sealed class Importer(
         ProcessStartInfo psi =
             new()
             {
-                FileName = "ffmpeg",
+                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
                 Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,

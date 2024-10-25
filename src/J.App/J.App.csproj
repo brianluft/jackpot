@@ -8,7 +8,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	<ApplicationIcon>Resources\App.ico</ApplicationIcon>
-	<AssemblyName>Jackpot</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

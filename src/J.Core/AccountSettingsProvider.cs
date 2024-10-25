@@ -1,11 +1,9 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
+﻿using Amazon.S3;
+using J.Core.Data;
+using Microsoft.Win32;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Amazon.S3;
-using J.Core.Data;
-using Microsoft.Win32;
 
 namespace J.Core;
 
@@ -102,30 +100,7 @@ public sealed class AccountSettingsProvider
         return path;
     }
 
-    public bool IsFfmpegInstalled()
-    {
-        // ffmpeg.exe must be on the $PATH. See if we can run ffmpeg --help.
-        try
-        {
-            using var p = Process.Start(
-                new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = "--help",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                }
-            )!;
-            p.WaitForExit();
-            return true;
-        }
-        catch (Win32Exception)
-        {
-            return false;
-        }
-    }
-
-    public bool IsVlcInstalled()
+    public Lazy<bool> IsVlcInstalled { get; } = new(() =>
     {
         // Check that the registry key "Computer\HKEY_CLASSES_ROOT\Applications\vlc.exe" exists.
         try
@@ -137,5 +112,5 @@ public sealed class AccountSettingsProvider
         {
             return false;
         }
-    }
+    });
 }
