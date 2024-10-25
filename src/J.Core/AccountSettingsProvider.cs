@@ -1,9 +1,9 @@
-﻿using Amazon.S3;
-using J.Core.Data;
-using Microsoft.Win32;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Amazon.S3;
+using J.Core.Data;
+using Microsoft.Win32;
 
 namespace J.Core;
 
@@ -100,17 +100,18 @@ public sealed class AccountSettingsProvider
         return path;
     }
 
-    public Lazy<bool> IsVlcInstalled { get; } = new(() =>
-    {
-        // Check that the registry key "Computer\HKEY_CLASSES_ROOT\Applications\vlc.exe" exists.
-        try
+    public Lazy<bool> IsVlcInstalled { get; } =
+        new(() =>
         {
-            using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
-            return key is not null;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    });
+            // Check that the registry key "Computer\HKEY_CLASSES_ROOT\Applications\vlc.exe" exists.
+            try
+            {
+                using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
+                return key is not null;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        });
 }

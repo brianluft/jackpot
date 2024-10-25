@@ -314,10 +314,7 @@ app.MapPost(
         ProcessStartInfo psi =
             new()
             {
-                FileName =
-                    isSystemVlc
-                    ? "vlc.exe"
-                    : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
+                FileName = isSystemVlc ? "vlc.exe" : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
                 Arguments = url,
                 UseShellExecute = isSystemVlc,
             };

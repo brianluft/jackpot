@@ -87,10 +87,7 @@ public sealed class ImportForm : Form
         RemoveExistingFiles();
     }
 
-    private static readonly FrozenSet<string> _extensions = new[]
-    {
-        ".mp4"
-    }.ToFrozenSet();
+    private static readonly FrozenSet<string> _extensions = new[] { ".mp4" }.ToFrozenSet();
 
     private void AddDirectory(string dir)
     {

@@ -12,13 +12,12 @@ public static class Program
             var dir = AppContext.BaseDirectory;
 
             // Are we on x64 or Arm64?
-            var exeFilePath =
-                RuntimeInformation.OSArchitecture switch
-                {
-                    Architecture.Arm64 => Path.Combine(dir, "arm64", "J.App.exe"),
-                    Architecture.X64 => Path.Combine(dir, "x64", "J.App.exe"),
-                    _ => throw new PlatformNotSupportedException()
-                };
+            var exeFilePath = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.Arm64 => Path.Combine(dir, "arm64", "J.App.exe"),
+                Architecture.X64 => Path.Combine(dir, "x64", "J.App.exe"),
+                _ => throw new PlatformNotSupportedException(),
+            };
 
             Process.Start(exeFilePath);
             return 0;
