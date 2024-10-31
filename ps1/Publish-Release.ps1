@@ -117,7 +117,7 @@ function Get-Vlc
 function Copy-LicenseFiles
 {
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
-	Copy-Item -Path "$root\LICENSE" -Destination "$buildDir\LICENSE"
+	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
 }
 
 function New-ReleaseZip
