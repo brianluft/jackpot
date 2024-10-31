@@ -114,25 +114,33 @@ function Get-Vlc
 	Remove-Item -Path $subdir.FullName -Recurse -Force
 }
 
-function Copy-LicenseFiles
+function Copy-MiscFiles
 {
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
 	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
+	Copy-Item -Path "$root\src\AppxManifest.xml" -Destination "$buildDir\AppxManifest.xml"
+
+	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
+	Copy-Item -Path "$root\src\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
+	Copy-Item -Path "$root\src\J.App\Resources\App150x150.png" -Destination "$buildDir\assets\App150x150.png"
+	Copy-Item -Path "$root\src\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.png"
 }
 
-function New-ReleaseZip
+function New-Msix
 {
-	Write-Host "Creating release zip."
-	$zipFilePath = "$root\publish\jackpot.zip"
-	if (Test-Path $zipFilePath) { Remove-Item -Path $zipFilePath -Force }
-	[System.IO.Compression.ZipFile]::CreateFromDirectory($buildDir, $zipFilePath)
+	Write-Host "Creating MSIX package."
+	$msixFilePath = "$root\publish\Jackpot.msix"
+	if (Test-Path $msixFilePath) { Remove-Item -Path $msixFilePath -Force }
+	& "MakeAppx.exe" pack /d "$buildDir" /p "$msixFilePath"
+
+	# .msix file still needs to be signed at this point. That will be done offline for release builds.
 }
 
-Copy-LicenseFiles
+Copy-MiscFiles
 Publish-Launcher
 Publish-PlatformRelease -Arch "x64"
 Publish-PlatformRelease -Arch "arm64"
 Get-FfmpegX64
 Get-FfmpegArm64
 Get-Vlc
-New-ReleaseZip
+New-Msix

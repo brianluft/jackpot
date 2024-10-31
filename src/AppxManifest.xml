@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package 
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  IgnorableNamespaces="uap rescap desktop">
+  
+  <Identity
+    Name="J.Jackpot"
+    Publisher="CN=Brian Luft, O=Brian Luft, L=St. Thomas, C=VI"
+    Version="1.0.0.0"
+    ProcessorArchitecture="x64" />
+    
+  <Properties>
+    <DisplayName>Jackpot</DisplayName>
+    <PublisherDisplayName>Brian Luft</PublisherDisplayName>
+    <Logo>assets\App.png</Logo>
+  </Properties>
+  
+  <Dependencies>
+    <TargetDeviceFamily 
+      Name="Windows.Desktop" 
+      MinVersion="10.0.19041.0" 
+      MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+  
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  
+  <Applications>
+    <Application 
+      Id="J.Jackpot"
+      Executable="Jackpot.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Jackpot"
+        Description="Personal cloud media library"
+        BackgroundColor="#ffffff"
+        Square150x150Logo="assets\App150x150.png"
+        Square44x44Logo="assets\App44x44.png">
+      </uap:VisualElements>
+      
+      <!--<Extensions>
+        <Extension Category="windows.registry">
+          <Registry Type="rootRegistry">
+            <Add Type="key" Name="HKEY_LOCAL_MACHINE\SOFTWARE\YourApp" Value=""/>
+            <Add Type="string" Name="HKEY_LOCAL_MACHINE\SOFTWARE\YourApp\InstallPath" Value="%INSTALLPATH%"/>
+          </Registry>
+        </Extension>
+      </Extensions>-->
+    </Application>
+  </Applications>
+  
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <Capability Name="internetClient"/>
+    <Capability Name="privateNetworkClientServer"/>
+    <!-- Common capabilities you might need: -->
+    <!--
+    <rescap:Capability Name="allowElevation" />
+    <rescap:Capability Name="localSystemServices" />
+    <uap:Capability Name="removableStorage"/>
+    <uap:Capability Name="documentsLibrary"/>
+    -->
+  </Capabilities>
+</Package>
