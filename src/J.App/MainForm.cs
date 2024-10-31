@@ -16,6 +16,7 @@ public sealed partial class MainForm : Form
     private readonly M3u8FolderSync _m3u8FolderSync;
     private readonly ImportProgressFormFactory _importProgressFormFactory;
     private readonly CoreWebView2Environment _coreWebView2Environment;
+    private readonly SingleInstanceManager _singleInstanceManager;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly EdgePanel _leftPanel,
@@ -54,7 +55,8 @@ public sealed partial class MainForm : Form
         Client client,
         M3u8FolderSync m3u8FolderSync,
         ImportProgressFormFactory importProgressFormFactory,
-        CoreWebView2Environment coreWebView2Environment
+        CoreWebView2Environment coreWebView2Environment,
+        SingleInstanceManager singleInstanceManager
     )
     {
         _serviceProvider = serviceProvider;
@@ -63,6 +65,7 @@ public sealed partial class MainForm : Form
         _m3u8FolderSync = m3u8FolderSync;
         _importProgressFormFactory = importProgressFormFactory;
         _coreWebView2Environment = coreWebView2Environment;
+        _singleInstanceManager = singleInstanceManager;
         Ui ui = new(this);
         _ui = ui;
 
@@ -984,6 +987,18 @@ public sealed partial class MainForm : Form
         }
 
         base.OnFormClosing(e);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == _singleInstanceManager.ActivateMessageId)
+        {
+            if (WindowState == FormWindowState.Minimized)
+                WindowState = FormWindowState.Maximized;
+            Activate();
+        }
+
+        base.WndProc(ref m);
     }
 
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]

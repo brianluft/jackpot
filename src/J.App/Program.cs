@@ -11,6 +11,7 @@ public static class Program
     public static void Main()
     {
         TaskbarUtil.SetTaskbarAppId();
+
         ServiceCollection services = new();
 
         services.AddHttpClient(
@@ -39,6 +40,7 @@ public static class Program
 
         services.AddSingleton<Client>();
         services.AddSingleton<S3Uploader>();
+        services.AddSingleton<SingleInstanceManager>();
 
         services.AddTransient<AccountSettingsForm>();
         services.AddTransient<EditMoviesChooseTagForm>();
@@ -58,6 +60,14 @@ public static class Program
         services.AddTransient<MovieExporter>();
 
         using var serviceProvider = services.BuildServiceProvider();
+
+        var singleInstanceManager = serviceProvider.GetRequiredService<SingleInstanceManager>();
+        if (!singleInstanceManager.IsFirstInstance)
+        {
+            singleInstanceManager.ActivateFirstInstance();
+            return;
+        }
+
         ApplicationConfiguration.Initialize();
         Application.Run(serviceProvider.GetRequiredService<MainForm>());
     }
