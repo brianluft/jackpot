@@ -1,11 +1,10 @@
-﻿using IoPath = System.IO.Path;
+﻿using J.Base;
+using IoPath = System.IO.Path;
 
 namespace J.Core;
 
 public sealed class ProcessTempDir : IDisposable
 {
-    public const string LOCK_FILENAME = "lock";
-
     private FileStream? _lockFile;
     private int _nextNumber = 1;
 
@@ -16,32 +15,24 @@ public sealed class ProcessTempDir : IDisposable
         var appDir = IoPath.Combine(IoPath.GetTempPath(), "Jackpot");
         Directory.CreateDirectory(appDir);
 
-        foreach (var dir in Directory.GetDirectories(appDir))
-            Prune(dir);
+        ProcessTempDirCleaner.Clean();
 
         Path = IoPath.Combine(appDir, IoPath.GetRandomFileName());
         Directory.CreateDirectory(Path);
-        _lockFile = new(IoPath.Combine(Path, LOCK_FILENAME), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
-    }
-
-    private static void Prune(string dir)
-    {
-        try
-        {
-            File.Delete(IoPath.Combine(dir, LOCK_FILENAME));
-            Directory.Delete(dir, true);
-        }
-        catch
-        {
-            // It's still in use. Try again next time.
-        }
+        _lockFile = new(
+            IoPath.Combine(Path, Constants.TEMP_DIR_LOCK_FILENAME),
+            FileMode.CreateNew,
+            FileAccess.ReadWrite,
+            FileShare.None
+        );
     }
 
     public void Dispose()
     {
         _lockFile?.Dispose();
         _lockFile = null;
-        Prune(Path);
+
+        ProcessTempDirCleaner.Clean();
     }
 
     public TempDir NewDir()

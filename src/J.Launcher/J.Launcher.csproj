@@ -12,4 +12,8 @@
 	<ApplicationIcon>..\J.App\Resources\App.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\J.Base\J.Base.csproj" />
+  </ItemGroup>
+
 </Project>

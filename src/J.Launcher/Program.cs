@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using J.Base;
 
 namespace J.Launcher;
 
@@ -7,8 +8,10 @@ public static class Program
 {
     public static int Main()
     {
+        Process process;
         try
         {
+            TaskbarUtil.SetTaskbarAppId();
             var dir = AppContext.BaseDirectory;
 
             // Are we on x64 or Arm64?
@@ -19,14 +22,20 @@ public static class Program
                 _ => throw new PlatformNotSupportedException(),
             };
 
-            Process.Start(exeFilePath);
-            //TODO: stick around and clean up process temp dir
-            return 0;
+            process = Process.Start(exeFilePath);
         }
         catch (Exception ex)
         {
             MessageBoxUtil.ShowError("There was a problem starting Jackpot on your computer.\n\n" + ex.Message);
             return -1;
+        }
+
+        using (process)
+        {
+            process.WaitForExit();
+            Thread.Sleep(500);
+            ProcessTempDirCleaner.Clean();
+            return process.ExitCode;
         }
     }
 }

@@ -1,3 +1,4 @@
+using J.Base;
 using J.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
@@ -9,6 +10,7 @@ public static class Program
     [STAThread]
     public static void Main()
     {
+        TaskbarUtil.SetTaskbarAppId();
         ServiceCollection services = new();
 
         services.AddHttpClient(
@@ -20,6 +22,8 @@ public static class Program
         );
         services.AddCore();
 
+        // Configure a custom user data folder for WebView2.
+        // Otherwise, WebView2 fails when it tries to store a cache in the app directory, which is read only.
         services.AddSingleton(services =>
         {
             var processTempDir = services.GetRequiredService<ProcessTempDir>();

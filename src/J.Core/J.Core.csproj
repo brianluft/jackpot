@@ -24,4 +24,8 @@
     <None Include="C:\Projects\jackpot\src\J.Core\.editorconfig" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\J.Base\J.Base.csproj" />
+  </ItemGroup>
+
 </Project>
