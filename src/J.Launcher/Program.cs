@@ -20,6 +20,7 @@ public static class Program
             };
 
             Process.Start(exeFilePath);
+            //TODO: stick around and clean up process temp dir
             return 0;
         }
         catch (Exception ex)

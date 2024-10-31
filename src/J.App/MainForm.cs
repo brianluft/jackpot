@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace J.App;
@@ -14,6 +15,7 @@ public sealed partial class MainForm : Form
     private readonly Client _client;
     private readonly M3u8FolderSync _m3u8FolderSync;
     private readonly ImportProgressFormFactory _importProgressFormFactory;
+    private readonly CoreWebView2Environment _coreWebView2Environment;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly EdgePanel _leftPanel,
@@ -51,7 +53,8 @@ public sealed partial class MainForm : Form
         LibraryProviderAdapter libraryProvider,
         Client client,
         M3u8FolderSync m3u8FolderSync,
-        ImportProgressFormFactory importProgressFormFactory
+        ImportProgressFormFactory importProgressFormFactory,
+        CoreWebView2Environment coreWebView2Environment
     )
     {
         _serviceProvider = serviceProvider;
@@ -59,6 +62,7 @@ public sealed partial class MainForm : Form
         _client = client;
         _m3u8FolderSync = m3u8FolderSync;
         _importProgressFormFactory = importProgressFormFactory;
+        _coreWebView2Environment = coreWebView2Environment;
         Ui ui = new(this);
         _ui = ui;
 
@@ -73,6 +77,7 @@ public sealed partial class MainForm : Form
             Padding = Padding.Empty,
             Margin = Padding.Empty,
         };
+        _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment); // fire and forget?
 
         Controls.Add(_leftPanel = new(left: true));
         {

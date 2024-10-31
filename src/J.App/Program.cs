@@ -1,4 +1,6 @@
+using J.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Web.WebView2.Core;
 
 namespace J.App;
 
@@ -17,6 +19,19 @@ public static class Program
             }
         );
         services.AddCore();
+
+        services.AddSingleton(services =>
+        {
+            var processTempDir = services.GetRequiredService<ProcessTempDir>();
+            var userDataDir = Path.Combine(processTempDir.Path, "WebView2");
+            Directory.CreateDirectory(userDataDir);
+
+            CoreWebView2EnvironmentOptions options = new();
+            return CoreWebView2Environment
+                .CreateAsync(browserExecutableFolder: null, userDataFolder: userDataDir, options: options)
+                .GetAwaiter()
+                .GetResult();
+        });
 
         services.AddSingleton<Client>();
         services.AddSingleton<S3Uploader>();
