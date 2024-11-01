@@ -19,8 +19,9 @@ public sealed partial class LibraryProvider : IDisposable
     private readonly AsyncRetryPolicy _policy = Policy
         .Handle<Exception>(x => x is not AmazonS3Exception s3ex || (int)s3ex.StatusCode >= 500)
         .RetryAsync(5);
-    private readonly ReaderWriterLockSlim _rwlock = new();
+    private readonly object _lock = new();
     private SqliteConnection? _connection;
+    private bool _inTransaction;
 
     public LibraryProvider(AccountSettingsProvider accountSettingsProvider, ProcessTempDir processTempDir)
     {
@@ -36,35 +37,9 @@ public sealed partial class LibraryProvider : IDisposable
         connection.Open();
     }
 
-    private void WithWriteLock(Action action)
-    {
-        _rwlock.EnterWriteLock();
-        try
-        {
-            action();
-        }
-        finally
-        {
-            _rwlock.ExitWriteLock();
-        }
-    }
-
-    private T WithReadLock<T>(Func<T> func)
-    {
-        _rwlock.EnterReadLock();
-        try
-        {
-            return func();
-        }
-        finally
-        {
-            _rwlock.ExitReadLock();
-        }
-    }
-
     public void Connect()
     {
-        WithWriteLock(() =>
+        lock (_lock)
         {
             _connection?.Dispose();
             _connection = null;
@@ -78,16 +53,16 @@ public sealed partial class LibraryProvider : IDisposable
             Execute("PRAGMA foreign_keys = ON;");
 
             Upgrade();
-        });
+        }
     }
 
     public void Disconnect()
     {
-        WithWriteLock(() =>
+        lock (_lock)
         {
             _connection?.Dispose();
             _connection = null;
-        });
+        }
     }
 
     public void Dispose()
@@ -162,7 +137,7 @@ INSERT INTO file_version VALUES (@n);
         Func<SqliteDataReader, T> generator
     )
     {
-        return WithReadLock(() =>
+        lock (_lock)
         {
             using var command = _connection!.CreateCommand();
             command.CommandText = sql;
@@ -172,7 +147,7 @@ INSERT INTO file_version VALUES (@n);
             while (reader.Read())
                 rows.Add(generator(reader));
             return rows;
-        });
+        }
     }
 
     private T QuerySingle<T>(
@@ -186,13 +161,13 @@ INSERT INTO file_version VALUES (@n);
 
     private void Execute(string sql, Action<SqliteParameterCollection>? configureParameters = null)
     {
-        WithWriteLock(() =>
+        lock (_lock)
         {
             using var command = _connection!.CreateCommand();
             command.CommandText = sql;
             configureParameters?.Invoke(command.Parameters);
             command.ExecuteNonQuery();
-        });
+        }
     }
 
     public void NewTagType(TagType tagType) =>
@@ -603,14 +578,33 @@ INSERT INTO file_version VALUES (@n);
         );
     }
 
+    public bool InTransaction
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _inTransaction;
+            }
+        }
+    }
+
     public void WithTransaction(Action action)
     {
-        WithWriteLock(() =>
+        lock (_lock)
         {
             using var transaction = _connection!.BeginTransaction();
-            action();
-            transaction.Commit();
-        });
+            _inTransaction = true;
+            try
+            {
+                action();
+                transaction.Commit();
+            }
+            finally
+            {
+                _inTransaction = false;
+            }
+        }
     }
 
     public async Task SyncUpAsync(CancellationToken cancel)
