@@ -7,7 +7,7 @@
   IgnorableNamespaces="uap rescap desktop">
   
   <Identity
-    Name="J.Jackpot"
+    Name="BrianLuft.Jackpot"
     Publisher="CN=Brian Luft"
     Version="1.0.0.0"
     ProcessorArchitecture="x64" />
@@ -31,25 +31,23 @@
   
   <Applications>
     <Application 
-      Id="J.Jackpot"
+      Id="BrianLuft.Jackpot"
       Executable="Jackpot.exe"
       EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="Jackpot"
         Description="Personal cloud media library"
-        BackgroundColor="#ffffff"
+        BackgroundColor="transparent"
         Square150x150Logo="assets\App150x150.png"
         Square44x44Logo="assets\App44x44.png">
+        <uap:DefaultTile Wide310x150Logo="assets\App310x150.png" />
+        <uap:InitialRotationPreference>
+          <uap:Rotation Preference="landscape"/>
+          <uap:Rotation Preference="portrait"/>
+          <uap:Rotation Preference="landscapeFlipped"/>
+          <uap:Rotation Preference="portraitFlipped"/>
+        </uap:InitialRotationPreference>
       </uap:VisualElements>
-      
-      <!--<Extensions>
-        <Extension Category="windows.registry">
-          <Registry Type="rootRegistry">
-            <Add Type="key" Name="HKEY_LOCAL_MACHINE\SOFTWARE\YourApp" Value=""/>
-            <Add Type="string" Name="HKEY_LOCAL_MACHINE\SOFTWARE\YourApp\InstallPath" Value="%INSTALLPATH%"/>
-          </Registry>
-        </Extension>
-      </Extensions>-->
     </Application>
   </Applications>
   
@@ -57,12 +55,5 @@
     <rescap:Capability Name="runFullTrust" />
     <Capability Name="internetClient"/>
     <Capability Name="privateNetworkClientServer"/>
-    <!-- Common capabilities you might need: -->
-    <!--
-    <rescap:Capability Name="allowElevation" />
-    <rescap:Capability Name="localSystemServices" />
-    <uap:Capability Name="removableStorage"/>
-    <uap:Capability Name="documentsLibrary"/>
-    -->
   </Capabilities>
 </Package>

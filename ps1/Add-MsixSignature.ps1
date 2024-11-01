@@ -9,6 +9,8 @@ if (-not (Test-Path $CertificatePath)) {
 	throw "Certificate not found!"
 }
 
+$root = Split-Path -Path $PSScriptRoot -Parent
+
 # Windows SDK
 $windowsSdkBaseDir = "C:\Program Files (x86)\Windows Kits\10\Redist"
 $windowsSdkVersion = `
@@ -26,7 +28,9 @@ if (Test-Path $signtool) {
 
 $msixFilePath = "$root\publish\jackpot.msix"
 
+Write-Host "`n--- Start: SignTool sign ---"
 & $signtool sign /f "$CertificatePath" /p "$CertificatePassword" /tr http://timestamp.sectigo.com /fd SHA256 /td SHA256 "$msixFilePath" | Write-Output
 if ($LastExitCode -ne 0) {
     throw "Failed to sign MSIX file."
 }
+Write-Host "--- End: SignTool sign ---`n"

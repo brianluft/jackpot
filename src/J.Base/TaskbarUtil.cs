@@ -4,7 +4,7 @@ namespace J.Base;
 
 public static partial class TaskbarUtil
 {
-    private const string TASKBAR_APP_ID = "J.Jackpot";
+    private const string TASKBAR_APP_ID = "BrianLuft.Jackpot";
 
     public static void SetTaskbarAppId()
     {

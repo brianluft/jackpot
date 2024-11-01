@@ -3,10 +3,11 @@ $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 $root = Split-Path -Path $PSScriptRoot -Parent
-Write-Host "Root: $root"
 
 $publishDir = "$root\publish"
-if (Test-Path $publishDir) { [System.IO.Directory]::Delete($publishDir, $true) | Out-Null }
+if (Test-Path $publishDir) {
+	[System.IO.Directory]::Delete($publishDir, $true) | Out-Null
+}
 
 $buildDir = "$root\publish\build"
 [System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
@@ -27,6 +28,13 @@ if (Test-Path $makeappx) {
     Write-Output "MakeAppx: $makeappx"
 } else {
 	throw "MakeAppx not found!"
+}
+
+$makepri = "C:\Program Files (x86)\Windows Kits\10\bin\$windowsSdkVersion\x64\makepri.exe"
+if (Test-Path $makepri) {
+    Write-Output "MakePri: $makepri"
+} else {
+	throw "MakePri not found!"
 }
 
 function Publish-App
@@ -155,8 +163,38 @@ function Copy-MiscFiles
 
 	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
 	Copy-Item -Path "$root\src\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
+	Copy-Item -Path "$root\src\J.App\Resources\App310x150.png" -Destination "$buildDir\assets\App310x150.png"
 	Copy-Item -Path "$root\src\J.App\Resources\App150x150.png" -Destination "$buildDir\assets\App150x150.png"
 	Copy-Item -Path "$root\src\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.png"
+	Copy-Item -Path "$root\src\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.targetsize-44_altform-unplated.png"
+
+	foreach ($x in 16, 24, 32, 48, 256)
+	{
+		Copy-Item -Path "$root\src\J.App\Resources\App${x}x${x}.png" -Destination "$buildDir\assets\App44x44.targetsize-${x}.png"
+		Copy-Item -Path "$root\src\J.App\Resources\App${x}x${x}.png" -Destination "$buildDir\assets\App44x44.altform-unplated_targetsize-${x}.png"
+	}
+
+	Push-Location $buildDir
+	try
+	{
+		Write-Host "`n--- Start: MakePri createconfig ---"
+		& "$makepri" createconfig /cf "priconfig.xml" /dq en-US
+		if ($LastExitCode -ne 0) {
+			throw "MakePri createconfig failed."
+		}
+		Write-Host "--- End: MakePri createconfig ---`n"
+
+		Write-Host "--- Start: MakePri new ---"
+		& "$makepri" new /pr "$buildDir" /cf "priconfig.xml"
+		if ($LastExitCode -ne 0) {
+			throw "MakePri new failed."
+		}
+		Write-Host "--- End: MakePri new ---`n"
+	}
+	finally
+	{
+		Pop-Location
+	}
 }
 
 function New-Msix
@@ -164,10 +202,12 @@ function New-Msix
 	Write-Host "Creating MSIX package."
 	$msixFilePath = "$root\publish\Jackpot.msix"
 	if (Test-Path $msixFilePath) { Remove-Item -Path $msixFilePath -Force }
+	Write-Host "`n--- Start: MakeAppx pack ---"
 	& "$makeappx" pack /d "$buildDir" /p "$msixFilePath"
 	if ($LastExitCode -ne 0) {
 		throw "Failed to create MSIX package."
 	}
+	Write-Host "--- End: MakeAppx pack ---`n"
 }
 
 function Add-TemporarySignature
