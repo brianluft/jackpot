@@ -21,7 +21,6 @@ public sealed partial class LibraryProvider : IDisposable
         .RetryAsync(5);
     private readonly object _lock = new();
     private SqliteConnection? _connection;
-    private bool _inTransaction;
 
     public LibraryProvider(AccountSettingsProvider accountSettingsProvider, ProcessTempDir processTempDir)
     {
@@ -578,32 +577,13 @@ INSERT INTO file_version VALUES (@n);
         );
     }
 
-    public bool InTransaction
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _inTransaction;
-            }
-        }
-    }
-
     public void WithTransaction(Action action)
     {
         lock (_lock)
         {
             using var transaction = _connection!.BeginTransaction();
-            _inTransaction = true;
-            try
-            {
-                action();
-                transaction.Commit();
-            }
-            finally
-            {
-                _inTransaction = false;
-            }
+            action();
+            transaction.Commit();
         }
     }
 
