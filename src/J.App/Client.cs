@@ -22,7 +22,7 @@ public sealed class Client(IHttpClientFactory httpClientFactory) : IDisposable
             //throw new InvalidOperationException("The web server is already running.");
 
             var dir = Path.GetDirectoryName(typeof(Client).Assembly.Location!)!;
-            var exe = Path.Combine(dir, "J.Server.exe");
+            var exe = Path.Combine(dir, "Jackpot.Server.exe");
 
             ProcessStartInfo psi =
                 new()

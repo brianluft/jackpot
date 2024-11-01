@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	<AssemblyName>Jackpot.App</AssemblyName>
 	<ApplicationIcon>Resources\App.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -18,12 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\J.Core\J.Core.csproj" />
     <ProjectReference Include="..\J.Server\J.Server.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="EditMoviesRemoveTagForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
   </ItemGroup>
 
   <ItemGroup>

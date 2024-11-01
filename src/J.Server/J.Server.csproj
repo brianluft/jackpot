@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+	<AssemblyName>Jackpot.Server</AssemblyName>
 	<ApplicationIcon>..\J.App\Resources\App.ico</ApplicationIcon>
   </PropertyGroup>
 

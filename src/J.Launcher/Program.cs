@@ -17,8 +17,8 @@ public static class Program
             // Are we on x64 or Arm64?
             var exeFilePath = RuntimeInformation.OSArchitecture switch
             {
-                Architecture.Arm64 => Path.Combine(dir, "arm64", "J.App.exe"),
-                Architecture.X64 => Path.Combine(dir, "x64", "J.App.exe"),
+                Architecture.Arm64 => Path.Combine(dir, "arm64", "Jackpot.App.exe"),
+                Architecture.X64 => Path.Combine(dir, "x64", "Jackpot.App.exe"),
                 _ => throw new PlatformNotSupportedException(),
             };
 
