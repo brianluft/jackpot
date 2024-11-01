@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Amazon.S3.Transfer;
+using J.Base;
 using J.Core;
 using J.Core.Data;
 
@@ -30,6 +31,7 @@ public sealed class MovieExporter(AccountSettingsProvider accountSettingsProvide
             };
 
         using var p = Process.Start(psi)!;
+        ApplicationSubProcesses.Add(p);
         p.WaitForExit();
         if (p.ExitCode != 0)
             throw new Exception($"Failed to export movie with ffmpeg. Exit code: {p.ExitCode}");

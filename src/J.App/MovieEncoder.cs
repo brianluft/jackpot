@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using J.Base;
 using J.Core;
 using J.Core.Data;
 
@@ -35,6 +36,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
 
         using (var p = Process.Start(psi)!)
         {
+            ApplicationSubProcesses.Add(p);
             p.WaitForExit();
             if (p.ExitCode != 0)
                 throw new Exception($"Failed to encode movie with ffmpeg. Exit code: {p.ExitCode}");

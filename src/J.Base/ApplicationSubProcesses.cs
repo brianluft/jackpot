@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace J.Core;
+namespace J.Base;
 
 public static class ApplicationSubProcesses
 {
@@ -9,40 +9,55 @@ public static class ApplicationSubProcesses
 
     static ApplicationSubProcesses()
     {
-        var hjob = NativeMethods.CreateJobObject(IntPtr.Zero, IntPtr.Zero);
-        if (hjob == IntPtr.Zero)
-            throw new Exception("CreateJobObject() failed.");
-
-        var jeli_buf = Marshal.AllocHGlobal(Marshal.SizeOf<NativeMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION>());
         try
         {
-            var jeli = new NativeMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
-            jeli.BasicLimitInformation.LimitFlags = NativeMethods.JOBOBJECTLIMIT.KillOnJobClose;
-            Marshal.StructureToPtr(jeli, jeli_buf, false);
-            if (
-                !NativeMethods.SetInformationJobObject(
-                    hjob,
-                    NativeMethods.JOBOBJECTINFOCLASS.ExtendedLimitInformation,
-                    jeli_buf,
-                    (uint)Marshal.SizeOf(jeli)
-                )
-            )
-            {
-                throw new Exception("SetInformationJobObject() failed.");
-            }
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(jeli_buf);
-        }
+            var hjob = NativeMethods.CreateJobObject(IntPtr.Zero, IntPtr.Zero);
+            if (hjob == IntPtr.Zero)
+                throw new Exception("CreateJobObject() failed.");
 
-        _hjob = hjob;
+            var jeli_buf = Marshal.AllocHGlobal(Marshal.SizeOf<NativeMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION>());
+            try
+            {
+                var jeli = new NativeMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
+                jeli.BasicLimitInformation.LimitFlags = NativeMethods.JOBOBJECTLIMIT.KillOnJobClose;
+                Marshal.StructureToPtr(jeli, jeli_buf, false);
+                if (
+                    !NativeMethods.SetInformationJobObject(
+                        hjob,
+                        NativeMethods.JOBOBJECTINFOCLASS.ExtendedLimitInformation,
+                        jeli_buf,
+                        (uint)Marshal.SizeOf(jeli)
+                    )
+                )
+                {
+                    throw new Exception("SetInformationJobObject() failed.");
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(jeli_buf);
+            }
+
+            _hjob = hjob;
+        }
+        catch
+        {
+            // Ignore errors. There's nothing we can do.
+            _hjob = IntPtr.Zero;
+        }
     }
 
     public static void Add(Process p)
     {
-        // Ignore errors. There's nothing we can do.
-        _ = NativeMethods.AssignProcessToJobObject(_hjob, p.Handle);
+        try
+        {
+            if (_hjob != IntPtr.Zero)
+                _ = NativeMethods.AssignProcessToJobObject(_hjob, p.Handle);
+        }
+        catch
+        {
+            // Ignore errors. There's nothing we can do.
+        }
     }
 
     private static class NativeMethods

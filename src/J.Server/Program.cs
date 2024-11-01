@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Web;
 using Amazon.S3;
+using J.Base;
 using J.Core;
 using J.Core.Data;
 using J.Server;

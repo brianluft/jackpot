@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Amazon.S3;
+using J.Base;
 using J.Core;
 using J.Core.Data;
 
@@ -112,6 +113,7 @@ public sealed class Importer(
             };
 
         using var p = Process.Start(psi)!;
+        ApplicationSubProcesses.Add(p);
 
         TimeSpan? duration = null;
         p.OutputDataReceived += (sender, e) =>
