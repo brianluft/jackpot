@@ -8,7 +8,7 @@
   
   <Identity
     Name="J.Jackpot"
-    Publisher="CN=Brian Luft, O=Brian Luft, L=St. Thomas, C=VI"
+    Publisher="CN=Brian Luft"
     Version="1.0.0.0"
     ProcessorArchitecture="x64" />
     

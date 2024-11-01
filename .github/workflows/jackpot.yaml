@@ -21,8 +21,12 @@ jobs:
         shell: pwsh
         run: .\ps1\Publish-Release.ps1
 
-      - name: Upload MSIX
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: Jackpot
-          path: publish/Jackpot.msix
+          compression-level: 0
+          retention-days: 7
+          path: |
+            publish/Jackpot.msix
+            publish/ci-certificate.cer

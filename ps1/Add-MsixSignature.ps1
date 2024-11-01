@@ -16,7 +16,6 @@ $windowsSdkVersion = `
     Where-Object { $_.Name -match '^10\.0\.\d+\.\d+$' } | 
     Sort-Object Name -Descending | 
     Select-Object -First 1 -ExpandProperty Name
-Write-Output "Windows SDK: $windowsSdkVersion"
 
 $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\$windowsSdkVersion\x64\signtool.exe"
 if (Test-Path $signtool) {
