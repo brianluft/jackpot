@@ -19,7 +19,6 @@ public sealed partial class LibraryProvider : IDisposable
     private readonly AsyncRetryPolicy _policy = Policy
         .Handle<Exception>(x => x is not AmazonS3Exception s3ex || (int)s3ex.StatusCode >= 500)
         .RetryAsync(5);
-    private readonly ReaderWriterLockSlim _rwlock = new();
     private SqliteConnection? _connection;
 
     public LibraryProvider(AccountSettingsProvider accountSettingsProvider, ProcessTempDir processTempDir)
@@ -36,58 +35,33 @@ public sealed partial class LibraryProvider : IDisposable
         connection.Open();
     }
 
-    private void WithWriteLock(Action action)
-    {
-        _rwlock.EnterWriteLock();
-        try
-        {
-            action();
-        }
-        finally
-        {
-            _rwlock.ExitWriteLock();
-        }
-    }
-
-    private T WithReadLock<T>(Func<T> func)
-    {
-        _rwlock.EnterReadLock();
-        try
-        {
-            return func();
-        }
-        finally
-        {
-            _rwlock.ExitReadLock();
-        }
-    }
-
     public void Connect()
     {
-        WithWriteLock(() =>
-        {
-            _connection?.Dispose();
-            _connection = null;
+        Disconnect();
 
-            SqliteConnectionStringBuilder builder =
-                new() { DataSource = _accountSettingsProvider.Current.DatabaseFilePath, Pooling = false };
-            SqliteConnection connection = new(builder.ConnectionString);
-            connection.Open();
-            _connection = connection;
+        SqliteConnectionStringBuilder builder =
+            new() { DataSource = _accountSettingsProvider.Current.DatabaseFilePath, Pooling = false };
+        SqliteConnection connection = new(builder.ConnectionString);
+        connection.Open();
+        _connection = connection;
 
-            Execute("PRAGMA foreign_keys = ON;");
+        Execute("PRAGMA foreign_keys = ON;");
 
-            Upgrade();
-        });
+        Upgrade();
     }
 
     public void Disconnect()
     {
-        WithWriteLock(() =>
+        var oldConnection = _connection;
+        _connection = null;
+        try
         {
-            _connection?.Dispose();
-            _connection = null;
-        });
+            oldConnection?.Dispose();
+        }
+        catch
+        {
+            // Not my problem.
+        }
     }
 
     public void Dispose()
@@ -100,22 +74,6 @@ public sealed partial class LibraryProvider : IDisposable
         return File.ReadAllText(
             Path.Combine(Path.GetDirectoryName(typeof(LibraryProvider).Assembly.Location)!, "Resources", filename)
         );
-    }
-
-    private int GetDatabaseVersion()
-    {
-        Execute(
-            @"
-CREATE TABLE IF NOT EXISTS file_version (
-    version_number INTEGER PRIMARY KEY
-) WITHOUT ROWID
-"
-        );
-
-        using var command = _connection!.CreateCommand();
-        command.CommandText = "SELECT version_number FROM file_version;";
-        using var reader = command.ExecuteReader();
-        return reader.Read() ? reader.GetInt32(0) : 0;
     }
 
     private void Upgrade()
@@ -154,6 +112,22 @@ INSERT INTO file_version VALUES (@n);
         }
 
         transaction.Commit();
+
+        int GetDatabaseVersion()
+        {
+            Execute(
+                @"
+CREATE TABLE IF NOT EXISTS file_version (
+    version_number INTEGER PRIMARY KEY
+) WITHOUT ROWID
+"
+            );
+
+            using var command = _connection!.CreateCommand();
+            command.CommandText = "SELECT version_number FROM file_version;";
+            using var reader = command.ExecuteReader();
+            return reader.Read() ? reader.GetInt32(0) : 0;
+        }
     }
 
     private List<T> Query<T>(
@@ -162,17 +136,14 @@ INSERT INTO file_version VALUES (@n);
         Func<SqliteDataReader, T> generator
     )
     {
-        return WithReadLock(() =>
-        {
-            using var command = _connection!.CreateCommand();
-            command.CommandText = sql;
-            configureParameters(command.Parameters);
-            using var reader = command.ExecuteReader();
-            List<T> rows = [];
-            while (reader.Read())
-                rows.Add(generator(reader));
-            return rows;
-        });
+        using var command = _connection!.CreateCommand();
+        command.CommandText = sql;
+        configureParameters(command.Parameters);
+        using var reader = command.ExecuteReader();
+        List<T> rows = [];
+        while (reader.Read())
+            rows.Add(generator(reader));
+        return rows;
     }
 
     private T QuerySingle<T>(
@@ -186,13 +157,10 @@ INSERT INTO file_version VALUES (@n);
 
     private void Execute(string sql, Action<SqliteParameterCollection>? configureParameters = null)
     {
-        WithWriteLock(() =>
-        {
-            using var command = _connection!.CreateCommand();
-            command.CommandText = sql;
-            configureParameters?.Invoke(command.Parameters);
-            command.ExecuteNonQuery();
-        });
+        using var command = _connection!.CreateCommand();
+        command.CommandText = sql;
+        configureParameters?.Invoke(command.Parameters);
+        command.ExecuteNonQuery();
     }
 
     public void NewTagType(TagType tagType) =>
@@ -605,12 +573,9 @@ INSERT INTO file_version VALUES (@n);
 
     public void WithTransaction(Action action)
     {
-        WithWriteLock(() =>
-        {
-            using var transaction = _connection!.BeginTransaction();
-            action();
-            transaction.Commit();
-        });
+        using var transaction = _connection!.BeginTransaction();
+        action();
+        transaction.Commit();
     }
 
     public async Task SyncUpAsync(CancellationToken cancel)
