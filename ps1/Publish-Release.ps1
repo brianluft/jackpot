@@ -178,14 +178,14 @@ function Copy-MiscFiles
 	try
 	{
 		Write-Host "`n--- Start: MakePri createconfig ---"
-		& "$makepri" createconfig /cf "priconfig.xml" /dq en-US
+		& "$makepri" createconfig /cf "priconfig.xml" /dq en-US | Out-Host
 		if ($LastExitCode -ne 0) {
 			throw "MakePri createconfig failed."
 		}
 		Write-Host "--- End: MakePri createconfig ---`n"
 
 		Write-Host "--- Start: MakePri new ---"
-		& "$makepri" new /pr "$buildDir" /cf "priconfig.xml"
+		& "$makepri" new /pr "$buildDir" /cf "priconfig.xml" | Out-Host
 		if ($LastExitCode -ne 0) {
 			throw "MakePri new failed."
 		}
