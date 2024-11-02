@@ -1,46 +1,60 @@
-# <img src="../src/J.App/Resources/App.png" width=24 height=24> Jackpot &mdash; personal cloud media library
+# <img src="../src/J.App/Resources/App.png" width=24 height=24> Jackpot Media Library
 
-Jackpot is a Windows app for storing your media collection in S3-compatible cloud storage and streaming it to your computer.
+### Personal streaming hub powered by Backblaze B2
+ 
+- Browse your collection as a wall of moving video clips.
+- Stream videos using [VLC player](https://www.videolan.org/vlc/). No intermediate server needed—the Jackpot app talks directly to Backblaze B2.
+- Fullscreen, mouse-driven design featuring [action buttons along the edges of the screen](https://en.wikipedia.org/wiki/Fitts%27s_law).
+- Organize your media with tagging and filtering.
+- Your library can be exported as `.m3u8` playlists for VLC on Apple devices and other non-Windows computers in your home. They'll stream through your main Jackpot installation.
+- All content is secured with standard AES-encrypted `.zip` files.
 
+<br>
 <img src="img/main-screenshot.jpg" width=640 height=360>
-
-## Features
-
-- Direct streaming from cloud storage. No intermediate server needed.
-- Flexible tagging and filtering.
-- Browse through a wall of moving video thumbnails.
-- Stream movies using the VLC player. Stream multiple videos at once, if you want.
-- Fullscreen, mouse-driven user interface featuring action buttons along the edges of the screen, following [Fitts's law](https://en.wikipedia.org/wiki/Fitts%27s_law).
-- Export your library as a folder of `.m3u8` playlist files for use with VLC on tvOS/iOS and other computers on your local network that don't have Jackpot. They will stream through Jackpot running on your main computer.
-- End-to-end encryption using standard AES-encrypted `.zip` files.
 
 ## Pricing
 
-The Jackpot app is free, but you need an account with an S3-compatible cloud storage provider.
-You'll pay them each month per terabyte of storage.
-Some providers also charge per gigabyte downloaded ("egress") beyond a certain allotment per month.
-Uploads to the cloud are always free.
+Jackpot is free and open source.
+You'll just need an S3-compatible cloud storage account with monthly costs based on storage and streaming data used.
 
-Provider | Storage price | Included downloads | Extra downloads
--- | -- | -- | --
-<nobr>🥇 [Backblaze B2](https://www.backblaze.com/cloud-storage)</nobr> | $6/TB/month | 3x total storage/month | $0.01/GB
-<nobr>🥈 [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)</nobr> | $15/TB/month | Unlimited | &mdash;
-<nobr>💸 [Amazon S3](https://aws.amazon.com/s3/)</nobr> | Up to $23/TB/month | 100 GB/month | $0.09/GB
+<table>
+<tr>
+<td>&nbsp;</td>
+<th align="center">🥇<br><a href="https://www.backblaze.com/cloud-storage" rel="nofollow">Backblaze&nbsp;B2</a></td>
+<th align="center">🥈<br><a href="https://www.cloudflare.com/developer-platform/r2/" rel="nofollow">Cloudflare&nbsp;R2</a></td>
+<th align="center">💸<br><a href="https://aws.amazon.com/s3/" rel="nofollow">Amazon&nbsp;S3</a></td>
+</tr>
+<tr>
+<td align="right"><i>Storage:</i></td>
+<td>$6 per TB</td>
+<td>$15 per TB</td>
+<td>$1&ndash;$23 per TB</td>
+</tr>
+<tr>
+<td align="right"><i>Included streaming:</i></td>
+<td>3 × storage</td>
+<td>Unlimited</td>
+<td>100 GB</td>
+</tr>
+<tr>
+<td align="right"><i>Additional streaming:</i></td>
+<td>1¢ per GB</td>
+<td>&mdash;</td>
+<td>9¢ per GB</td>
+</tr>
+</table>
 
-Read more about egress fees in the Backblaze article, ["Cloud 101: Data Egress Fees Explained."](https://www.backblaze.com/blog/cloud-101-data-egress-fees-explained/)
+## Requirements
 
-## Getting started
+- Windows 10 (version 20H1) or higher
+- S3-compatible cloud storage account
+- Internet speed: 20&nbsp;Mbps per 1080p stream
+- Video files in MP4 format (Jackpot does not reencode videos)
 
-On the Backblaze website, create a bucket and an application key.
+## Alternatives
 
-Download Jackpot, extract, and run `Jackpot.exe`.
-If the Account Settings window does not appear, click the menu button in the upper left corner to access it.
-Enter, at minimum:
-- Endpoint URL
-- Bucket name
-- Access key ID and secret access key
-- Choose a password for encrypting your library
+A USB drive is the simplest solution for most users: affordable, fast, and works offline. Media server software like [Jellyfin](https://jellyfin.org/), [Emby](https://emby.media/index.html), and [Plex Media Server](https://en.wikipedia.org/wiki/Plex_Inc.#Plex_Media_Server) can provide streaming and organization features. These are mature platforms with large communities, though they focus on commercial TV shows and movies and require technical knowledge to set up.
 
-Save your settings, then click "Connect" under the menu.
-You're in!
-Next time, Jackpot will connect automatically.
+Consumer cloud storage like [OneDrive](https://en.wikipedia.org/wiki/OneDrive) and [Dropbox](https://en.wikipedia.org/wiki/Dropbox) offer video streaming, but they transcode videos to lower quality, have slow startup times, and lack native player integration. They can be convenient for small personal collections, but they don't provide end-to-end encryption and can be cumbersome for large libraries.
+
+Jackpot aims for a middle ground: direct streaming from cheap commodity storage with end-to-end encryption, no quality loss, and minimal setup.
