@@ -19,7 +19,7 @@ jobs:
 
       - name: Publish
         shell: pwsh
-        run: .\ps1\Publish-Release.ps1
+        run: .\src\Publish-Release.ps1
 
       - name: Upload
         uses: actions/upload-artifact@v4
