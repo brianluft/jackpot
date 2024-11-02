@@ -157,8 +157,8 @@ function Get-Vlc
 
 function Copy-MiscFiles
 {
-	Copy-Item -Path "$root\docs\COPYING" -Destination "$buildDir\COPYING"
-	Copy-Item -Path "$root\docs\NOTICE" -Destination "$buildDir\NOTICE"
+	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
+	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
 	Copy-Item -Path "$root\src\AppxManifest.xml" -Destination "$buildDir\AppxManifest.xml"
 
 	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
