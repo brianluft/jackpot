@@ -44,13 +44,28 @@ void RefreshLibrary()
         {
             Dictionary<ListPageKey, Lazy<List<Page>>> dict = [];
             dict[new ListPageKey(ListPageType.Movies, null)] = new(
-                () => SplitMoviesIntoPages(movies, "Movies", optionShuffle)
+                () =>
+                    SplitMoviesIntoPages(
+                        movies,
+                        "Movies",
+                        optionShuffle,
+                        n => $"/list.html?type={ListPageType.Movies}&pageIndex={n - 1}"
+                    )
             );
 
             foreach (var tagType in libraryProvider.GetTagTypes())
             {
                 ListPageKey key = new(ListPageType.TagType, tagType.Id);
-                dict[key] = new(() => GetTagListPage(libraryProvider, tagType, optionShuffle));
+                dict[key] = new(
+                    () =>
+                        GetTagListPage(
+                            libraryProvider,
+                            tagType,
+                            optionShuffle,
+                            n =>
+                                $"/list.html?type={ListPageType.TagType}&tagTypeId={tagType.Id.Value}&pageIndex={n - 1}"
+                        )
+                );
             }
 
             listPages = dict;
@@ -66,7 +81,8 @@ void RefreshLibrary()
                         SplitMoviesIntoPages(
                             libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
                             tag.Name,
-                            optionShuffle
+                            optionShuffle,
+                            n => $"/tag.html?tagId={tag.Id.Value}&pageIndex={n - 1}"
                         )
                 );
             tagPages = dict;
@@ -141,7 +157,12 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
     }
 }
 
-static List<Page> GetTagListPage(LibraryProvider libraryProvider, TagType tagType, bool shuffle)
+static List<Page> GetTagListPage(
+    LibraryProvider libraryProvider,
+    TagType tagType,
+    bool shuffle,
+    Func<int, string> getUrlForPageNumber
+)
 {
     var tags = libraryProvider.GetTags(tagType.Id);
     var dict = libraryProvider.GetRandomMoviePerTag(tagType);
@@ -154,19 +175,30 @@ static List<Page> GetTagListPage(LibraryProvider libraryProvider, TagType tagTyp
         Page.Block block = new(movieId, tag.Id, tag.Name);
         blocks.Add(block);
     }
-    return SplitBlocksIntoPages(blocks, tagType.PluralName, shuffle);
+    return SplitBlocksIntoPages(blocks, tagType.PluralName, shuffle, getUrlForPageNumber);
 }
 
-static List<Page> SplitMoviesIntoPages(List<Movie> movies, string title, bool shuffle)
+static List<Page> SplitMoviesIntoPages(
+    List<Movie> movies,
+    string title,
+    bool shuffle,
+    Func<int, string> getUrlForPageNumber
+)
 {
     return SplitBlocksIntoPages(
         (from x in movies select new Page.Block(x.Id, null, x.Filename)).ToList(),
         title,
-        shuffle
+        shuffle,
+        getUrlForPageNumber
     );
 }
 
-static List<Page> SplitBlocksIntoPages(List<Page.Block> blocks, string title, bool shuffle)
+static List<Page> SplitBlocksIntoPages(
+    List<Page.Block> blocks,
+    string title,
+    bool shuffle,
+    Func<int, string> getUrlForPageNumber
+)
 {
     if (shuffle)
         Shuffle(blocks);
@@ -177,10 +209,16 @@ static List<Page> SplitBlocksIntoPages(List<Page.Block> blocks, string title, bo
     var pageNumber = 1;
     foreach (var chunk in blocks.Chunk(BLOCKS_PER_PAGE))
     {
-        Page page = new([.. chunk], "");
+        var previousPageUrl = pageNumber > 1 ? getUrlForPageNumber(pageNumber - 1) : "";
+        var nextPageUrl = getUrlForPageNumber(pageNumber + 1);
+        Page page = new([.. chunk], "", previousPageUrl, nextPageUrl);
         pages.Add(page);
         pageNumber++;
     }
+
+    // Blank out the NextPageUrl for the last page.
+    if (pages.Count > 0)
+        pages[^1] = pages[^1] with { NextPageUrl = "" };
 
     for (var i = 0; i < pages.Count; i++)
     {
@@ -275,7 +313,7 @@ app.MapGet(
         ListPageKey key = new(listPageType, tagTypeId is null ? null : new(tagTypeId));
         var lazy = listPages[key];
         if (pageIndex < 0 || pageIndex >= lazy.Value.Count)
-            page = new([], "Blank");
+            page = new([], "Blank", "", "");
         else
             page = lazy.Value[pageIndex];
 
@@ -292,7 +330,7 @@ app.MapGet(
 
         var lazy = tagPages[new(tagId)];
         if (pageIndex < 0 || pageIndex >= lazy.Value.Count)
-            page = new([], "");
+            page = new([], "", "", "");
         else
             page = lazy.Value[pageIndex];
 

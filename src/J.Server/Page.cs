@@ -5,7 +5,7 @@ using J.Core.Data;
 
 namespace J.Server;
 
-public readonly record struct Page(List<Page.Block> Blocks, string Title)
+public readonly record struct Page(List<Page.Block> Blocks, string Title, string PreviousPageUrl, string NextPageUrl)
 {
     public readonly record struct Block(
         MovieId MovieId, // movie to get the clip from
@@ -131,9 +131,42 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                         location.href = '/tag.html?tagId=' + encodeURIComponent(id) + '&pageIndex=0';
                     }
 
+                    // Disable context menu
                     document.addEventListener('contextmenu', function(event) {
                         event.preventDefault();
                     });
+
+                    // Handle mouse wheel
+                    (function() {
+                        // Handles mouse wheel navigation on a page with no scrolling.
+                        // - Prevents default wheel behavior (scrolling)
+                        // - First downward wheel triggers next page
+                        // - First upward wheel triggers previous page
+                        // - Each direction works exactly once
+                        document.addEventListener('wheel', (e) => { e.preventDefault(); }, { passive: false });
+
+                        let hasHandledUp = false;
+                        let hasHandledDown = false;
+
+                        const previousPageUrl = '{{PreviousPageUrl}}';
+                        const nextPageUrl = '{{NextPageUrl}}';
+
+                        document.addEventListener('wheel', (event) => {
+                            const isDownScroll = Math.sign(event.deltaY) > 0;
+
+                            if (isDownScroll && !hasHandledDown) {
+                                hasHandledDown = true;
+                                if (nextPageUrl !== '') {
+                                    location.href = nextPageUrl;
+                                }
+                            } else if (!isDownScroll && !hasHandledUp) {
+                                hasHandledUp = true;
+                                if (previousPageUrl !== '') {
+                                    location.href = previousPageUrl;
+                                }
+                            }
+                        });
+                    })();
                 </script>
             </head>
             <body>
