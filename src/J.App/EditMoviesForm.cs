@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Frozen;
+using System.Data;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -302,6 +303,13 @@ public sealed class EditMoviesForm : Form
 
     private void UpdateList()
     {
+        var selectedIds = _grid
+            .SelectedRows.Cast<DataGridViewRow>()
+            .Select(x => (MovieId)((DataRowView)x.DataBoundItem).Row["id"])
+            .ToFrozenSet();
+        var firstRowIndex = _grid.FirstDisplayedScrollingRowIndex;
+        var firstColumnIndex = _grid.FirstDisplayedScrollingColumnIndex;
+
         var movies = _libraryProvider.GetMovies();
         var tagTypes = _libraryProvider.GetTagTypes().ToDictionary(x => x.Id);
         var tags = _libraryProvider.GetTags().ToDictionary(x => x.Id);
@@ -337,6 +345,21 @@ public sealed class EditMoviesForm : Form
         }
 
         _grid.DataSource = _data;
+
+        // Restore scroll position, if possible (it might be beyond the new bounds).
+        if (firstRowIndex >= 0 && firstRowIndex < _grid.RowCount)
+            _grid.FirstDisplayedScrollingRowIndex = firstRowIndex;
+        if (firstColumnIndex >= 0 && firstColumnIndex < _grid.ColumnCount)
+            _grid.FirstDisplayedScrollingColumnIndex = firstColumnIndex;
+
+        // Re-select the originally selected rows, if possible (they might have been deleted).
+        foreach (DataGridViewRow viewRow in _grid.Rows)
+        {
+            var row = ((DataRowView)viewRow.DataBoundItem).Row;
+            var id = (MovieId)row["id"];
+            if (selectedIds.Contains(id))
+                viewRow.Selected = true;
+        }
     }
 
     private void ExportMovie_Click(object? sender, EventArgs e)
