@@ -82,7 +82,7 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
 
     var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId);
     var tagTypes = libraryProvider.GetTags().ToDictionary(x => x.Id, x => x.TagTypeId);
-    return movies.Where(x => IsMovieIncludedInFilter(x)).ToList();
+    return movies.Where(IsMovieIncludedInFilter).ToList();
 
     bool IsMovieIncludedInFilter(Movie movie)
     {
@@ -122,13 +122,11 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
                     break;
 
                 case FilterOperator.ContainsString:
-                    foreach (var str in rule.StringValue!)
-                        Add(movie.Filename.Contains(str, StringComparison.InvariantCultureIgnoreCase));
+                    Add(movie.Filename.Contains(rule.StringValue!, StringComparison.InvariantCultureIgnoreCase));
                     break;
 
                 case FilterOperator.DoesNotContainString:
-                    foreach (var str in rule.StringValue!)
-                        Add(!movie.Filename.Contains(str, StringComparison.InvariantCultureIgnoreCase));
+                    Add(!movie.Filename.Contains(rule.StringValue!, StringComparison.InvariantCultureIgnoreCase));
                     break;
 
                 default:
