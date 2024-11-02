@@ -69,7 +69,7 @@ public sealed partial class MainForm : Form
         Ui ui = new(this);
         _ui = ui;
 
-        _edgeHideTimer = new() { Interval = 2000, Enabled = false };
+        _edgeHideTimer = new() { Interval = 250, Enabled = false };
         {
             _edgeHideTimer.Tick += EdgeHideTimer_Tick;
         }
