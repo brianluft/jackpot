@@ -1,4 +1,3 @@
-using System;
 using J.Base;
 using J.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,90 +95,133 @@ public static class Program
             _m3u8FolderSync = m3U8FolderSync;
             _serviceProvider = serviceProvider;
 
-            if (!_accountSettingsProvider.Current.AppearsValid)
-                ShowLoginForm();
-            else
-                ShowConnectForm();
+            Try(
+                () =>
+                {
+                    Application.ThreadException += (sender, e) =>
+                    {
+                        MessageBox.Show(e.Exception.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        ExitThread();
+                    };
+
+                    if (_accountSettingsProvider.Current.AppearsValid)
+                        ShowConnectForm();
+                    else
+                        ShowLoginForm();
+                },
+                ExitThread
+            );
+        }
+
+        private static void Try(Action workAction, Action exitAction)
+        {
+            try
+            {
+                workAction();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                exitAction();
+            }
         }
 
         private void ShowLoginForm()
         {
-            var f = _serviceProvider.GetRequiredService<LoginForm>();
-            f.FormClosed += delegate
-            {
-                if (f.DialogResult == DialogResult.OK)
-                    ShowConnectForm();
-                else
-                    ExitThread();
-            };
-            f.Show();
+            Try(
+                () =>
+                {
+                    var f = _serviceProvider.GetRequiredService<LoginForm>();
+                    f.FormClosed += delegate
+                    {
+                        if (f.DialogResult == DialogResult.OK)
+                            ShowConnectForm();
+                        else
+                            ExitThread();
+                    };
+                    f.Show();
+                },
+                ExitThread
+            );
         }
 
         private void ShowConnectForm()
         {
-            SimpleProgressForm f =
-                new(
-                    (updateProgress, updateMessage, cancel) =>
+            Try(
+                () =>
+                {
+                    SimpleProgressForm f =
+                        new(
+                            (updateProgress, updateMessage, cancel) =>
+                            {
+                                updateMessage("Connecting...");
+                                _libraryProvider.Connect();
+                                updateProgress(0.05);
+
+                                updateMessage("Synchronizing library...");
+                                _libraryProvider
+                                    .SyncDownAsync(x => updateProgress(0.05 + 0.75 * x), cancel)
+                                    .GetAwaiter()
+                                    .GetResult();
+
+                                updateMessage("Starting background service...");
+                                _client.Start();
+
+                                updateMessage("Synchronizing .m3u8 folder...");
+                                _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
+                            }
+                        )
+                        {
+                            Text = "Jackpot Login",
+                        };
+                    f.FormClosed += delegate
                     {
-                        updateMessage("Connecting...");
-                        _libraryProvider.Connect();
-                        updateProgress(0.05);
-
-                        updateMessage("Synchronizing library...");
-                        _libraryProvider
-                            .SyncDownAsync(x => updateProgress(0.05 + 0.75 * x), cancel)
-                            .GetAwaiter()
-                            .GetResult();
-
-                        updateMessage("Starting background service...");
-                        _client.Start();
-
-                        updateMessage("Synchronizing .m3u8 folder...");
-                        _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
-                    }
-                )
-                {
-                    Text = "Jackpot Login",
-                };
-            f.FormClosed += delegate
-            {
-                switch (f.DialogResult)
-                {
-                    case DialogResult.Cancel:
-                        ShowLoginForm();
-                        break;
-                    case DialogResult.Abort:
-                        MessageBox.Show(
-                            "Jackpot login failed.\n\n" + f.Exception!.SourceException.Message,
-                            "Jackpot Login",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
-                        );
-                        ShowLoginForm();
-                        break;
-                    case DialogResult.OK:
-                        ShowMainForm();
-                        break;
-                    default:
-                        ExitThread();
-                        break;
-                }
-            };
-            f.ShowInTaskbar = true;
-            f.Show();
+                        switch (f.DialogResult)
+                        {
+                            case DialogResult.Cancel:
+                                ShowLoginForm();
+                                break;
+                            case DialogResult.Abort:
+                                MessageBox.Show(
+                                    "Jackpot login failed.\n\n" + f.Exception!.SourceException.Message,
+                                    "Jackpot Login",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error
+                                );
+                                ShowLoginForm();
+                                break;
+                            case DialogResult.OK:
+                                ShowMainForm();
+                                break;
+                            default:
+                                ExitThread();
+                                break;
+                        }
+                    };
+                    f.ShowInTaskbar = true;
+                    f.Show();
+                },
+                ExitThread
+            );
         }
 
         private void ShowMainForm()
         {
-            var f = _serviceProvider.GetRequiredService<MainForm>();
-            f.FormClosed += delegate
-            {
-                if (f.DialogResult == DialogResult.Retry)
-                    ShowLoginForm();
-                else
-                    ExitThread();
-            };
-            f.Show();
+            Try(
+                () =>
+                {
+                    var f = _serviceProvider.GetRequiredService<MainForm>();
+                    f.FormClosed += delegate
+                    {
+                        if (f.DialogResult == DialogResult.Retry)
+                            ShowLoginForm();
+                        else
+                            ExitThread();
+                    };
+                    f.Show();
+                },
+                ExitThread
+            );
         }
     }
 }
