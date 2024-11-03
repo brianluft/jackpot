@@ -1,16 +1,16 @@
-# <img src="../src/J.App/Resources/App.png" width=24 height=24> Jackpot Media Library
+<h1 align="center"><img src="../src/J.App/Resources/App.png" width=64 height=64><br>Jackpot Media Library</h1>
 
-### Personal streaming hub powered by Backblaze B2
+### Browse and stream videos directly from S3-compatible storage
  
 - Browse your collection as a wall of moving video clips.
-- Stream videos using [VLC player](https://www.videolan.org/vlc/). No intermediate server needed—the Jackpot app talks directly to Backblaze B2.
+- Stream videos using [VLC player](https://www.videolan.org/vlc/). No intermediate server needed.
 - Fullscreen, mouse-driven design featuring [action buttons along the edges of the screen](https://en.wikipedia.org/wiki/Fitts%27s_law).
-- Organize your media with tagging and filtering.
-- Your library can be exported as `.m3u8` playlists for VLC on Apple devices and other non-Windows computers in your home. They'll stream through your main Jackpot installation.
+- Organize your media with simple tagging and filtering.
+- Apple devices and other non-Windows devices can stream videos through your main Jackpot installation. Sync your library to `.m3u8` files and share them over the local network.
 - All content is secured with standard AES-encrypted `.zip` files.
 
 <br>
-<img src="img/main-screenshot.jpg" width=640 height=360>
+<p align="center"><img src="img/main-screenshot.jpg" width=640 height=360></p>
 
 ## Pricing
 
@@ -57,4 +57,4 @@ A USB drive is the simplest solution for most users: affordable, fast, and works
 
 Consumer cloud storage like [OneDrive](https://en.wikipedia.org/wiki/OneDrive) and [Dropbox](https://en.wikipedia.org/wiki/Dropbox) offer video streaming, but they transcode videos to lower quality, have slow startup times, and lack native player integration. They can be convenient for small personal collections, but they don't provide end-to-end encryption and can be cumbersome for large libraries.
 
-Jackpot aims for a middle ground: direct streaming from cheap commodity storage with end-to-end encryption, no quality loss, and minimal setup.
+Jackpot aims for a middle ground: direct streaming from cheap cloud storage with end-to-end encryption, no quality loss, and minimal setup.
