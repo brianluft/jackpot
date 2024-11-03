@@ -13,4 +13,12 @@ public readonly record struct AccountSettings(
 )
 {
     public Password Password => new(PasswordText);
+
+    public bool AppearsValid =>
+        !string.IsNullOrWhiteSpace(Endpoint)
+        && !string.IsNullOrWhiteSpace(AccessKeyId)
+        && !string.IsNullOrWhiteSpace(SecretAccessKey)
+        && !string.IsNullOrWhiteSpace(Bucket)
+        && !string.IsNullOrWhiteSpace(DatabaseFilePath)
+        && !string.IsNullOrWhiteSpace(PasswordText);
 }

@@ -10,6 +10,7 @@ public sealed class SimpleProgressForm : Form
     private readonly ProgressBar _progressBar;
     private readonly FlowLayoutPanel _buttonFlow;
     private readonly Button _cancelButton;
+    private bool _allowClose = false;
 
     public delegate void WorkDelegate(
         Action<double> updateProgress,
@@ -79,7 +80,7 @@ public sealed class SimpleProgressForm : Form
         }
 
         Text = "Progress";
-        StartPosition = FormStartPosition.CenterParent;
+        StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = ui.GetSize(300, 150);
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowOnly;
@@ -108,6 +109,7 @@ public sealed class SimpleProgressForm : Form
             }
             finally
             {
+                _allowClose = true;
                 Close();
             }
         };
@@ -132,7 +134,13 @@ public sealed class SimpleProgressForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         base.OnFormClosing(e);
-        _cts.Cancel();
+
+        if (!_allowClose)
+        {
+            e.Cancel = true;
+            _cts.Cancel();
+            _cancelButton.Enabled = false;
+        }
     }
 
     private void CancelButton_Click(object? sender, EventArgs e)

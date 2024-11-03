@@ -4,7 +4,7 @@ using J.Core.Data;
 
 namespace J.App;
 
-public sealed class AccountSettingsForm : Form
+public sealed class LoginForm : Form
 {
     private readonly AccountSettingsProvider _accountSettingsProvider;
     private readonly TableLayoutPanel _formTable,
@@ -30,7 +30,7 @@ public sealed class AccountSettingsForm : Form
         _localPage;
     private readonly CheckBox _enableM3u8FolderCheck;
 
-    public AccountSettingsForm(AccountSettingsProvider accountSettingsProvider)
+    public LoginForm(AccountSettingsProvider accountSettingsProvider)
     {
         _accountSettingsProvider = accountSettingsProvider;
 
@@ -144,12 +144,15 @@ public sealed class AccountSettingsForm : Form
                 _saveCancelButtonsFlow.Dock = DockStyle.Right;
                 _saveCancelButtonsFlow.Margin = ui.TopSpacingBig;
 
-                _saveCancelButtonsFlow.Controls.Add(_saveButton = ui.NewButton("Save"));
+                _saveCancelButtonsFlow.Controls.Add(_saveButton = ui.NewButton("Log in"));
                 {
                     _saveButton.Click += SaveButton_Click;
                 }
 
-                _saveCancelButtonsFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));
+                _saveCancelButtonsFlow.Controls.Add(_cancelButton = ui.NewButton("Exit"));
+                {
+                    _cancelButton.Click += CancelButton_Click;
+                }
             }
         }
 
@@ -164,15 +167,16 @@ public sealed class AccountSettingsForm : Form
         }
         Space(this);
 
-        Text = "Account Settings";
-        StartPosition = FormStartPosition.CenterParent;
+        Text = "Jackpot Login";
+        StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = Size = ui.GetSize(460, 450);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
         AcceptButton = _saveButton;
         CancelButton = _cancelButton;
-        ShowIcon = false;
+        Icon = ui.GetIconResource("App.ico");
+        ShowIcon = true;
         ShowInTaskbar = false;
 
         Load += delegate
@@ -293,5 +297,11 @@ public sealed class AccountSettingsForm : Form
                 MessageBoxIcon.Error
             );
         }
+    }
+
+    private void CancelButton_Click(object? sender, EventArgs e)
+    {
+        DialogResult = DialogResult.Cancel;
+        Close();
     }
 }

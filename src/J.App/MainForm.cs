@@ -23,9 +23,7 @@ public sealed partial class MainForm : Form
         _rightPanel;
     private readonly ToolStripDropDownButton _menuButton,
         _filterButton;
-    private readonly ToolStripMenuItem _connectButton,
-        _disconnectButton,
-        _accountSettingsButton,
+    private readonly ToolStripMenuItem _logOutButton,
         _addToLibraryButton,
         _editTagsButton,
         _manageMoviesButton,
@@ -281,20 +279,9 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _menuButton.DropDownItems.Add(_connectButton = ui.NewToolStripMenuItem("Connect"));
+                _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Log out"));
                 {
-                    _connectButton.Click += ConnectButton_Click;
-                }
-
-                _menuButton.DropDownItems.Add(_disconnectButton = ui.NewToolStripMenuItem("Disconnect"));
-                {
-                    _disconnectButton.Visible = false;
-                    _disconnectButton.Click += DisconnectButton_Click;
-                }
-
-                _menuButton.DropDownItems.Add(_accountSettingsButton = ui.NewToolStripMenuItem("Account Settings"));
-                {
-                    _accountSettingsButton.Click += AccountSettingsButton_Click;
+                    _logOutButton.Click += DisconnectButton_Click;
                 }
             }
 
@@ -415,111 +402,36 @@ public sealed partial class MainForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-
-        try
-        {
-            Connect();
-        }
-        catch
-        {
-            // It's fine; let the user correct it and try connecting themselves.
-            _browser.Visible = false;
-            using var f = _serviceProvider.GetRequiredService<AccountSettingsForm>();
-            f.ShowDialog(this);
-        }
-    }
-
-    private void ConnectButton_Click(object? sender, EventArgs e)
-    {
-        try
-        {
-            Connect();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
+        _browser.Visible = true;
+        UpdateTagTypes();
+        GoHome();
     }
 
     private void DisconnectButton_Click(object? sender, EventArgs e)
     {
+        if (_importInProgress)
+        {
+            MessageBox.Show(
+                this,
+                "An import is in progress. Please wait for it to finish before logging out.",
+                "Jackpot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+            return;
+        }
+
         try
         {
-            Disconnect();
+            _client.Stop();
+            _libraryProvider.Disconnect();
+            DialogResult = DialogResult.Retry;
+            Close();
         }
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
-    }
-
-    private void Connect()
-    {
-        try
-        {
-            using SimpleProgressForm f =
-                new(
-                    (updateProgress, updateMessage, cancel) =>
-                    {
-                        updateMessage("Connecting...");
-                        _libraryProvider.Connect();
-                        updateMessage("Synchronizing library...");
-                        _libraryProvider.SyncDownAsync(CancellationToken.None).GetAwaiter().GetResult();
-                        updateMessage("Starting background service...");
-                        _client.Start();
-                        updateMessage("Synchronizing .m3u8 folder...");
-                        SyncM3u8Folder();
-                    },
-                    false
-                );
-            f.Text = "Connection";
-            var result = f.ShowDialog();
-            if (result == DialogResult.Abort)
-                f.Exception!.Throw();
-            else if (result == DialogResult.Cancel)
-                throw new OperationCanceledException();
-
-            _browser.Visible = true;
-            UpdateTagTypes();
-            GoHome();
-            EnableDisableToolbarButtons(true);
-        }
-        catch
-        {
-            try
-            {
-                Disconnect();
-            }
-            catch { }
-
-            throw;
-        }
-    }
-
-    private void Disconnect()
-    {
-        _client.Stop();
-        _libraryProvider.Disconnect();
-        NavigateBlank();
-        _browser.Visible = false;
-
-        EnableDisableToolbarButtons(false);
-    }
-
-    private void EnableDisableToolbarButtons(bool t)
-    {
-        _connectButton.Visible = !t;
-        _disconnectButton.Visible = t;
-        _accountSettingsButton.Enabled = !t;
-        _editTagsButton.Enabled = t;
-        _manageMoviesButton.Enabled = t;
-        _addToLibraryButton.Enabled = t;
-        _moviesButton.Enabled = t;
-        for (var i = 1; _menuButton.DropDownItems[i] is not ToolStripSeparator; i++)
-            _menuButton.DropDownItems[i].Enabled = t;
-        _shuffleButton.Enabled = t;
-        _homeButton.Enabled = t;
-        _filterButton.Enabled = t;
     }
 
     private void EditTagsButton_Click(object? sender, EventArgs e)
@@ -664,7 +576,7 @@ public sealed partial class MainForm : Form
 
     private void AccountSettingsButton_Click(object? sender, EventArgs e)
     {
-        using var f = _serviceProvider.GetRequiredService<AccountSettingsForm>();
+        using var f = _serviceProvider.GetRequiredService<LoginForm>();
         if (f.ShowDialog(this) == DialogResult.OK)
         {
             SyncM3u8Folder();
@@ -1004,18 +916,21 @@ public sealed partial class MainForm : Form
             return;
         }
 
-        var response = MessageBox.Show(
-            this,
-            "Are you sure you want to exit?",
-            "Jackpot",
-            MessageBoxButtons.OKCancel,
-            MessageBoxIcon.Question,
-            MessageBoxDefaultButton.Button2
-        );
-        if (response != DialogResult.OK)
+        if (DialogResult != DialogResult.Retry)
         {
-            e.Cancel = true;
-            return;
+            var response = MessageBox.Show(
+                this,
+                "Are you sure you want to exit?",
+                "Jackpot",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2
+            );
+            if (response != DialogResult.OK)
+            {
+                e.Cancel = true;
+                return;
+            }
         }
 
         base.OnFormClosing(e);

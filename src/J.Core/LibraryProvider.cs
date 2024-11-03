@@ -7,7 +7,8 @@ using Amazon.S3;
 using J.Core.Data;
 using Microsoft.Data.Sqlite;
 using Polly;
-using Polly.Retry;
+using Polly.Timeout;
+using Polly.Wrap;
 
 namespace J.Core;
 
@@ -17,9 +18,16 @@ public sealed partial class LibraryProvider : IDisposable
 
     private readonly AccountSettingsProvider _accountSettingsProvider;
     private readonly ProcessTempDir _processTempDir;
-    private readonly AsyncRetryPolicy _policy = Policy
-        .Handle<Exception>(x => x is not AmazonS3Exception s3ex || (int)s3ex.StatusCode >= 500)
-        .RetryAsync(5);
+
+    private readonly AsyncPolicyWrap _policy = Policy.WrapAsync(
+        // Outer: retry
+        Policy
+            .Handle<AmazonS3Exception>(x => x.StatusCode == HttpStatusCode.TooManyRequests || (int)x.StatusCode >= 500)
+            .WaitAndRetryAsync(5, _ => TimeSpan.FromSeconds(1)),
+        // Inner: timeout
+        Policy.TimeoutAsync(TimeSpan.FromSeconds(15), TimeoutStrategy.Pessimistic)
+    );
+
     private readonly object _lock = new();
     private SqliteConnection? _connection;
 
@@ -621,7 +629,7 @@ INSERT INTO file_version VALUES (@n);
         // Upload to S3.
         var putObjectResponse = await _policy
             .ExecuteAsync(
-                async () =>
+                async cancel =>
                     await s3.PutObjectAsync(
                             new()
                             {
@@ -631,7 +639,8 @@ INSERT INTO file_version VALUES (@n);
                             },
                             cancel
                         )
-                        .ConfigureAwait(false)
+                        .ConfigureAwait(false),
+                cancel
             )
             .ConfigureAwait(false);
 
@@ -674,8 +683,9 @@ INSERT INTO file_version VALUES (@n);
         {
             var metadataResponse = await _policy
                 .ExecuteAsync(
-                    async () =>
-                        await s3.GetObjectMetadataAsync(settings.Bucket, "library.zip", cancel).ConfigureAwait(false)
+                    async cancel =>
+                        await s3.GetObjectMetadataAsync(settings.Bucket, "library.zip", cancel).ConfigureAwait(false),
+                    cancel
                 )
                 .ConfigureAwait(false);
             remoteVersionId = metadataResponse.ETag;
@@ -705,7 +715,9 @@ INSERT INTO file_version VALUES (@n);
         {
             response = await _policy
                 .ExecuteAsync(
-                    async () => await s3.GetObjectAsync(settings.Bucket, "library.zip", cancel).ConfigureAwait(false)
+                    async cancel =>
+                        await s3.GetObjectAsync(settings.Bucket, "library.zip", cancel).ConfigureAwait(false),
+                    cancel
                 )
                 .ConfigureAwait(false);
         }

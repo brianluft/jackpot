@@ -42,7 +42,13 @@ public sealed class AccountSettingsProvider
 
     public IAmazonS3 CreateAmazonS3Client()
     {
-        AmazonS3Config config = new() { ServiceURL = _current.Endpoint };
+        AmazonS3Config config =
+            new()
+            {
+                ServiceURL = _current.Endpoint,
+                Timeout = TimeSpan.FromSeconds(30),
+                MaxErrorRetry = 3,
+            };
         return new AmazonS3Client(_current.AccessKeyId, _current.SecretAccessKey, config);
     }
 
