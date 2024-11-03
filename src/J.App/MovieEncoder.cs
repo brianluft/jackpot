@@ -12,6 +12,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
 
     public void Encode(
         string movieFilePath,
+        TimeSpan movieDuration,
         string clipFilePath,
         string outZipFilePath,
         string outM3u8FilePath,
@@ -23,12 +24,23 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         var m3u8Path = Path.Combine(tempDir.Path, $"{PREFIX}.m3u8");
         var title = Path.GetFileNameWithoutExtension(movieFilePath);
 
+        // HLS time:
+        // There seems to be an issue with too many segments so we need to keep it reasonable.
+        // 5 seconds at 1 hour 15 minutes seems to be around the cutoff for breakage.
+        // So we'll do half that: 5 seconds per 45 minutes.
+        var hlsTime = 5 * (1 + (int)(movieDuration.TotalMinutes / 45));
+
         ProcessStartInfo psi =
             new()
             {
+#if DEBUG
+                // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
+                FileName = "ffmpeg.exe",
+#else
                 FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
+#endif
                 Arguments =
-                    $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time 5 -hls_list_size 0 -hls_playlist_type vod -f hls \"{m3u8Path}\"",
+                    $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls \"{m3u8Path}\"",
                 WorkingDirectory = "",
                 UseShellExecute = false,
                 CreateNoWindow = true,

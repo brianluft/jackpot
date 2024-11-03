@@ -52,7 +52,8 @@ public sealed class ImportProgressForm : Form
             _table.Controls.Add(_progressBar = ui.NewProgressBar(400), 0, 3);
             {
                 _progressBar.Margin += ui.TopSpacingBig;
-                _progressBar.Maximum = 1000;
+                _progressBar.Style = ProgressBarStyle.Marquee;
+                _progressBar.MarqueeAnimationSpeed = 10;
             }
 
             _table.Controls.Add(_messageLabel = ui.NewLabel("Starting."), 0, 2);
@@ -180,15 +181,32 @@ public sealed class ImportProgressForm : Form
     {
         var uploadedBytes = _s3Uploader.BytesUploaded - _bytesUploadedAtStart;
         var hasStarted = uploadedBytes > 0;
-        if (!hasStarted)
-            _stopwatch.Restart();
 
-        var percent = _totalBytes == 0 ? 0d : (double)uploadedBytes / _totalBytes;
-        _progressBar.Value = Math.Clamp((int)(percent * 1000), 0, 1000);
+        if (hasStarted)
+        {
+            // The progressbar started off as marquee, but once we get going we'll convert to continuous.
+            if (_progressBar.Style != ProgressBarStyle.Continuous)
+            {
+                _progressBar.Style = ProgressBarStyle.Continuous;
+                _progressBar.Maximum = 1000;
+            }
+
+            var percent = _totalBytes == 0 ? 0d : (double)uploadedBytes / _totalBytes;
+            _progressBar.Value = Math.Clamp((int)(percent * 1000), 0, 1000);
+        }
+        else
+        {
+            _stopwatch.Restart();
+        }
+
         var elapsedTime = _stopwatch.Elapsed;
         var bytesPerSecond = elapsedTime.TotalSeconds == 0 ? 0 : uploadedBytes / elapsedTime.TotalSeconds;
         var megabitsPerSecond = bytesPerSecond * 8 / 1_000_000;
-        if (uploadedBytes > _totalBytes)
+        if (!hasStarted)
+        {
+            _messageLabel.Text = $"Uploaded 0 MB of {_totalBytes / 1_000_000:#,##0} MB";
+        }
+        else if (uploadedBytes > _totalBytes)
         {
             _messageLabel.Text = $"Uploaded {uploadedBytes / 1_000_000:#,##0} MB ({megabitsPerSecond:#,##0} Mbps)";
         }

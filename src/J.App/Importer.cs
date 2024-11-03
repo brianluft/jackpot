@@ -39,7 +39,14 @@ public sealed class Importer(
             MakeClip(sourceFilePath, duration, clipFilePath);
             cancel.ThrowIfCancellationRequested();
 
-            movieEncoder.Encode(sourceFilePath, clipFilePath, encodedFullMovieFilePath, m3u8FilePath, out zipIndex);
+            movieEncoder.Encode(
+                sourceFilePath,
+                duration,
+                clipFilePath,
+                encodedFullMovieFilePath,
+                m3u8FilePath,
+                out zipIndex
+            );
             cancel.ThrowIfCancellationRequested();
         }
 
@@ -105,7 +112,12 @@ public sealed class Importer(
         ProcessStartInfo psi =
             new()
             {
-                FileName = "ffprobe",
+#if DEBUG
+                // For debug builds, use ffprobe.exe in PATH since the ffmpeg install gets inserted only for releases.
+                FileName = "ffprobe.exe",
+#else
+                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffprobe.exe"),
+#endif
                 Arguments = $"-i \"{filePath}\" -show_entries format=duration -v quiet -of csv=\"p=0\"",
                 RedirectStandardOutput = true,
                 CreateNoWindow = true,
@@ -195,7 +207,12 @@ public sealed class Importer(
         ProcessStartInfo psi =
             new()
             {
+#if DEBUG
+                // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
+                FileName = "ffmpeg.exe",
+#else
                 FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
+#endif
                 Arguments = arguments,
                 CreateNoWindow = true,
                 UseShellExecute = false,

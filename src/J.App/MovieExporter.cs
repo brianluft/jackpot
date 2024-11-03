@@ -23,7 +23,12 @@ public sealed class MovieExporter(AccountSettingsProvider accountSettingsProvide
         ProcessStartInfo psi =
             new()
             {
+#if DEBUG
+                // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
+                FileName = "ffmpeg.exe",
+#else
                 FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
+#endif
                 Arguments = $"-y -i \"{m3u8Path}\" -codec copy \"{outFilePath}\"",
                 WorkingDirectory = "",
                 UseShellExecute = false,
