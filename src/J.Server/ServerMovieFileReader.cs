@@ -7,12 +7,6 @@ namespace J.Server;
 
 public sealed class ServerMovieFileReader(LibraryProvider libraryProvider, IAmazonS3 s3)
 {
-    public async Task ReadM3u8Async(MovieId movieId, Stream output, CancellationToken cancel)
-    {
-        var bytes = libraryProvider.GetM3u8(movieId);
-        await output.WriteAsync(bytes, cancel);
-    }
-
     public void ReadTs(MovieId movieId, int tsIndex, string bucket, Password password, Stream output)
     {
         var entryName = $"movie{tsIndex}.ts";

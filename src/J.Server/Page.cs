@@ -13,7 +13,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title, string
         string Title
     );
 
-    public string ToHtml()
+    public string ToHtml(string sessionPassword)
     {
         StringBuilder rows = new();
 
@@ -23,6 +23,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title, string
             foreach (var block in row)
             {
                 var query = HttpUtility.ParseQueryString("");
+                query["sessionPassword"] = sessionPassword;
                 query["movieId"] = block.MovieId.Value;
                 var onclick = block.TagId is null
                     ? $"openMovie('{block.MovieId.Value}');return false;"
@@ -115,20 +116,20 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title, string
                         const escapedMovieId = encodeURIComponent(movieId);
 
                         // Create the full URL with the escaped movieId
-                        const url = `/open-movie?movieId=${escapedMovieId}`;
+                        const url = `/open-movie?sessionPassword={{sessionPassword}}&movieId=${escapedMovieId}`;
 
                         // Send a POST request
                         fetch(url, { method: 'POST' })
-                        .then(() => {
-                            // cool
-                        })
-                        .catch(error => {
-                            alert('Could not open movie: ' + error.message);
-                        });
+                            .then(() => {
+                                // cool
+                            })
+                            .catch(error => {
+                                alert('Could not open movie: ' + error.message);
+                            });
                     }
 
                     function openTag(id) {
-                        location.href = '/tag.html?tagId=' + encodeURIComponent(id) + '&pageIndex=0';
+                        location.href = '/tag.html?sessionPassword={{sessionPassword}}&tagId=' + encodeURIComponent(id) + '&pageIndex=0';
                     }
 
                     // Disable context menu

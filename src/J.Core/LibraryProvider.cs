@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Web;
 using Amazon.S3;
 using J.Core.Data;
 using Microsoft.Data.Sqlite;
@@ -336,7 +337,7 @@ INSERT INTO file_version VALUES (@n);
 
     public byte[] GetMovieClip(MovieId movieId) => GetMovieFileData(movieId, "clip.mp4");
 
-    public byte[] GetM3u8(MovieId movieId)
+    public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword)
     {
         var hostname = _accountSettingsProvider.Current.M3u8Hostname;
         if (string.IsNullOrWhiteSpace(hostname))
@@ -355,7 +356,11 @@ INSERT INTO file_version VALUES (@n);
                 {
                     // Modify segment filename to point to our /movie.ts endpoint.
                     var tsIndex = int.Parse(match.Groups[1].Value);
-                    writer.WriteLine($"http://{hostname}:6786/movie.ts?movieId={movieId.Value}&index={tsIndex}");
+                    var query = HttpUtility.ParseQueryString("");
+                    query["sessionPassword"] = sessionPassword;
+                    query["movieId"] = movieId.Value;
+                    query["index"] = $"{tsIndex}";
+                    writer.WriteLine($"http://{hostname}:{portNumber}/movie.ts?{query}");
                 }
                 else
                 {

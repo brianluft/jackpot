@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.ComponentModel;
 using System.Text.RegularExpressions;
 using System.Web;
 using J.Core.Data;
@@ -674,7 +673,7 @@ public sealed partial class MainForm : Form
 
     private void MoviesButton_Click(object? sender, EventArgs e)
     {
-        Navigate("/list.html?type=Movies&pageIndex=0");
+        GoHome();
     }
 
     private void NavigateBlank()
@@ -684,7 +683,7 @@ public sealed partial class MainForm : Form
 
     private void Navigate(string path)
     {
-        var url = "http://localhost:6786" + path;
+        var url = $"http://localhost:{_client.Port}{path}";
         Uri uri = new(url);
         if (_browser.Source?.Equals(uri) ?? false)
             _browser.Reload();
@@ -692,10 +691,7 @@ public sealed partial class MainForm : Form
             _browser.Source = uri;
     }
 
-    private void Browser_NavigationCompleted(
-        object? sender,
-        Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e
-    )
+    private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
         var title = _browser.CoreWebView2.DocumentTitle;
 
@@ -786,7 +782,11 @@ public sealed partial class MainForm : Form
 
     private void GoHome()
     {
-        Navigate("/list.html?type=Movies&pageIndex=0");
+        var query = HttpUtility.ParseQueryString("");
+        query["sessionPassword"] = _client.SessionPassword;
+        query["type"] = "Movies";
+        query["pageIndex"] = "0";
+        Navigate($"/list.html?{query}");
     }
 
     private async void ShuffleButton_Click(object? sender, EventArgs e)
@@ -951,6 +951,7 @@ public sealed partial class MainForm : Form
             menuItem.Click += delegate
             {
                 var query = HttpUtility.ParseQueryString("");
+                query["sessionPassword"] = _client.SessionPassword;
                 query["type"] = "TagType";
                 query["tagTypeId"] = tagType.Id.Value;
                 query["pageIndex"] = "0";

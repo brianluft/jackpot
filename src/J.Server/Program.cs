@@ -21,6 +21,10 @@ builder.Services.AddSingleton<IAmazonS3>(services =>
 var app = builder.Build();
 app.UseHttpLogging();
 
+var configuredPort = GetPortNumber();
+var configuredSessionPassword =
+    Environment.GetEnvironmentVariable("JACKPOT_SESSION_PASSWORD")
+    ?? throw new Exception("Session password is required.");
 var libraryProvider = app.Services.GetRequiredService<LibraryProvider>();
 libraryProvider.Connect();
 var accountSettingsProvider = app.Services.GetRequiredService<AccountSettingsProvider>();
@@ -49,7 +53,8 @@ void RefreshLibrary()
                         movies,
                         "Movies",
                         optionShuffle,
-                        n => $"/list.html?type={ListPageType.Movies}&pageIndex={n - 1}"
+                        n =>
+                            $"/list.html?sessionPassword={configuredSessionPassword}&type={ListPageType.Movies}&pageIndex={n - 1}"
                     )
             );
 
@@ -63,7 +68,7 @@ void RefreshLibrary()
                             tagType,
                             optionShuffle,
                             n =>
-                                $"/list.html?type={ListPageType.TagType}&tagTypeId={tagType.Id.Value}&pageIndex={n - 1}"
+                                $"/list.html?sessionPassword={configuredSessionPassword}&type={ListPageType.TagType}&tagTypeId={tagType.Id.Value}&pageIndex={n - 1}"
                         )
                 );
             }
@@ -82,7 +87,8 @@ void RefreshLibrary()
                             libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
                             tag.Name,
                             optionShuffle,
-                            n => $"/tag.html?tagId={tag.Id.Value}&pageIndex={n - 1}"
+                            n =>
+                                $"/tag.html?sessionPassword={configuredSessionPassword}&tagId={tag.Id.Value}&pageIndex={n - 1}"
                         )
                 );
             tagPages = dict;
@@ -237,6 +243,39 @@ static void Shuffle<T>(List<T> list)
     }
 }
 
+static int GetPortNumber()
+{
+    var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    if (string.IsNullOrEmpty(urls))
+    {
+        throw new InvalidOperationException("ASPNETCORE_URLS environment variable is not set");
+    }
+
+    // Take first URL if multiple are specified
+    var url = urls.Split(';').First();
+
+    // Find the last occurrence of : and parse everything after it
+    var lastColon = url.LastIndexOf(':');
+    if (lastColon == -1)
+    {
+        throw new InvalidOperationException($"Could not parse port from URL: {url}");
+    }
+
+    var portStr = url[(lastColon + 1)..];
+    if (!int.TryParse(portStr, out int port))
+    {
+        throw new InvalidOperationException($"Invalid port number: {portStr}");
+    }
+
+    return port;
+}
+
+void CheckSessionPassword(string sessionPassword)
+{
+    if (sessionPassword != configuredSessionPassword)
+        throw new Exception("Unrecognized caller.");
+}
+
 RefreshLibrary();
 
 // ---
@@ -245,12 +284,14 @@ app.MapGet(
     "/movie.m3u8",
     async (
         [FromQuery, Required] string movieId,
+        [FromQuery, Required] string sessionPassword,
         HttpResponse response,
         ServerMovieFileReader movieFileReader,
         CancellationToken cancel
     ) =>
     {
-        var m3u8 = libraryProvider.GetM3u8(new(movieId));
+        CheckSessionPassword(sessionPassword);
+        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword);
         response.ContentType = "application/vnd.apple.mpegurl";
         await response.StartAsync(cancel);
         await response.Body.WriteAsync(m3u8, cancel);
@@ -262,11 +303,13 @@ app.MapGet(
     async (
         [FromQuery, Required] string movieId,
         [FromQuery, Required] int index,
+        [FromQuery, Required] string sessionPassword,
         HttpResponse response,
         ServerMovieFileReader movieFileReader,
         CancellationToken cancel
     ) =>
     {
+        CheckSessionPassword(sessionPassword);
         await using MemoryStream output = new();
         await ServerPolicy.Policy.ExecuteAsync(
             delegate
@@ -285,8 +328,14 @@ app.MapGet(
 
 app.MapGet(
     "/clip.mp4",
-    async ([FromQuery, Required] string movieId, HttpResponse response, CancellationToken cancel) =>
+    async (
+        [FromQuery, Required] string movieId,
+        [FromQuery, Required] string sessionPassword,
+        HttpResponse response,
+        CancellationToken cancel
+    ) =>
     {
+        CheckSessionPassword(sessionPassword);
         var bytes = libraryProvider.GetMovieClip(new(movieId));
 
         response.ContentType = "video/mp4";
@@ -296,7 +345,14 @@ app.MapGet(
     }
 );
 
-app.MapPost("/refresh-library", RefreshLibrary);
+app.MapPost(
+    "/refresh-library",
+    ([FromQuery, Required] string sessionPassword) =>
+    {
+        CheckSessionPassword(sessionPassword);
+        RefreshLibrary();
+    }
+);
 
 app.MapGet(
     "/list.html",
@@ -304,9 +360,11 @@ app.MapGet(
         [FromQuery, Required] string type,
         [FromQuery] string? tagTypeId,
         [FromQuery, Required] int pageIndex,
+        [FromQuery, Required] string sessionPassword,
         HttpResponse response
     ) =>
     {
+        CheckSessionPassword(sessionPassword);
         Page page;
 
         var listPageType = (ListPageType)Enum.Parse(typeof(ListPageType), type);
@@ -318,14 +376,20 @@ app.MapGet(
             page = lazy.Value[pageIndex];
 
         response.ContentType = "text/html";
-        return page.ToHtml();
+        return page.ToHtml(configuredSessionPassword);
     }
 );
 
 app.MapGet(
     "/tag.html",
-    ([FromQuery, Required] string tagId, [FromQuery, Required] int pageIndex, HttpResponse response) =>
+    (
+        [FromQuery, Required] string tagId,
+        [FromQuery, Required] int pageIndex,
+        [FromQuery, Required] string sessionPassword,
+        HttpResponse response
+    ) =>
     {
+        CheckSessionPassword(sessionPassword);
         Page page;
 
         var lazy = tagPages[new(tagId)];
@@ -335,18 +399,20 @@ app.MapGet(
             page = lazy.Value[pageIndex];
 
         response.ContentType = "text/html";
-        return page.ToHtml();
+        return page.ToHtml(configuredSessionPassword);
     }
 );
 
 app.MapPost(
     "/open-movie",
-    ([FromQuery, Required] string movieId, HttpResponse response) =>
+    ([FromQuery, Required] string movieId, [FromQuery, Required] string sessionPassword, HttpResponse response) =>
     {
+        CheckSessionPassword(sessionPassword);
         var movie = libraryProvider.GetMovie(new(movieId));
         var query = HttpUtility.ParseQueryString("");
         query["movieId"] = movie.Id.Value;
-        var url = $"http://localhost:6786/movie.m3u8?{query}";
+        query["sessionPassword"] = configuredSessionPassword;
+        var url = $"http://localhost:{configuredPort}/movie.m3u8?{query}";
         var isSystemVlc = accountSettingsProvider.IsVlcInstalled.Value;
         ProcessStartInfo psi =
             new()
@@ -362,8 +428,9 @@ app.MapPost(
 
 app.MapPost(
     "/shuffle",
-    ([FromQuery, Required] bool on) =>
+    ([FromQuery, Required] bool on, [FromQuery, Required] string sessionPassword) =>
     {
+        CheckSessionPassword(sessionPassword);
         lock (optionsLock)
         {
             optionShuffle = on;
@@ -374,8 +441,9 @@ app.MapPost(
 
 app.MapPost(
     "/filter",
-    ([FromBody] Filter filter) =>
+    ([FromBody] Filter filter, [FromQuery, Required] string sessionPassword) =>
     {
+        CheckSessionPassword(sessionPassword);
         lock (optionsLock)
         {
             optionFilter = filter;

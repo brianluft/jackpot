@@ -8,7 +8,8 @@ namespace J.App;
 
 public sealed partial class M3u8FolderSync(
     AccountSettingsProvider accountSettingsProvider,
-    LibraryProvider libraryProvider
+    LibraryProvider libraryProvider,
+    Client client
 )
 {
     private static readonly string _filesystemInvalidChars =
@@ -25,6 +26,8 @@ public sealed partial class M3u8FolderSync(
 
         lock (_lock)
         {
+            var portNumber = client.Port;
+            var sessionPassword = client.SessionPassword;
             var dir = accountSettingsProvider.Current.LocalM3u8FolderPath;
 
             var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.TagId, x => x.MovieId);
@@ -38,18 +41,18 @@ public sealed partial class M3u8FolderSync(
 
             var moviesDir = Path.Combine(dir, "Movies");
             Directory.CreateDirectory(moviesDir);
-            SyncMovies(moviesDir, movies.Values, livingFiles);
+            SyncMovies(moviesDir, movies.Values, livingFiles, portNumber, sessionPassword);
 
             foreach (var tagType in libraryProvider.GetTagTypes())
             {
                 var tagDir = Path.Combine(dir, MakeFilesystemSafe(tagType.PluralName));
                 Directory.CreateDirectory(tagDir);
-                SyncTagType(tagDir, tagType, movies, movieTags, livingFiles);
+                SyncTagType(tagDir, tagType, movies, movieTags, livingFiles, portNumber, sessionPassword);
             }
 
             var searchDir = Path.Combine(dir, "Search");
             Directory.CreateDirectory(searchDir);
-            SyncSearch(searchDir, movies.Values, livingFiles);
+            SyncSearch(searchDir, movies.Values, livingFiles, portNumber, sessionPassword);
 
             lock (livingFiles)
             {
@@ -74,14 +77,20 @@ public sealed partial class M3u8FolderSync(
         }
     }
 
-    private void SyncMovies(string dir, IEnumerable<Movie> movies, HashSet<string> livingFiles)
+    private void SyncMovies(
+        string dir,
+        IEnumerable<Movie> movies,
+        HashSet<string> livingFiles,
+        int portNumber,
+        string sessionPassword
+    )
     {
         Parallel.ForEach(
             movies,
             new ParallelOptions { MaxDegreeOfParallelism = 4 },
             movie =>
             {
-                CopyM3u8(dir, movie, livingFiles);
+                CopyM3u8(dir, movie, livingFiles, portNumber, sessionPassword);
             }
         );
     }
@@ -91,7 +100,9 @@ public sealed partial class M3u8FolderSync(
         TagType tagType,
         Dictionary<MovieId, Movie> movies,
         ILookup<TagId, MovieId> movieTags,
-        HashSet<string> livingFiles
+        HashSet<string> livingFiles,
+        int portNumber,
+        string sessionPassword
     )
     {
         List<(string TagDir, Movie Movie)> files = [];
@@ -112,12 +123,12 @@ public sealed partial class M3u8FolderSync(
             new ParallelOptions { MaxDegreeOfParallelism = 4 },
             file =>
             {
-                CopyM3u8(file.TagDir, file.Movie, livingFiles);
+                CopyM3u8(file.TagDir, file.Movie, livingFiles, portNumber, sessionPassword);
             }
         );
     }
 
-    private void CopyM3u8(string dir, Movie movie, HashSet<string> livingFiles)
+    private void CopyM3u8(string dir, Movie movie, HashSet<string> livingFiles, int portNumber, string sessionPassword)
     {
         var prefix = Path.Combine(dir, MakeFilesystemSafe(movie.Filename));
 
@@ -134,12 +145,18 @@ public sealed partial class M3u8FolderSync(
             }
         }
 
-        var m3u8 = libraryProvider.GetM3u8(movie.Id);
+        var m3u8 = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword);
 
         File.WriteAllBytes(m3u8FilePath, m3u8);
     }
 
-    private void SyncSearch(string searchDir, IEnumerable<Movie> movies, HashSet<string> livingFiles)
+    private void SyncSearch(
+        string searchDir,
+        IEnumerable<Movie> movies,
+        HashSet<string> livingFiles,
+        int portNumber,
+        string sessionPassword
+    )
     {
         var wordGroups = (
             from movie in movies
@@ -169,7 +186,7 @@ public sealed partial class M3u8FolderSync(
             file =>
             {
                 Directory.CreateDirectory(file.Dir);
-                CopyM3u8(file.Dir, file.Movie, livingFiles);
+                CopyM3u8(file.Dir, file.Movie, livingFiles, portNumber, sessionPassword);
             }
         );
     }

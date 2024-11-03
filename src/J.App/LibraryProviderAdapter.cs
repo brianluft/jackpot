@@ -39,7 +39,8 @@ public sealed class LibraryProviderAdapter(
 
     public byte[] GetMovieClip(MovieId movieId) => libraryProvider.GetMovieClip(movieId);
 
-    public byte[] GetM3u8(MovieId movieId) => libraryProvider.GetM3u8(movieId);
+    public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword) =>
+        libraryProvider.GetM3u8(movieId, portNumber, sessionPassword);
 
     public async Task NewTagTypeAsync(TagType tagType, CancellationToken cancel) =>
         await MutateAsync(() => libraryProvider.NewTagType(tagType), cancel).ConfigureAwait(false);
