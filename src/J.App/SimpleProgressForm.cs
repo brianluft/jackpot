@@ -46,24 +46,30 @@ public sealed class SimpleProgressForm : Form
     {
         Ui ui = new(this);
 
-        Controls.Add(_table = ui.NewTable(1, 3));
+        Controls.Add(_table = ui.NewTable(2, 3));
         {
             _table.Padding = ui.DefaultPadding;
             _table.RowStyles[0].SizeType = SizeType.Percent;
             _table.RowStyles[0].Height = 100;
+            _table.ColumnStyles[1].SizeType = SizeType.Percent;
+            _table.ColumnStyles[1].Width = 100;
 
-            _table.Controls.Add(_label = ui.NewLabel("Starting."), 0, 0);
-            {
-                _label.Margin = ui.BottomSpacingBig;
-            }
+            _table.Controls.Add(ui.NewPictureBox(ui.GetScaledBitmapResource("App.png", 32, 32)), 0, 0);
+
+            _table.Controls.Add(_label = ui.NewLabel("Starting."), 1, 0);
 
             _table.Controls.Add(_progressBar = ui.NewProgressBar(300), 0, 1);
             {
-                _progressBar.Margin = ui.BottomSpacingBig;
-                _progressBar.Visible = progressBar;
+                _table.SetColumnSpan(_progressBar, 2);
+                _progressBar.Margin = ui.TopSpacingBig + ui.BottomSpacingBig;
+                if (!progressBar)
+                {
+                    _progressBar.Style = ProgressBarStyle.Marquee;
+                    _progressBar.MarqueeAnimationSpeed = 10;
+                }
             }
 
-            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 2);
+            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 1, 2);
             {
                 _buttonFlow.Dock = DockStyle.Right;
 

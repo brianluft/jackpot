@@ -646,6 +646,11 @@ public sealed partial class Ui(Control parent)
         NativeMethods.SendMessageW(textBox.Handle, NativeMethods.EM_SETCUEBANNER, IntPtr.Zero, cueText);
     }
 
+    public PictureBox NewPictureBox(Image image)
+    {
+        return new() { Image = image, SizeMode = PictureBoxSizeMode.AutoSize };
+    }
+
     private static partial class NativeMethods
     {
         [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
