@@ -47,9 +47,9 @@ public sealed class EditTagsForm : Form
         SimpleProgressForm.Do(
             this,
             "Creating tag...",
-            async (cancel) =>
+            async (updateProgress, cancel) =>
             {
-                await _libraryProvider.NewTagTypeAsync(tagType, cancel).ConfigureAwait(true);
+                await _libraryProvider.NewTagTypeAsync(tagType, updateProgress, cancel).ConfigureAwait(true);
             }
         );
 

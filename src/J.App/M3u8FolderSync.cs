@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using System.Collections.Frozen;
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using J.Core;
@@ -12,19 +14,55 @@ public sealed partial class M3u8FolderSync(
     Client client
 )
 {
-    private static readonly string _filesystemInvalidChars =
+    private readonly string _filesystemInvalidChars =
         new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
 
-    private static readonly object _lock = new();
+    private readonly FrozenSet<string> _stopWords = new[]
+    {
+        "a",
+        "am",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "has",
+        "he",
+        "in",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "that",
+        "the",
+        "these",
+        "there",
+        "their",
+        "they",
+        "to",
+        "was",
+        "were",
+        "will",
+        "with",
+    }.ToFrozenSet();
+
+    private readonly object _syncLock = new();
+    private readonly object _fileHashesLock = new();
+    private readonly Dictionary<string, byte[]> _fileHashes = [];
 
     public bool Enabled => accountSettingsProvider.Current.EnableLocalM3u8Folder;
 
-    public void Sync()
+    public void Sync(Action<double> updateProgress)
     {
         if (!Enabled)
             return;
 
-        lock (_lock)
+        lock (_syncLock)
         {
             var portNumber = client.Port;
             var sessionPassword = client.SessionPassword;
@@ -41,18 +79,30 @@ public sealed partial class M3u8FolderSync(
 
             var moviesDir = Path.Combine(dir, "Movies");
             Directory.CreateDirectory(moviesDir);
-            SyncMovies(moviesDir, movies.Values, livingFiles, portNumber, sessionPassword);
+            SyncMovies(moviesDir, movies, livingFiles, portNumber, sessionPassword, x => updateProgress(0.2 * x));
 
-            foreach (var tagType in libraryProvider.GetTagTypes())
+            var tagTypes = libraryProvider.GetTagTypes();
+            var progressPerTagType = 0.2d / tagTypes.Count;
+            for (var i = 0; i < tagTypes.Count; i++)
             {
+                var tagType = tagTypes[i];
                 var tagDir = Path.Combine(dir, MakeFilesystemSafe(tagType.PluralName));
                 Directory.CreateDirectory(tagDir);
-                SyncTagType(tagDir, tagType, movies, movieTags, livingFiles, portNumber, sessionPassword);
+                SyncTagType(
+                    tagDir,
+                    tagType,
+                    movies,
+                    movieTags,
+                    livingFiles,
+                    portNumber,
+                    sessionPassword,
+                    x => updateProgress(0.2 + progressPerTagType * i + x * progressPerTagType)
+                );
             }
 
             var searchDir = Path.Combine(dir, "Search");
             Directory.CreateDirectory(searchDir);
-            SyncSearch(searchDir, movies.Values, livingFiles, portNumber, sessionPassword);
+            SyncSearch(searchDir, movies, livingFiles, portNumber, sessionPassword, x => updateProgress(0.4 + 0.6 * x));
 
             lock (livingFiles)
             {
@@ -79,18 +129,27 @@ public sealed partial class M3u8FolderSync(
 
     private void SyncMovies(
         string dir,
-        IEnumerable<Movie> movies,
+        Dictionary<MovieId, Movie> movies,
         HashSet<string> livingFiles,
         int portNumber,
-        string sessionPassword
+        string sessionPassword,
+        Action<double> updateProgress
     )
     {
+        var soFar = 0; // interlocked
+        var count = movies.Count;
+        var interval = Math.Max(1, count / 100);
+
         Parallel.ForEach(
             movies,
-            new ParallelOptions { MaxDegreeOfParallelism = 4 },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
             movie =>
             {
-                CopyM3u8(dir, movie, livingFiles, portNumber, sessionPassword);
+                CopyM3u8(dir, movie.Value, livingFiles, portNumber, sessionPassword);
+
+                var i = Interlocked.Increment(ref soFar);
+                if (i % interval == 0)
+                    updateProgress((double)i / count);
             }
         );
     }
@@ -102,7 +161,8 @@ public sealed partial class M3u8FolderSync(
         ILookup<TagId, MovieId> movieTags,
         HashSet<string> livingFiles,
         int portNumber,
-        string sessionPassword
+        string sessionPassword,
+        Action<double> updateProgress
     )
     {
         List<(string TagDir, Movie Movie)> files = [];
@@ -118,12 +178,20 @@ public sealed partial class M3u8FolderSync(
             }
         }
 
+        var soFar = 0; // interlocked
+        var count = files.Count;
+        var interval = Math.Max(1, count / 100);
+
         Parallel.ForEach(
             files,
-            new ParallelOptions { MaxDegreeOfParallelism = 4 },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
             file =>
             {
                 CopyM3u8(file.TagDir, file.Movie, livingFiles, portNumber, sessionPassword);
+
+                var i = Interlocked.Increment(ref soFar);
+                if (i % interval == 0)
+                    updateProgress((double)i / count);
             }
         );
     }
@@ -145,48 +213,75 @@ public sealed partial class M3u8FolderSync(
             }
         }
 
-        var m3u8 = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword);
+        var bytes = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword);
+        var fileHash = SHA256.HashData(bytes);
 
-        File.WriteAllBytes(m3u8FilePath, m3u8);
+        lock (_fileHashesLock)
+        {
+            if (_fileHashes.TryGetValue(m3u8FilePath, out var x) && fileHash.SequenceEqual(x))
+                return;
+        }
+
+        File.WriteAllBytes(m3u8FilePath, bytes);
+
+        lock (_fileHashesLock)
+        {
+            _fileHashes[m3u8FilePath] = fileHash;
+        }
     }
 
     private void SyncSearch(
         string searchDir,
-        IEnumerable<Movie> movies,
+        Dictionary<MovieId, Movie> movies,
         HashSet<string> livingFiles,
         int portNumber,
-        string sessionPassword
+        string sessionPassword,
+        Action<double> updateProgress
     )
     {
         var wordGroups = (
-            from movie in movies
-            from rawWord in WhitespaceRegex().Split(movie.Filename)
-            let word = MakeFilesystemSafe(Strip(rawWord))
-            where word.Length >= 2 && !NumberRegex().IsMatch(word)
-            select (Word: word.ToLowerInvariant(), Movie: movie)
-        )
-            .Distinct()
-            .ToLookup(x => x.Word, x => x.Movie);
+            from movie in movies.Values
+            from rawWord in WordSeparatorRegex().Split(movie.Filename)
+            let word = MakeFilesystemSafe(Strip(rawWord)).ToLowerInvariant()
+            where word.Length >= 2 && !NumberRegex().IsMatch(word) && !_stopWords.Contains(word)
+            group movie by word into wordGroup
+            let distinctMovies = wordGroup.Distinct().ToList()
+            orderby distinctMovies.Count descending
+            select (Word: wordGroup.Key, Movies: distinctMovies)
+        ).Take(500);
 
         List<(string Dir, Movie Movie)> files = [];
 
-        foreach (var wordGroup in wordGroups)
+        foreach (var (word, wordMovies) in wordGroups)
         {
-            var firstCharacter = GetFirstCharacter(wordGroup.Key).ToUpperInvariant();
-            var dir = Path.Combine(searchDir, firstCharacter, wordGroup.Key);
-            foreach (var movie in wordGroup)
+            var firstCharacter = GetFirstCharacter(word).ToUpperInvariant();
+            var dir = Path.Combine(searchDir, firstCharacter, word);
+            foreach (var movie in wordMovies)
             {
                 files.Add((dir, movie));
             }
         }
 
         Parallel.ForEach(
+            files.Select(x => x.Dir).Distinct(),
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
+            dir => Directory.CreateDirectory(dir)
+        );
+
+        var soFar = 0; // interlocked
+        var count = files.Count;
+        var interval = Math.Max(1, count / 100);
+
+        Parallel.ForEach(
             files,
-            new ParallelOptions { MaxDegreeOfParallelism = 4 },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
             file =>
             {
-                Directory.CreateDirectory(file.Dir);
                 CopyM3u8(file.Dir, file.Movie, livingFiles, portNumber, sessionPassword);
+
+                var i = Interlocked.Increment(ref soFar);
+                if (i % interval == 0)
+                    updateProgress((double)i / count);
             }
         );
     }
@@ -211,12 +306,22 @@ public sealed partial class M3u8FolderSync(
 
         foreach (var c in str)
         {
+            if (c is '\'')
+            {
+                // Allow "don't" etc.
+                sb.Append(c);
+                continue;
+            }
+
             switch (CharUnicodeInfo.GetUnicodeCategory(c))
             {
                 case UnicodeCategory.UppercaseLetter:
                 case UnicodeCategory.LowercaseLetter:
                 case UnicodeCategory.TitlecaseLetter:
                 case UnicodeCategory.OtherLetter:
+                case UnicodeCategory.DecimalDigitNumber:
+                case UnicodeCategory.LetterNumber:
+                case UnicodeCategory.OtherNumber:
                     sb.Append(c);
                     break;
             }
@@ -225,11 +330,11 @@ public sealed partial class M3u8FolderSync(
         return sb.ToString();
     }
 
-    private static string MakeFilesystemSafe(string name) =>
+    private string MakeFilesystemSafe(string name) =>
         string.Join("_", name.Split(_filesystemInvalidChars, StringSplitOptions.RemoveEmptyEntries));
 
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespaceRegex();
+    [GeneratedRegex(@"[_'""\s\-\[\]\(\)]+")]
+    private static partial Regex WordSeparatorRegex();
 
     [GeneratedRegex(@"^[\d\-\._]+$")]
     private static partial Regex NumberRegex();

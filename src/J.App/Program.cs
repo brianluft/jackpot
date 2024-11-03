@@ -42,6 +42,7 @@ public static class Program
         services.AddSingleton<Client>();
         services.AddSingleton<S3Uploader>();
         services.AddSingleton<SingleInstanceManager>();
+        services.AddSingleton<M3u8FolderSync>();
         services.AddSingleton<MyApplicationContext>();
 
         services.AddTransient<LoginForm>();
@@ -56,7 +57,6 @@ public static class Program
         services.AddTransient<ImportForm>();
         services.AddTransient<ImportProgressFormFactory>();
         services.AddTransient<LibraryProviderAdapter>();
-        services.AddTransient<M3u8FolderSync>();
         services.AddTransient<MainForm>();
         services.AddTransient<MovieEncoder>();
         services.AddTransient<MovieExporter>();
@@ -123,14 +123,20 @@ public static class Program
                     {
                         updateMessage("Connecting...");
                         _libraryProvider.Connect();
+                        updateProgress(0.05);
+
                         updateMessage("Synchronizing library...");
-                        _libraryProvider.SyncDownAsync(cancel).GetAwaiter().GetResult();
+                        _libraryProvider
+                            .SyncDownAsync(x => updateProgress(0.05 + 0.85 * x), cancel)
+                            .GetAwaiter()
+                            .GetResult();
+
                         updateMessage("Starting background service...");
                         _client.Start();
+
                         updateMessage("Synchronizing .m3u8 folder...");
-                        _m3u8FolderSync.Sync();
-                    },
-                    false
+                        _m3u8FolderSync.Sync(x => updateProgress(0.90 + 0.10 * x));
+                    }
                 )
                 {
                     Text = "Jackpot Login",
@@ -159,6 +165,7 @@ public static class Program
                         break;
                 }
             };
+            f.ShowInTaskbar = true;
             f.Show();
         }
 

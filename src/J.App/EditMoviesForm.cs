@@ -128,9 +128,9 @@ public sealed class EditMoviesForm : Form
             SimpleProgressForm.Do(
                 this,
                 "Tagging movies...",
-                async (cancel) =>
+                async (updateProgress, cancel) =>
                 {
-                    await _libraryProvider.AddMovieTagsAsync(list, cancel).ConfigureAwait(true);
+                    await _libraryProvider.AddMovieTagsAsync(list, updateProgress, cancel).ConfigureAwait(true);
                 }
             );
 
@@ -178,9 +178,11 @@ public sealed class EditMoviesForm : Form
             SimpleProgressForm.Do(
                 this,
                 "Untagging movies...",
-                async (cancel) =>
+                async (updateProgress, cancel) =>
                 {
-                    await _libraryProvider.DeleteMovieTagsAsync(removeMovieTags, cancel).ConfigureAwait(true);
+                    await _libraryProvider
+                        .DeleteMovieTagsAsync(removeMovieTags, updateProgress, cancel)
+                        .ConfigureAwait(true);
                 }
             );
 
@@ -219,9 +221,9 @@ public sealed class EditMoviesForm : Form
         SimpleProgressForm.Do(
             this,
             "Renaming...",
-            async (cancel) =>
+            async (updateProgress, cancel) =>
             {
-                await _libraryProvider.UpdateMovieAsync(movie, cancel).ConfigureAwait(false);
+                await _libraryProvider.UpdateMovieAsync(movie, updateProgress, cancel).ConfigureAwait(false);
             }
         );
 
@@ -262,7 +264,7 @@ public sealed class EditMoviesForm : Form
                         var i = 0;
                         foreach (var id in movieIds)
                         {
-                            _libraryProvider.DeleteMovieAsync(id, CancellationToken.None).GetAwaiter().GetResult();
+                            _libraryProvider.DeleteMovieAsync(id, updateProgress, cancel).GetAwaiter().GetResult();
 
                             i++;
                             updateProgress((double)i / count);

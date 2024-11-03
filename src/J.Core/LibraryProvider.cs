@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -564,6 +566,46 @@ INSERT INTO file_version VALUES (@n);
             }
         );
 
+    private readonly object _movieFileChunkSqlLock = new();
+    private readonly Dictionary<int, string> _movieFileChunkSql = [];
+
+    public void NewMovieFiles(MovieFile[] files)
+    {
+        string? sql;
+        lock (_movieFileChunkSqlLock)
+        {
+            if (!_movieFileChunkSql.TryGetValue(files.Length, out sql))
+            {
+                List<string> values = new(files.Length);
+                for (int i = 0; i < files.Length; i++)
+                    values.Add($"(@movie_id{i}, @name{i}, @offset{i}, @length{i}, @data{i})");
+
+                sql = $"""
+                    INSERT INTO movie_files (movie_id, name, offset, length, data)
+                    VALUES {string.Join(",\n", values)};
+                    """;
+
+                _movieFileChunkSql[files.Length] = sql;
+            }
+        }
+
+        Execute(
+            sql!,
+            p =>
+            {
+                for (int i = 0; i < files.Length; i++)
+                {
+                    var f = files[i];
+                    p.AddWithValue($"@movie_id{i}", f.MovieId.Value);
+                    p.AddWithValue($"@name{i}", f.Name);
+                    p.AddWithValue($"@offset{i}", f.OffsetLength.Offset);
+                    p.AddWithValue($"@length{i}", f.OffsetLength.Length);
+                    p.AddWithValue($"@data{i}", f.Data is null ? DBNull.Value : f.Data);
+                }
+            }
+        );
+    }
+
     public Dictionary<TagId, MovieId> GetRandomMoviePerTag(TagType type)
     {
         var rows = Query(
@@ -600,7 +642,7 @@ INSERT INTO file_version VALUES (@n);
         }
     }
 
-    public async Task SyncUpAsync(CancellationToken cancel)
+    public async Task SyncUpAsync(Action<double> updateProgress, CancellationToken cancel)
     {
         var settings = _accountSettingsProvider.Current;
         using var s3 = _accountSettingsProvider.CreateAmazonS3Client();
@@ -609,11 +651,12 @@ INSERT INTO file_version VALUES (@n);
         var changed = await HasRemoteVersionChangedAsync(s3, cancel).ConfigureAwait(false);
         if (changed)
         {
-            await SyncDownAsync(cancel).ConfigureAwait(false);
+            await SyncDownAsync(updateProgress, cancel).ConfigureAwait(false);
             throw new Exception(
                 "Another user updated the library at the same time and your change failed. Please try again."
             );
         }
+        updateProgress(0.05);
 
         // Export library to JSON.
         SyncLibrary library =
@@ -625,6 +668,7 @@ INSERT INTO file_version VALUES (@n);
         using MemoryStream zipMemoryStream = new();
         EncryptedZipFile.CreateLibraryZip(zipMemoryStream, "library.json", jsonMemoryStream, settings.Password);
         zipMemoryStream.Position = 0;
+        updateProgress(0.10);
 
         // Upload to S3.
         var putObjectResponse = await _policy
@@ -647,6 +691,7 @@ INSERT INTO file_version VALUES (@n);
         // Store the object version so we know later whether the library has changed.
         var etag = putObjectResponse.ETag;
         UpdateRemoteVersion(etag);
+        updateProgress(1);
     }
 
     private void UpdateRemoteVersion(string etag)
@@ -699,7 +744,7 @@ INSERT INTO file_version VALUES (@n);
         return localVersionId != remoteVersionId;
     }
 
-    public async Task SyncDownAsync(CancellationToken cancel)
+    public async Task SyncDownAsync(Action<double> updateProgress, CancellationToken cancel)
     {
         var settings = _accountSettingsProvider.Current;
         using var s3 = _accountSettingsProvider.CreateAmazonS3Client();
@@ -707,7 +752,11 @@ INSERT INTO file_version VALUES (@n);
         // Check object version to see if anything has changed.
         var changed = await HasRemoteVersionChangedAsync(s3, cancel).ConfigureAwait(false);
         if (!changed)
+        {
+            updateProgress(1);
             return;
+        }
+        updateProgress(0.05);
 
         // Download from S3.
         Amazon.S3.Model.GetObjectResponse response;
@@ -730,14 +779,17 @@ INSERT INTO file_version VALUES (@n);
         using var responseStream = response.ResponseStream;
         await responseStream.CopyToAsync(responseMemoryStream, cancel).ConfigureAwait(false);
         responseMemoryStream.Position = 0;
+        updateProgress(0.10);
 
         // Extract password protected Zip.
         using MemoryStream jsonStream = new();
         EncryptedZipFile.ExtractSingleFile(responseMemoryStream, "library.json", jsonStream, settings.Password);
         jsonStream.Position = 0;
+        cancel.ThrowIfCancellationRequested();
 
         // Parse the JSON.
         var remote = JsonSerializer.Deserialize<SyncLibrary>(jsonStream);
+        cancel.ThrowIfCancellationRequested();
 
         // Prepare to compare local vs. remote.
         var remoteMovieTags = remote.MovieTags.ToDictionary(x => (x.MovieId, x.TagId));
@@ -749,6 +801,8 @@ INSERT INTO file_version VALUES (@n);
         var localTagTypes = GetTagTypes().ToDictionary(x => x.Id);
         var localTags = GetTags().ToDictionary(x => x.Id);
         var localMovies = GetMovies().ToDictionary(x => x.Id);
+        updateProgress(0.15);
+        cancel.ThrowIfCancellationRequested();
 
         // We have to issue S3 requests for parts of the movie files in order to populate the movie_files table, since
         // that information is not in the JSON. Do this before opening a transaction because it may take awhile.
@@ -757,55 +811,101 @@ INSERT INTO file_version VALUES (@n);
         SyncMovieFileReader syncMovieFileReader = new(settings.Bucket, settings.Password, tempDir.Path, s3);
         var remoteMoviesByS3Key = remoteMovies.Values.ToDictionary(x => x.S3Key);
         var cachedFiles = await syncMovieFileReader
-            .ReadZipEntriesToBeCachedLocallyAsync(newMovieIds.Select(id => remoteMovies[id].S3Key).ToList(), cancel)
+            .ReadZipEntriesToBeCachedLocallyAsync(
+                newMovieIds.Select(id => remoteMovies[id].S3Key).ToList(),
+                x => updateProgress(0.15 + 0.55 * x),
+                cancel
+            )
             .ConfigureAwait(false);
 
+        updateProgress(0.70);
         WithTransaction(() =>
         {
             // Update columns of rows that are in both the local and remote libraries.
             foreach (var tagTypeId in localTagTypes.Keys.Intersect(remoteTagTypes.Keys))
                 UpdateTagType(remoteTagTypes[tagTypeId]);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var tagId in localTags.Keys.Intersect(remoteTags.Keys))
                 UpdateTag(remoteTags[tagId]);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var movieId in localMovies.Keys.Intersect(remoteMovies.Keys))
                 UpdateMovie(remoteMovies[movieId]);
+            cancel.ThrowIfCancellationRequested();
 
             // Add local rows that are new in the remote library.
             foreach (var tagTypeId in remoteTagTypes.Keys.Except(localTagTypes.Keys))
                 NewTagType(remoteTagTypes[tagTypeId]);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var tagId in remoteTags.Keys.Except(localTags.Keys))
                 NewTag(remoteTags[tagId]);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var movieId in newMovieIds)
                 NewMovie(remoteMovies[movieId]);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var x in remoteMovieTags.Keys.Except(localMovieTags.Keys))
                 AddMovieTag(x.MovieId, x.TagId);
+            cancel.ThrowIfCancellationRequested();
 
             // Delete local rows no longer present in the remote library.
             foreach (var tagTypeId in localTagTypes.Keys.Except(remoteTagTypes.Keys))
                 DeleteTagType(tagTypeId);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var movieTagId in localMovieTags.Keys.Except(remoteMovieTags.Keys))
                 DeleteMovieTag(movieTagId.MovieId, movieTagId.TagId);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var tagId in localTags.Keys.Except(remoteTags.Keys))
                 DeleteTag(tagId);
+            cancel.ThrowIfCancellationRequested();
 
             foreach (var movieId in localMovies.Keys.Except(remoteMovies.Keys))
                 DeleteMovie(movieId);
+            cancel.ThrowIfCancellationRequested();
 
             // Populate the movie_files table.
-            foreach (var x in cachedFiles)
+            var soFar = 0; // interlocked
+            var count = cachedFiles.Count;
+            BlockingCollection<MovieFile> movieFileQueue = new(500);
+
+            var movieFileProducer = Task.Run(() =>
             {
-                var movie = remoteMoviesByS3Key[x.Key];
-                var bytes = x.FilePath is null ? null : File.ReadAllBytes(x.FilePath);
-                MovieFile movieFile = new(movie.Id, x.EntryName, x.OffsetLength, bytes);
-                NewMovieFile(movieFile);
+                try
+                {
+                    Parallel.ForEach(
+                        cachedFiles,
+                        new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancel },
+                        x =>
+                        {
+                            var movie = remoteMoviesByS3Key[x.Key];
+                            var bytes = x.FilePath is null ? null : File.ReadAllBytes(x.FilePath);
+                            MovieFile movieFile = new(movie.Id, x.EntryName, x.OffsetLength, bytes);
+                            movieFileQueue.Add(movieFile);
+                        }
+                    );
+                }
+                finally
+                {
+                    movieFileQueue.CompleteAdding();
+                }
+            });
+
+            foreach (var movieFileChunk in movieFileQueue.GetConsumingEnumerable().Chunk(50))
+            {
+                NewMovieFiles(movieFileChunk);
+
+                var i = Interlocked.Add(ref soFar, movieFileChunk.Length);
+                updateProgress(0.70 + 0.30d * i / count);
             }
+
+            movieFileProducer.GetAwaiter().GetResult();
+
+            updateProgress(1);
         });
 
         UpdateRemoteVersion(response.ETag);

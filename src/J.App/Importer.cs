@@ -80,7 +80,7 @@ public sealed class Importer(
             .ToList();
 
         List<MovieFile> files = [zipHeaderFile, m3u8File, clipFile, .. otherFiles];
-        libraryProvider.NewMovieAsync(movie, files, CancellationToken.None).GetAwaiter().GetResult();
+        libraryProvider.NewMovieAsync(movie, files, _ => { }, cancel).GetAwaiter().GetResult();
     }
 
     private static byte[] ReadFileByteRange(string filePath, OffsetLength offsetLength)

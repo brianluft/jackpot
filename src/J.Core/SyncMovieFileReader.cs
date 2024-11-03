@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -16,15 +18,27 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
 
     public readonly record struct EntryData(string Key, string EntryName, OffsetLength OffsetLength, string? FilePath);
 
-    public async Task<List<EntryData>> ReadZipEntriesToBeCachedLocallyAsync(List<string> keys, CancellationToken cancel)
+    public async Task<List<EntryData>> ReadZipEntriesToBeCachedLocallyAsync(
+        List<string> keys,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
     {
+        const double DOWNLOAD_INDICES_PORTION = 0.2;
+        const double DOWNLOAD_DATA_PORTION = 0.6;
+        const double EXTRACT_PORTION = 0.2;
+        Debug.Assert(DOWNLOAD_INDICES_PORTION + DOWNLOAD_DATA_PORTION + EXTRACT_PORTION == 1);
+
+        var count = keys.Count;
+        var soFar = 0; // interlocked
+
         // Read the zip indices.
         object zipIndicesLock = new();
         Dictionary<string, ZipIndex> zipIndices = []; // Key => ZipIndex
         await Parallel
             .ForEachAsync(
                 keys,
-                new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancel },
+                new ParallelOptions { MaxDegreeOfParallelism = 32, CancellationToken = cancel },
                 async (key, cancel) =>
                 {
                     var zipIndex = await ReadZipIndexAsync(key, cancel).ConfigureAwait(false);
@@ -33,6 +47,9 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
                     {
                         zipIndices[key] = zipIndex;
                     }
+
+                    var i = Interlocked.Increment(ref soFar);
+                    updateProgress(DOWNLOAD_INDICES_PORTION * i / count);
                 }
             )
             .ConfigureAwait(false);
@@ -47,10 +64,12 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
         }
         object rawDataLock = new();
         Dictionary<(string Key, string EntryName), string> rawData = []; // => FilePath
+        count = entriesToDownload.Count;
+        soFar = 0;
         await Parallel
             .ForEachAsync(
                 entriesToDownload,
-                new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancel },
+                new ParallelOptions { MaxDegreeOfParallelism = 32, CancellationToken = cancel },
                 async (x, cancel) =>
                 {
                     var zipIndex = zipIndices[x.Key];
@@ -61,72 +80,84 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
                     {
                         rawData[x] = filePath;
                     }
+
+                    var i = Interlocked.Increment(ref soFar);
+                    updateProgress(DOWNLOAD_INDICES_PORTION + DOWNLOAD_DATA_PORTION * i / count);
                 }
             )
             .ConfigureAwait(false);
 
         // Extract/decrypt the entries.
-        List<EntryData> entries = [];
-        foreach (var key in keys)
-        {
-            var zipIndex = zipIndices[key];
-
-            // For all entries except movie.m3u8 and clip.mp4, include range but no data.
-            foreach (var entry in zipIndex.Entries)
+        ConcurrentBag<EntryData> entries = [];
+        count = keys.Count;
+        soFar = 0;
+        Parallel.ForEach(
+            keys,
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1, CancellationToken = cancel },
+            key =>
             {
-                if (entry.Name is "movie.m3u8" or "clip.mp4")
-                    continue;
+                var zipIndex = zipIndices[key];
 
-                entries.Add(new(key, entry.Name, entry.OffsetLength, null));
+                // For all entries except movie.m3u8 and clip.mp4, include range but no data.
+                foreach (var entry in zipIndex.Entries)
+                {
+                    if (entry.Name is "movie.m3u8" or "clip.mp4")
+                        continue;
+
+                    entries.Add(new(key, entry.Name, entry.OffsetLength, null));
+                }
+
+                var zipHeaderRawFilePath = rawData[(key, "")];
+                var zipHeaderRawData = File.ReadAllBytes(zipHeaderRawFilePath);
+                File.Delete(zipHeaderRawFilePath);
+                var zipHeaderOffsetLength = zipIndex.ZipHeader;
+                var zipFileLength = zipHeaderOffsetLength.Offset + zipHeaderOffsetLength.Length;
+
+                var m3u8RawFilePath = rawData[(key, "movie.m3u8")];
+                var m3u8RawData = File.ReadAllBytes(m3u8RawFilePath);
+                File.Delete(m3u8RawFilePath);
+                var m3u8OffsetLength = zipIndex.Entries.Single(x => x.Name == "movie.m3u8").OffsetLength;
+
+                var clipRawFilePath = rawData[(key, "clip.mp4")];
+                var clipRawData = File.ReadAllBytes(clipRawFilePath);
+                File.Delete(clipRawFilePath);
+                var clipOffsetLength = zipIndex.Entries.Single(x => x.Name == "clip.mp4").OffsetLength;
+
+                // Patch together a sparse stream.
+                List<SparseDataStream.Range> ranges =
+                [
+                    new(0, [0x50, 0x4B, 0x03, 0x04]),
+                    new(zipHeaderOffsetLength.Offset, zipHeaderRawData),
+                    new(m3u8OffsetLength.Offset, m3u8RawData),
+                    new(clipOffsetLength.Offset, clipRawData),
+                ];
+                using SparseDataStream sparseStream = new(zipFileLength, ranges);
+
+                // Extract the files.
+                var zipHeaderFilePath = NewFilePath();
+                File.WriteAllBytes(zipHeaderFilePath, zipHeaderRawData);
+                entries.Add(new(key, "", zipHeaderOffsetLength, zipHeaderFilePath));
+
+                var m3u8FilePath = NewFilePath();
+                using (var extractedStream = File.Create(m3u8FilePath))
+                {
+                    EncryptedZipFile.ReadEntry(sparseStream, extractedStream, "movie.m3u8", password);
+                    entries.Add(new(key, "movie.m3u8", m3u8OffsetLength, m3u8FilePath));
+                }
+
+                var clipFilePath = NewFilePath();
+                using (var extractedStream = File.Create(clipFilePath))
+                {
+                    EncryptedZipFile.ReadEntry(sparseStream, extractedStream, "clip.mp4", password);
+                    entries.Add(new(key, "clip.mp4", clipOffsetLength, clipFilePath));
+                }
+
+                var i = Interlocked.Increment(ref soFar);
+                updateProgress(DOWNLOAD_INDICES_PORTION + DOWNLOAD_DATA_PORTION + EXTRACT_PORTION * i / count);
             }
+        );
 
-            var zipHeaderRawFilePath = rawData[(key, "")];
-            var zipHeaderRawData = File.ReadAllBytes(zipHeaderRawFilePath);
-            File.Delete(zipHeaderRawFilePath);
-            var zipHeaderOffsetLength = zipIndex.ZipHeader;
-            var zipFileLength = zipHeaderOffsetLength.Offset + zipHeaderOffsetLength.Length;
-
-            var m3u8RawFilePath = rawData[(key, "movie.m3u8")];
-            var m3u8RawData = File.ReadAllBytes(m3u8RawFilePath);
-            File.Delete(m3u8RawFilePath);
-            var m3u8OffsetLength = zipIndex.Entries.Single(x => x.Name == "movie.m3u8").OffsetLength;
-
-            var clipRawFilePath = rawData[(key, "clip.mp4")];
-            var clipRawData = File.ReadAllBytes(clipRawFilePath);
-            File.Delete(clipRawFilePath);
-            var clipOffsetLength = zipIndex.Entries.Single(x => x.Name == "clip.mp4").OffsetLength;
-
-            // Patch together a sparse stream.
-            List<SparseDataStream.Range> ranges =
-            [
-                new(0, [0x50, 0x4B, 0x03, 0x04]),
-                new(zipHeaderOffsetLength.Offset, zipHeaderRawData),
-                new(m3u8OffsetLength.Offset, m3u8RawData),
-                new(clipOffsetLength.Offset, clipRawData),
-            ];
-            using SparseDataStream sparseStream = new(zipFileLength, ranges);
-
-            // Extract the files.
-            var zipHeaderFilePath = NewFilePath();
-            File.WriteAllBytes(zipHeaderFilePath, zipHeaderRawData);
-            entries.Add(new(key, "", zipHeaderOffsetLength, zipHeaderFilePath));
-
-            var m3u8FilePath = NewFilePath();
-            using (var extractedStream = File.Create(m3u8FilePath))
-            {
-                EncryptedZipFile.ReadEntry(sparseStream, extractedStream, "movie.m3u8", password);
-                entries.Add(new(key, "movie.m3u8", m3u8OffsetLength, m3u8FilePath));
-            }
-
-            var clipFilePath = NewFilePath();
-            using (var extractedStream = File.Create(clipFilePath))
-            {
-                EncryptedZipFile.ReadEntry(sparseStream, extractedStream, "clip.mp4", password);
-                entries.Add(new(key, "clip.mp4", clipOffsetLength, clipFilePath));
-            }
-        }
-
-        return entries;
+        return [.. entries];
     }
 
     private async Task<ZipIndex> ReadZipIndexAsync(string key, CancellationToken cancel)

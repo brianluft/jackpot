@@ -79,9 +79,9 @@ public sealed class EditTagForm : Form
             SimpleProgressForm.Do(
                 this,
                 "Deleting tag...",
-                async (cancel) =>
+                async (updateProgress, cancel) =>
                 {
-                    await _libraryProvider.DeleteTagAsync(_id!, cancel).ConfigureAwait(false);
+                    await _libraryProvider.DeleteTagAsync(_id!, updateProgress, cancel).ConfigureAwait(false);
                 }
             );
 
@@ -101,18 +101,18 @@ public sealed class EditTagForm : Form
             SimpleProgressForm.Do(
                 this,
                 "Saving tag...",
-                async (cancel) =>
+                async (updateProgress, cancel) =>
                 {
                     if (_id is null)
                     {
                         _id = new();
                         Tag tag = new(_id, _type.Id, _nameTextBox.Text);
-                        await _libraryProvider.NewTagAsync(tag, cancel).ConfigureAwait(true);
+                        await _libraryProvider.NewTagAsync(tag, updateProgress, cancel).ConfigureAwait(true);
                     }
                     else
                     {
                         Tag tag = new(_id, _type.Id, _nameTextBox.Text);
-                        await _libraryProvider.UpdateTagAsync(tag, cancel).ConfigureAwait(true);
+                        await _libraryProvider.UpdateTagAsync(tag, updateProgress, cancel).ConfigureAwait(true);
                     }
                 }
             );

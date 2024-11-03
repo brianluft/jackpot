@@ -214,7 +214,7 @@ public sealed class LoginForm : Form
         dialog.AutoUpgradeEnabled = true;
         dialog.CheckFileExists = true;
         dialog.CheckPathExists = true;
-        dialog.Filter = "Key files (*.key)|*.key";
+        dialog.Filter = "Database files (*.db)|*.db";
         dialog.Multiselect = false;
         dialog.RestoreDirectory = true;
         dialog.SelectReadOnly = true;

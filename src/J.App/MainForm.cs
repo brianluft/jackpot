@@ -251,7 +251,6 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(_moviesButton = ui.NewToolStripMenuItem("Movies"));
                 {
-                    _moviesButton.Enabled = false;
                     _moviesButton.Image = ui.GetScaledBitmapResource("Movie.png", 16, 16);
                     _moviesButton.Click += MoviesButton_Click;
                 }
@@ -260,20 +259,17 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(_addToLibraryButton = ui.NewToolStripMenuItem("Add Movies..."));
                 {
-                    _addToLibraryButton.Enabled = false;
                     _addToLibraryButton.Image = ui.GetScaledBitmapResource("Add.png", 16, 16);
                     _addToLibraryButton.Click += AddToLibraryButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(_manageMoviesButton = ui.NewToolStripMenuItem("Edit Movies..."));
                 {
-                    _manageMoviesButton.Enabled = false;
                     _manageMoviesButton.Click += EditMoviesButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(_editTagsButton = ui.NewToolStripMenuItem("Edit Tags..."));
                 {
-                    _editTagsButton.Enabled = false;
                     _editTagsButton.Click += EditTagsButton_Click;
                 }
 
@@ -287,7 +283,6 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_browseBackButton = ui.NewToolStripButton("Back"));
             {
-                _browseBackButton.Enabled = false;
                 _browseBackButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _browseBackButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("BrowseBack.png", 16, 16));
                 _browseBackButton.Click += delegate
@@ -298,7 +293,6 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_browseForwardButton = ui.NewToolStripButton("Forward"));
             {
-                _browseForwardButton.Enabled = false;
                 _browseForwardButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _browseForwardButton.Image = ui.InvertColorsInPlace(
                     ui.GetScaledBitmapResource("BrowseForward.png", 16, 16)
@@ -311,7 +305,6 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_homeButton = ui.NewToolStripButton("Home"));
             {
-                _homeButton.Enabled = false;
                 _homeButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _homeButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Home.png", 16, 16));
                 _homeButton.Click += delegate
@@ -574,15 +567,6 @@ public sealed partial class MainForm : Form
         };
     }
 
-    private void AccountSettingsButton_Click(object? sender, EventArgs e)
-    {
-        using var f = _serviceProvider.GetRequiredService<LoginForm>();
-        if (f.ShowDialog(this) == DialogResult.OK)
-        {
-            SyncM3u8Folder();
-        }
-    }
-
     private void MoviesButton_Click(object? sender, EventArgs e)
     {
         GoHome();
@@ -821,27 +805,6 @@ public sealed partial class MainForm : Form
         _toolStrip.Visible = false;
         _leftPanel.Visible = false;
         _rightPanel.Visible = false;
-    }
-
-    private void SyncM3u8Folder()
-    {
-        if (!_m3u8FolderSync.Enabled)
-            return;
-
-        try
-        {
-            _m3u8FolderSync.Sync();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(
-                this,
-                "There was a problem synchronizing your .m3u8 folder.\n\n" + ex.Message,
-                "Sync Error",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
     }
 
     private void UpdateTagTypes()

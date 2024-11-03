@@ -22,7 +22,7 @@ public static class Program
                 _ => throw new PlatformNotSupportedException(),
             };
 
-            ProcessStartInfo psi = new(exeFilePath) { UseShellExecute = true };
+            ProcessStartInfo psi = new(exeFilePath) { UseShellExecute = false };
 
             process = Process.Start(psi)!;
         }

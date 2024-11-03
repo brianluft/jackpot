@@ -20,21 +20,20 @@ public sealed class SimpleProgressForm : Form
 
     public ExceptionDispatchInfo? Exception { get; private set; }
 
-    public static void Do(IWin32Window owner, string text, Func<CancellationToken, Task> action)
+    public static void Do(IWin32Window owner, string text, Func<Action<double>, CancellationToken, Task> action)
     {
-        Do(owner, text, cancel => action(cancel).GetAwaiter().GetResult());
+        Do(owner, text, (updateProgress, cancel) => action(updateProgress, cancel).GetAwaiter().GetResult());
     }
 
-    public static void Do(IWin32Window owner, string text, Action<CancellationToken> action)
+    public static void Do(IWin32Window owner, string text, Action<Action<double>, CancellationToken> action)
     {
         using SimpleProgressForm f =
             new(
                 (updateProgress, updateMessage, cancel) =>
                 {
                     updateMessage(text);
-                    action(cancel);
-                },
-                false
+                    action(updateProgress, cancel);
+                }
             );
         var result = f.ShowDialog(owner);
         if (result == DialogResult.Abort)
@@ -43,34 +42,25 @@ public sealed class SimpleProgressForm : Form
             throw new OperationCanceledException();
     }
 
-    public SimpleProgressForm(WorkDelegate action, bool progressBar = true)
+    public SimpleProgressForm(WorkDelegate action)
     {
         Ui ui = new(this);
 
-        Controls.Add(_table = ui.NewTable(2, 3));
+        Controls.Add(_table = ui.NewTable(1, 3));
         {
             _table.Padding = ui.DefaultPadding;
             _table.RowStyles[0].SizeType = SizeType.Percent;
             _table.RowStyles[0].Height = 100;
-            _table.ColumnStyles[1].SizeType = SizeType.Percent;
-            _table.ColumnStyles[1].Width = 100;
 
-            _table.Controls.Add(ui.NewPictureBox(ui.GetScaledBitmapResource("App.png", 32, 32)), 0, 0);
-
-            _table.Controls.Add(_label = ui.NewLabel("Starting."), 1, 0);
+            _table.Controls.Add(_label = ui.NewLabel("Starting."), 0, 0);
 
             _table.Controls.Add(_progressBar = ui.NewProgressBar(300), 0, 1);
             {
                 _table.SetColumnSpan(_progressBar, 2);
-                _progressBar.Margin = ui.TopSpacingBig + ui.BottomSpacingBig;
-                if (!progressBar)
-                {
-                    _progressBar.Style = ProgressBarStyle.Marquee;
-                    _progressBar.MarqueeAnimationSpeed = 10;
-                }
+                _progressBar.Margin = ui.GetPadding(0, 36, 0, 0) + ui.BottomSpacingBig;
             }
 
-            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 1, 2);
+            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 2);
             {
                 _buttonFlow.Dock = DockStyle.Right;
 
@@ -88,7 +78,8 @@ public sealed class SimpleProgressForm : Form
         MinimizeBox = false;
         MaximizeBox = false;
         CancelButton = _cancelButton;
-        ShowIcon = false;
+        Icon = ui.GetIconResource("App.ico");
+        ShowIcon = true;
         ShowInTaskbar = false;
 
         Shown += async delegate

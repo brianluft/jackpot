@@ -13,25 +13,25 @@ public sealed class LibraryProviderAdapter(
 
     public void Disconnect() => libraryProvider.Disconnect();
 
-    private async Task MutateAsync(Action action, CancellationToken cancel)
+    private async Task MutateAsync(Action action, Action<double> updateProgress, CancellationToken cancel)
     {
-        await libraryProvider.SyncDownAsync(cancel).ConfigureAwait(false);
+        await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), cancel).ConfigureAwait(false);
         action();
-        await libraryProvider.SyncUpAsync(cancel).ConfigureAwait(false);
+        await libraryProvider.SyncUpAsync(x => updateProgress(0.4 + 0.4 * x), cancel).ConfigureAwait(false);
         await client.RefreshLibraryAsync(cancel).ConfigureAwait(false);
-        m3U8FolderSync.Sync();
+        m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x));
     }
 
-    public async Task NewTagAsync(Tag tag, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.NewTag(tag), cancel).ConfigureAwait(false);
+    public async Task NewTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.NewTag(tag), updateProgress, cancel).ConfigureAwait(false);
 
-    public async Task UpdateTagAsync(Tag tag, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.UpdateTag(tag), cancel).ConfigureAwait(false);
+    public async Task UpdateTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.UpdateTag(tag), updateProgress, cancel).ConfigureAwait(false);
 
     public Tag GetTag(TagId id) => libraryProvider.GetTag(id);
 
-    public async Task DeleteTagAsync(TagId id, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.DeleteTag(id), cancel).ConfigureAwait(false);
+    public async Task DeleteTagAsync(TagId id, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.DeleteTag(id), updateProgress, cancel).ConfigureAwait(false);
 
     public List<Movie> GetMovies() => libraryProvider.GetMovies();
 
@@ -42,8 +42,8 @@ public sealed class LibraryProviderAdapter(
     public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword) =>
         libraryProvider.GetM3u8(movieId, portNumber, sessionPassword);
 
-    public async Task NewTagTypeAsync(TagType tagType, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.NewTagType(tagType), cancel).ConfigureAwait(false);
+    public async Task NewTagTypeAsync(TagType tagType, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.NewTagType(tagType), updateProgress, cancel).ConfigureAwait(false);
 
     public List<TagType> GetTagTypes() => libraryProvider.GetTagTypes();
 
@@ -55,49 +55,65 @@ public sealed class LibraryProviderAdapter(
 
     public List<MovieTag> GetMovieTags(MovieId movieId) => libraryProvider.GetMovieTags(movieId);
 
-    public async Task AddMovieTagsAsync(List<(MovieId MovieId, TagId TagId)> list, CancellationToken cancel) =>
+    public async Task AddMovieTagsAsync(
+        List<(MovieId MovieId, TagId TagId)> list,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    ) =>
         await WithTransactionAsync(
                 () =>
                 {
                     foreach (var (movieId, tagId) in list)
                         libraryProvider.AddMovieTag(movieId, tagId);
                 },
+                updateProgress,
                 cancel
             )
             .ConfigureAwait(false);
 
-    public async Task DeleteMovieTagsAsync(List<MovieTag> list, CancellationToken cancel) =>
+    public async Task DeleteMovieTagsAsync(
+        List<MovieTag> list,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    ) =>
         await WithTransactionAsync(
                 () =>
                 {
                     foreach (var (movieId, tagId) in list)
                         libraryProvider.DeleteMovieTag(movieId, tagId);
                 },
+                updateProgress,
                 cancel
             )
             .ConfigureAwait(false);
 
-    public async Task NewMovieAsync(Movie movie, List<MovieFile> files, CancellationToken cancel) =>
+    public async Task NewMovieAsync(
+        Movie movie,
+        List<MovieFile> files,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    ) =>
         await WithTransactionAsync(
                 () =>
                 {
                     libraryProvider.NewMovie(movie);
-                    foreach (var file in files)
-                        libraryProvider.NewMovieFile(file);
+                    foreach (var files in files.Chunk(10))
+                        libraryProvider.NewMovieFiles(files);
                 },
+                updateProgress,
                 cancel
             )
             .ConfigureAwait(false);
 
-    public async Task UpdateMovieAsync(Movie movie, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.UpdateMovie(movie), cancel).ConfigureAwait(false);
+    public async Task UpdateMovieAsync(Movie movie, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.UpdateMovie(movie), updateProgress, cancel).ConfigureAwait(false);
 
-    private async Task WithTransactionAsync(Action action, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.WithTransaction(action), cancel).ConfigureAwait(false);
+    private async Task WithTransactionAsync(Action action, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.WithTransaction(action), updateProgress, cancel).ConfigureAwait(false);
 
-    public async Task DeleteMovieAsync(MovieId id, CancellationToken cancel) =>
-        await MutateAsync(() => libraryProvider.DeleteMovie(id), cancel).ConfigureAwait(false);
+    public async Task DeleteMovieAsync(MovieId id, Action<double> updateProgress, CancellationToken cancel) =>
+        await MutateAsync(() => libraryProvider.DeleteMovie(id), updateProgress, cancel).ConfigureAwait(false);
 
-    public async Task SyncDownAsync(CancellationToken cancel) =>
-        await libraryProvider.SyncDownAsync(cancel).ConfigureAwait(false);
+    public async Task SyncDownAsync(Action<double> updateProgress, CancellationToken cancel) =>
+        await libraryProvider.SyncDownAsync(updateProgress, cancel).ConfigureAwait(false);
 }
