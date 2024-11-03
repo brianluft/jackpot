@@ -1,4 +1,5 @@
-﻿using System.Drawing.Drawing2D;
+﻿using System.ComponentModel;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Mvc;
@@ -416,6 +417,23 @@ public sealed partial class Ui(Control parent)
             AutoToolTip = false,
             ShowDropDownArrow = false,
         };
+    }
+
+    public ToolStripTextBox NewToolStripTextBox(int unscaledWidth)
+    {
+        var font = NewListFont();
+        ToolStripTextBox box =
+            new()
+            {
+                AutoSize = false,
+                Width = GetLength(unscaledWidth),
+                Font = font,
+            };
+        box.Disposed += delegate
+        {
+            font.Dispose();
+        };
+        return box;
     }
 
     public ToolStripMenuItem NewToolStripMenuItem(string text)

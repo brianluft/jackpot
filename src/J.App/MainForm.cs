@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Text.RegularExpressions;
 using System.Web;
 using J.Core.Data;
@@ -39,6 +40,7 @@ public sealed partial class MainForm : Form
         _browseBackButton,
         _browseForwardButton,
         _shuffleButton;
+    private readonly ToolStripTextBox _searchText;
     private readonly ToolStripLabel _titleLabel,
         _pageLabel;
     private readonly WebView2 _browser;
@@ -80,6 +82,26 @@ public sealed partial class MainForm : Form
             Padding = Padding.Empty,
             Margin = Padding.Empty,
         };
+        _browser.CoreWebView2InitializationCompleted += delegate
+        {
+            var settings = _browser.CoreWebView2.Settings;
+            settings.AreBrowserAcceleratorKeysEnabled = false;
+            settings.AreDefaultContextMenusEnabled = false;
+            settings.AreDefaultScriptDialogsEnabled = false;
+            settings.AreDevToolsEnabled = false;
+            settings.AreHostObjectsAllowed = false;
+            settings.IsBuiltInErrorPageEnabled = false;
+            settings.IsGeneralAutofillEnabled = false;
+            settings.IsNonClientRegionSupportEnabled = false;
+            settings.IsPasswordAutosaveEnabled = false;
+            settings.IsPinchZoomEnabled = false;
+            settings.IsReputationCheckingRequired = false;
+            settings.IsScriptEnabled = true;
+            settings.IsStatusBarEnabled = false;
+            settings.IsSwipeNavigationEnabled = false;
+            settings.IsWebMessageEnabled = false;
+            settings.IsZoomControlEnabled = false;
+        };
         _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment); // fire and forget?
 
         Controls.Add(_leftPanel = new(left: true));
@@ -104,6 +126,7 @@ public sealed partial class MainForm : Form
         {
             _toolStrip.GripStyle = ToolStripGripStyle.Hidden;
             _toolStrip.Visible = false;
+            _toolStrip.MouseUp += ToolStrip_MouseUp;
 
             _toolStrip.Items.Add(_exitButton = ui.NewToolStripButton("Exit", true));
             {
@@ -212,6 +235,13 @@ public sealed partial class MainForm : Form
                 }
 
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
+            }
+
+            _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(200));
+            {
+                _searchText.Alignment = ToolStripItemAlignment.Right;
+                _searchText.KeyPress += SearchText_KeyPress;
+                ui.SetCueText(_searchText.TextBox, "Search");
             }
 
             _toolStrip.Items.Add(_menuButton = ui.NewToolStripDropDownButton("Menu"));
@@ -380,6 +410,7 @@ public sealed partial class MainForm : Form
         BackColor = Color.Black;
         DoubleBuffered = true;
         ShowInTaskbar = true;
+        KeyPreview = true;
     }
 
     protected override void OnShown(EventArgs e)
@@ -1001,6 +1032,52 @@ public sealed partial class MainForm : Form
         base.WndProc(ref m);
     }
 
+    private void ToolStrip_MouseUp(object? sender, MouseEventArgs e)
+    {
+        var pt = e.Location;
+
+        if (pt.Y >= _toolStrip.Bottom)
+            return;
+
+        var left = _searchText.TextBox.PointToScreen(Point.Empty).X;
+        var right = left + _searchText.TextBox.Width;
+        if (pt.X >= left && pt.Y <= right)
+        {
+            _searchText.Focus();
+            _searchText.SelectAll();
+        }
+    }
+
+    private async void SearchText_KeyPress(object? sender, KeyPressEventArgs e)
+    {
+        // Did they press the enter key with no modifiers?
+        if (e.KeyChar == (char)Keys.Enter && ModifierKeys == Keys.None)
+        {
+            e.Handled = true;
+
+            var phrase = _searchText.Text;
+
+            var words = WhitespaceRegex().Split(phrase);
+            foreach (var word in words)
+            {
+                FilterField field = new(FilterFieldType.Filename, null);
+                FilterRule rule = new(field, FilterOperator.ContainsString, null, word);
+                _filterRules.Add(rule);
+            }
+
+            _filterOr = false;
+            _filterOrButton.Checked = false;
+            _filterAndButton.Checked = true;
+
+            _searchText.Text = "";
+
+            await UpdateFiltersAsync().ConfigureAwait(true);
+        }
+    }
+
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]
     private static partial Regex TitlePageNumberRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
 }
