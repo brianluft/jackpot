@@ -127,7 +127,7 @@ public static class Program
 
                         updateMessage("Synchronizing library...");
                         _libraryProvider
-                            .SyncDownAsync(x => updateProgress(0.05 + 0.85 * x), cancel)
+                            .SyncDownAsync(x => updateProgress(0.05 + 0.75 * x), cancel)
                             .GetAwaiter()
                             .GetResult();
 
@@ -135,7 +135,7 @@ public static class Program
                         _client.Start();
 
                         updateMessage("Synchronizing .m3u8 folder...");
-                        _m3u8FolderSync.Sync(x => updateProgress(0.90 + 0.10 * x));
+                        _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
                     }
                 )
                 {

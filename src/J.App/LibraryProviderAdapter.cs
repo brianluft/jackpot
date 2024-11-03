@@ -9,8 +9,6 @@ public sealed class LibraryProviderAdapter(
     M3u8FolderSync m3U8FolderSync
 )
 {
-    public void Connect() => libraryProvider.Connect();
-
     public void Disconnect() => libraryProvider.Disconnect();
 
     private async Task MutateAsync(Action action, Action<double> updateProgress, CancellationToken cancel)
@@ -22,16 +20,25 @@ public sealed class LibraryProviderAdapter(
         m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x));
     }
 
-    public async Task NewTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel) =>
+    public async Task NewTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(tags: [tag.Id]);
         await MutateAsync(() => libraryProvider.NewTag(tag), updateProgress, cancel).ConfigureAwait(false);
+    }
 
-    public async Task UpdateTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel) =>
+    public async Task UpdateTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(tags: [tag.Id]);
         await MutateAsync(() => libraryProvider.UpdateTag(tag), updateProgress, cancel).ConfigureAwait(false);
+    }
 
     public Tag GetTag(TagId id) => libraryProvider.GetTag(id);
 
-    public async Task DeleteTagAsync(TagId id, Action<double> updateProgress, CancellationToken cancel) =>
+    public async Task DeleteTagAsync(TagId id, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(tags: [id]);
         await MutateAsync(() => libraryProvider.DeleteTag(id), updateProgress, cancel).ConfigureAwait(false);
+    }
 
     public List<Movie> GetMovies() => libraryProvider.GetMovies();
 
@@ -42,8 +49,11 @@ public sealed class LibraryProviderAdapter(
     public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword) =>
         libraryProvider.GetM3u8(movieId, portNumber, sessionPassword);
 
-    public async Task NewTagTypeAsync(TagType tagType, Action<double> updateProgress, CancellationToken cancel) =>
+    public async Task NewTagTypeAsync(TagType tagType, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(tagTypes: [tagType.Id]);
         await MutateAsync(() => libraryProvider.NewTagType(tagType), updateProgress, cancel).ConfigureAwait(false);
+    }
 
     public List<TagType> GetTagTypes() => libraryProvider.GetTagTypes();
 
@@ -59,7 +69,9 @@ public sealed class LibraryProviderAdapter(
         List<(MovieId MovieId, TagId TagId)> list,
         Action<double> updateProgress,
         CancellationToken cancel
-    ) =>
+    )
+    {
+        m3U8FolderSync.Invalidate(tags: list.Select(x => x.TagId).Distinct());
         await WithTransactionAsync(
                 () =>
                 {
@@ -70,12 +82,11 @@ public sealed class LibraryProviderAdapter(
                 cancel
             )
             .ConfigureAwait(false);
+    }
 
-    public async Task DeleteMovieTagsAsync(
-        List<MovieTag> list,
-        Action<double> updateProgress,
-        CancellationToken cancel
-    ) =>
+    public async Task DeleteMovieTagsAsync(List<MovieTag> list, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(tags: list.Select(x => x.TagId).Distinct());
         await WithTransactionAsync(
                 () =>
                 {
@@ -86,33 +97,43 @@ public sealed class LibraryProviderAdapter(
                 cancel
             )
             .ConfigureAwait(false);
+    }
 
     public async Task NewMovieAsync(
         Movie movie,
         List<MovieFile> files,
         Action<double> updateProgress,
         CancellationToken cancel
-    ) =>
+    )
+    {
+        m3U8FolderSync.Invalidate(movies: [movie.Id]);
         await WithTransactionAsync(
                 () =>
                 {
                     libraryProvider.NewMovie(movie);
-                    foreach (var files in files.Chunk(10))
+                    foreach (var files in files.Chunk(50))
                         libraryProvider.NewMovieFiles(files);
                 },
                 updateProgress,
                 cancel
             )
             .ConfigureAwait(false);
+    }
 
-    public async Task UpdateMovieAsync(Movie movie, Action<double> updateProgress, CancellationToken cancel) =>
+    public async Task UpdateMovieAsync(Movie movie, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(movies: [movie.Id]);
         await MutateAsync(() => libraryProvider.UpdateMovie(movie), updateProgress, cancel).ConfigureAwait(false);
+    }
 
     private async Task WithTransactionAsync(Action action, Action<double> updateProgress, CancellationToken cancel) =>
         await MutateAsync(() => libraryProvider.WithTransaction(action), updateProgress, cancel).ConfigureAwait(false);
 
-    public async Task DeleteMovieAsync(MovieId id, Action<double> updateProgress, CancellationToken cancel) =>
+    public async Task DeleteMovieAsync(MovieId id, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.InvalidateAll();
         await MutateAsync(() => libraryProvider.DeleteMovie(id), updateProgress, cancel).ConfigureAwait(false);
+    }
 
     public async Task SyncDownAsync(Action<double> updateProgress, CancellationToken cancel) =>
         await libraryProvider.SyncDownAsync(updateProgress, cancel).ConfigureAwait(false);

@@ -1,8 +1,4 @@
-﻿using System.Collections.Frozen;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using J.Core;
 using J.Core.Data;
 
@@ -17,52 +13,56 @@ public sealed partial class M3u8FolderSync(
     private readonly string _filesystemInvalidChars =
         new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
 
-    private readonly FrozenSet<string> _stopWords = new[]
-    {
-        "a",
-        "am",
-        "an",
-        "and",
-        "are",
-        "as",
-        "at",
-        "be",
-        "by",
-        "for",
-        "from",
-        "has",
-        "he",
-        "in",
-        "is",
-        "it",
-        "its",
-        "of",
-        "on",
-        "that",
-        "the",
-        "these",
-        "there",
-        "their",
-        "they",
-        "to",
-        "was",
-        "were",
-        "will",
-        "with",
-    }.ToFrozenSet();
-
-    private readonly object _syncLock = new();
-    private readonly object _fileHashesLock = new();
-    private readonly Dictionary<string, byte[]> _fileHashes = [];
+    private readonly object _lock = new();
+    private readonly HashSet<TagTypeId> _invalidatedTagTypes = [];
+    private readonly HashSet<TagId> _invalidatedTags = [];
+    private readonly HashSet<MovieId> _invalidatedMovies = [];
+    private bool _invalidatedAll = true;
 
     public bool Enabled => accountSettingsProvider.Current.EnableLocalM3u8Folder;
+
+    public void Invalidate(
+        IEnumerable<TagTypeId>? tagTypes = null,
+        IEnumerable<TagId>? tags = null,
+        IEnumerable<MovieId>? movies = null
+    )
+    {
+        if (!Enabled)
+            return;
+
+        lock (_lock)
+        {
+            if (tagTypes is not null)
+                foreach (var tagType in tagTypes)
+                    _invalidatedTagTypes.Add(tagType);
+
+            if (tags is not null)
+                foreach (var tag in tags)
+                    _invalidatedTags.Add(tag);
+
+            if (movies is not null)
+                foreach (var movie in movies)
+                    _invalidatedMovies.Add(movie);
+        }
+    }
+
+    public void InvalidateAll()
+    {
+        if (!Enabled)
+            return;
+
+        lock (_lock)
+        {
+            _invalidatedAll = true;
+        }
+    }
 
     public void Sync(Action<double> updateProgress)
     {
         if (!Enabled)
             return;
 
-        lock (_syncLock)
+        lock (_lock)
         {
             var portNumber = client.Port;
             var sessionPassword = client.SessionPassword;
@@ -75,14 +75,14 @@ public sealed partial class M3u8FolderSync(
             var existingFiles = Directory
                 .GetFiles(dir, "*.m3u8", SearchOption.AllDirectories)
                 .Select(x => x.ToUpperInvariant())
-                .ToHashSet(); // read-only during Sync calls below
+                .ToHashSet();
 
             var moviesDir = Path.Combine(dir, "Movies");
             Directory.CreateDirectory(moviesDir);
-            SyncMovies(moviesDir, movies, livingFiles, portNumber, sessionPassword, x => updateProgress(0.2 * x));
+            SyncMovies(moviesDir, movies, livingFiles, portNumber, sessionPassword, x => updateProgress(0.5 * x));
 
             var tagTypes = libraryProvider.GetTagTypes();
-            var progressPerTagType = 0.2d / tagTypes.Count;
+            var progressPerTagType = 0.5d / tagTypes.Count;
             for (var i = 0; i < tagTypes.Count; i++)
             {
                 var tagType = tagTypes[i];
@@ -96,13 +96,11 @@ public sealed partial class M3u8FolderSync(
                     livingFiles,
                     portNumber,
                     sessionPassword,
-                    x => updateProgress(0.2 + progressPerTagType * i + x * progressPerTagType)
+                    x => updateProgress(0.5 + progressPerTagType * i + x * progressPerTagType)
                 );
             }
 
-            var searchDir = Path.Combine(dir, "Search");
-            Directory.CreateDirectory(searchDir);
-            SyncSearch(searchDir, movies, livingFiles, portNumber, sessionPassword, x => updateProgress(0.4 + 0.6 * x));
+            updateProgress(1);
 
             lock (livingFiles)
             {
@@ -112,6 +110,11 @@ public sealed partial class M3u8FolderSync(
             }
 
             DeleteEmptyDirectories(dir);
+
+            _invalidatedTagTypes.Clear();
+            _invalidatedTags.Clear();
+            _invalidatedMovies.Clear();
+            _invalidatedAll = false;
         }
     }
 
@@ -145,7 +148,14 @@ public sealed partial class M3u8FolderSync(
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
             movie =>
             {
-                CopyM3u8(dir, movie.Value, livingFiles, portNumber, sessionPassword);
+                CopyM3u8(
+                    dir,
+                    movie.Value,
+                    livingFiles,
+                    portNumber,
+                    sessionPassword,
+                    writeFile: _invalidatedMovies.Contains(movie.Key) || _invalidatedAll
+                );
 
                 var i = Interlocked.Increment(ref soFar);
                 if (i % interval == 0)
@@ -165,7 +175,7 @@ public sealed partial class M3u8FolderSync(
         Action<double> updateProgress
     )
     {
-        List<(string TagDir, Movie Movie)> files = [];
+        List<(TagId TagId, string TagDir, Movie Movie)> files = [];
 
         foreach (var tag in libraryProvider.GetTags(tagType.Id))
         {
@@ -174,7 +184,7 @@ public sealed partial class M3u8FolderSync(
             foreach (var movieId in movieTags[tag.Id])
             {
                 var movie = movies[movieId];
-                files.Add((tagDir, movie));
+                files.Add((tag.Id, tagDir, movie));
             }
         }
 
@@ -187,7 +197,16 @@ public sealed partial class M3u8FolderSync(
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
             file =>
             {
-                CopyM3u8(file.TagDir, file.Movie, livingFiles, portNumber, sessionPassword);
+                CopyM3u8(
+                    file.TagDir,
+                    file.Movie,
+                    livingFiles,
+                    portNumber,
+                    sessionPassword,
+                    writeFile: _invalidatedTags.Contains(file.TagId)
+                        || _invalidatedMovies.Contains(file.Movie.Id)
+                        || _invalidatedAll
+                );
 
                 var i = Interlocked.Increment(ref soFar);
                 if (i % interval == 0)
@@ -196,7 +215,14 @@ public sealed partial class M3u8FolderSync(
         );
     }
 
-    private void CopyM3u8(string dir, Movie movie, HashSet<string> livingFiles, int portNumber, string sessionPassword)
+    private void CopyM3u8(
+        string dir,
+        Movie movie,
+        HashSet<string> livingFiles,
+        int portNumber,
+        string sessionPassword,
+        bool writeFile
+    )
     {
         var prefix = Path.Combine(dir, MakeFilesystemSafe(movie.Filename));
 
@@ -213,121 +239,11 @@ public sealed partial class M3u8FolderSync(
             }
         }
 
-        var bytes = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword);
-        var fileHash = SHA256.HashData(bytes);
-
-        lock (_fileHashesLock)
+        if (writeFile)
         {
-            if (_fileHashes.TryGetValue(m3u8FilePath, out var x) && fileHash.SequenceEqual(x))
-                return;
+            var bytes = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword);
+            File.WriteAllBytes(m3u8FilePath, bytes);
         }
-
-        File.WriteAllBytes(m3u8FilePath, bytes);
-
-        lock (_fileHashesLock)
-        {
-            _fileHashes[m3u8FilePath] = fileHash;
-        }
-    }
-
-    private void SyncSearch(
-        string searchDir,
-        Dictionary<MovieId, Movie> movies,
-        HashSet<string> livingFiles,
-        int portNumber,
-        string sessionPassword,
-        Action<double> updateProgress
-    )
-    {
-        var wordGroups = (
-            from movie in movies.Values
-            from rawWord in WordSeparatorRegex().Split(movie.Filename)
-            let word = MakeFilesystemSafe(Strip(rawWord)).ToLowerInvariant()
-            where word.Length >= 2 && !NumberRegex().IsMatch(word) && !_stopWords.Contains(word)
-            group movie by word into wordGroup
-            let distinctMovies = wordGroup.Distinct().ToList()
-            orderby distinctMovies.Count descending
-            select (Word: wordGroup.Key, Movies: distinctMovies)
-        ).Take(500);
-
-        List<(string Dir, Movie Movie)> files = [];
-
-        foreach (var (word, wordMovies) in wordGroups)
-        {
-            var firstCharacter = GetFirstCharacter(word).ToUpperInvariant();
-            var dir = Path.Combine(searchDir, firstCharacter, word);
-            foreach (var movie in wordMovies)
-            {
-                files.Add((dir, movie));
-            }
-        }
-
-        Parallel.ForEach(
-            files.Select(x => x.Dir).Distinct(),
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
-            dir => Directory.CreateDirectory(dir)
-        );
-
-        var soFar = 0; // interlocked
-        var count = files.Count;
-        var interval = Math.Max(1, count / 100);
-
-        Parallel.ForEach(
-            files,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
-            file =>
-            {
-                CopyM3u8(file.Dir, file.Movie, livingFiles, portNumber, sessionPassword);
-
-                var i = Interlocked.Increment(ref soFar);
-                if (i % interval == 0)
-                    updateProgress((double)i / count);
-            }
-        );
-    }
-
-    private static string GetFirstCharacter(string str)
-    {
-        var enumerator = StringInfo.GetTextElementEnumerator(str);
-        if (enumerator.MoveNext())
-            return enumerator.GetTextElement();
-
-        throw new ArgumentException("Empty string.", nameof(str));
-    }
-
-    private static string Strip(string str)
-    {
-        if (string.IsNullOrEmpty(str))
-        {
-            return str;
-        }
-
-        StringBuilder sb = new(str.Length);
-
-        foreach (var c in str)
-        {
-            if (c is '\'')
-            {
-                // Allow "don't" etc.
-                sb.Append(c);
-                continue;
-            }
-
-            switch (CharUnicodeInfo.GetUnicodeCategory(c))
-            {
-                case UnicodeCategory.UppercaseLetter:
-                case UnicodeCategory.LowercaseLetter:
-                case UnicodeCategory.TitlecaseLetter:
-                case UnicodeCategory.OtherLetter:
-                case UnicodeCategory.DecimalDigitNumber:
-                case UnicodeCategory.LetterNumber:
-                case UnicodeCategory.OtherNumber:
-                    sb.Append(c);
-                    break;
-            }
-        }
-
-        return sb.ToString();
     }
 
     private string MakeFilesystemSafe(string name) =>
