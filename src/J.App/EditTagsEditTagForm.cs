@@ -2,7 +2,7 @@
 
 namespace J.App;
 
-public sealed class EditTagForm : Form
+public sealed class EditTagsEditTagForm : Form
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly TableLayoutPanel _table;
@@ -15,7 +15,7 @@ public sealed class EditTagForm : Form
     private TagType _type;
     private TagId? _id;
 
-    public EditTagForm(LibraryProviderAdapter libraryProvider)
+    public EditTagsEditTagForm(LibraryProviderAdapter libraryProvider)
     {
         _libraryProvider = libraryProvider;
         Ui ui = new(this);
@@ -98,6 +98,9 @@ public sealed class EditTagForm : Form
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
+                throw new Exception("Please enter a name.");
+
             SimpleProgressForm.Do(
                 this,
                 "Saving tag...",
@@ -126,7 +129,7 @@ public sealed class EditTagForm : Form
         }
     }
 
-    public void OpenTag(TagType type, TagId? id)
+    public void Initialize(TagType type, TagId? id)
     {
         Text = $"{(id is null ? "New" : "Edit")} {type.SingularName}";
         _type = type;

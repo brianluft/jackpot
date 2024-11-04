@@ -57,6 +57,33 @@ public sealed class LibraryProviderAdapter(
 
     public List<TagType> GetTagTypes() => libraryProvider.GetTagTypes();
 
+    public TagType GetTagType(TagTypeId tagTypeId) => libraryProvider.GetTagType(tagTypeId);
+
+    public async Task DeleteTagTypeAsync(TagTypeId tagTypeId, Action<double> updateProgress, CancellationToken cancel)
+    {
+        m3U8FolderSync.Invalidate(tagTypes: [tagTypeId]);
+        await MutateAsync(() => libraryProvider.DeleteTagType(tagTypeId), updateProgress, cancel).ConfigureAwait(false);
+    }
+
+    public async Task UpdateTagTypesAsync(
+        List<TagType> tagTypes,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
+    {
+        m3U8FolderSync.Invalidate(tagTypes: tagTypes.Select(x => x.Id));
+        await MutateAsync(
+                () =>
+                {
+                    foreach (var tagType in tagTypes)
+                        libraryProvider.UpdateTagType(tagType);
+                },
+                updateProgress,
+                cancel
+            )
+            .ConfigureAwait(false);
+    }
+
     public List<Tag> GetTags() => libraryProvider.GetTags();
 
     public List<Tag> GetTags(TagTypeId tagTypeId) => libraryProvider.GetTags(tagTypeId);

@@ -44,18 +44,19 @@ public static class Program
         services.AddSingleton<M3u8FolderSync>();
         services.AddSingleton<MyApplicationContext>();
 
-        services.AddTransient<LoginForm>();
         services.AddTransient<EditMoviesChooseTagForm>();
         services.AddTransient<EditMoviesForm>();
         services.AddTransient<EditMoviesRemoveTagForm>();
-        services.AddTransient<EditTagForm>();
+        services.AddTransient<EditTagsEditTagForm>();
         services.AddTransient<EditTagsForm>();
+        services.AddTransient<EditTagsRenameTagTypeForm>();
         services.AddTransient<FilterChooseTagForm>();
         services.AddTransient<FilterEnterStringForm>();
         services.AddTransient<Importer>();
         services.AddTransient<ImportForm>();
         services.AddTransient<ImportProgressFormFactory>();
         services.AddTransient<LibraryProviderAdapter>();
+        services.AddTransient<LoginForm>();
         services.AddTransient<MainForm>();
         services.AddTransient<MovieEncoder>();
         services.AddTransient<MovieExporter>();
@@ -168,6 +169,7 @@ public static class Program
                                 _client.Start();
 
                                 updateMessage("Synchronizing .m3u8 folder...");
+                                _m3u8FolderSync.InvalidateAll();
                                 _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
                             }
                         )

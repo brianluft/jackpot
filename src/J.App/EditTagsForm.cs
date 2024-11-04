@@ -1,4 +1,5 @@
-﻿using J.Core.Data;
+﻿using System.Diagnostics;
+using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace J.App;
@@ -18,10 +19,11 @@ public sealed class EditTagsForm : Form
         Ui ui = new(this);
 
         Controls.Add(_tabs = ui.NewTabControl());
-
-        _tabs.TabPages.Add(_newTab = new());
         {
-            _newTab.Create += NewTab_Create;
+            _tabs.TabPages.Add(_newTab = new());
+            {
+                _newTab.Create += NewTab_Create;
+            }
         }
 
         UpdateTagTabs();
@@ -41,7 +43,8 @@ public sealed class EditTagsForm : Form
 
     private void NewTab_Create(object? sender, NewTagTypeTab.CreateEventArgs e)
     {
-        var sortIndex = _libraryProvider.GetTagTypes().Max(x => x.SortIndex) + 1;
+        var tagTypes = _libraryProvider.GetTagTypes();
+        var sortIndex = tagTypes.Count == 0 ? 0 : tagTypes.Max(x => x.SortIndex) + 1;
         TagType tagType = new(new(), sortIndex, e.SingularName, e.PluralName);
 
         SimpleProgressForm.Do(
@@ -61,38 +64,50 @@ public sealed class EditTagsForm : Form
     {
         // Remember the current selection.
         var selectedTab = _tabs.SelectedTab;
-        var isNewTabSelected = selectedTab is null || selectedTab is NewTagTypeTab;
-        var selectedTag = isNewTabSelected ? null : ((TagsTab)selectedTab!).TagTypeId;
+        var firstTime = selectedTab is null;
+        var isNewTabSelected = selectedTab is NewTagTypeTab;
+        var selectedTag = firstTime || isNewTabSelected ? null : ((TagsTab)selectedTab!).TagTypeId;
 
         // Delete every tab except the New Tab.
-        for (int i = _tabs.TabPages.Count - 1; i >= 1; i--)
+        for (int i = _tabs.TabPages.Count - 1; i >= 0; i--)
         {
             if (!ReferenceEquals(_tabs.TabPages[i], _newTab))
                 _tabs.TabPages.RemoveAt(i);
         }
 
         // Insert a tab for each tag type.
-        var tagTypes = _libraryProvider.GetTagTypes().OrderBy(x => x.SortIndex);
+        var tagTypes = _libraryProvider.GetTagTypes().OrderBy(x => x.SortIndex).ToList();
         _tagsTabs.Clear();
-        foreach (var tagType in tagTypes)
+        for (var i = 0; i < tagTypes.Count; i++)
         {
-            TagsTab tab = new(tagType, _libraryProvider, _serviceProvider);
+            var tagType = tagTypes[i];
+            var isFirst = i == 0;
+            var isLast = i == tagTypes.Count - 1;
+            TagsTab tab = new(tagType, isFirst, isLast, _libraryProvider, _serviceProvider);
+            tab.TagTypeChanged += delegate
+            {
+                UpdateTagTabs();
+            };
             var index = _tabs.TabCount - 1;
             _tabs.TabPages.Insert(index, tab);
             _tagsTabs[tagType.Id] = tab;
         }
 
         // Restore the previous selection if possible.
-        if (isNewTabSelected)
+        if (firstTime)
         {
-            _tabs.SelectedIndex = _newTab.TabIndex;
+            _tabs.SelectedIndex = 0;
+        }
+        else if (isNewTabSelected)
+        {
+            _tabs.SelectedTab = _newTab;
         }
         else
         {
             if (_tagsTabs.TryGetValue(selectedTag!, out var tagsTab))
-                _tabs.SelectedIndex = tagsTab.TabIndex;
+                _tabs.SelectedTab = tagsTab;
             else
-                _tabs.SelectedIndex = _newTab.TabIndex;
+                _tabs.SelectedIndex = 0;
         }
 
         // We recreated the listboxes so we have to populate them again.
@@ -117,18 +132,27 @@ public sealed class EditTagsForm : Form
         private readonly LibraryProviderAdapter _libraryProvider;
         private readonly IServiceProvider _serviceProvider;
         private readonly TableLayoutPanel _table;
-        private readonly Label _groupLabel;
-        private readonly FlowLayoutPanel _buttonFlow;
-        private readonly Button _renameButton,
-            _deleteButton,
-            _leftButton,
-            _rightButton;
+        private readonly FlowLayoutPanel _topButtonFlow,
+            _bottomButtonFlow;
+        private readonly Button _groupRenameButton,
+            _groupDeleteButton,
+            _groupMoveLeftButton,
+            _groupMoveRightButton,
+            _newButton;
         private readonly ListBox _listBox;
         private List<Tag> _tags = [];
 
         public TagTypeId TagTypeId => _type.Id;
 
-        public TagsTab(TagType type, LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
+        public event EventHandler? TagTypeChanged;
+
+        public TagsTab(
+            TagType type,
+            bool isFirst,
+            bool isLast,
+            LibraryProviderAdapter libraryProvider,
+            IServiceProvider serviceProvider
+        )
             : base(type.PluralName)
         {
             _type = type;
@@ -136,58 +160,148 @@ public sealed class EditTagsForm : Form
             _serviceProvider = serviceProvider;
             Ui ui = new(this);
 
-            Controls.Add(_table = ui.NewTable(1, 3));
+            Controls.Add(_table = ui.NewTable(1, 4));
             {
                 _table.Padding = ui.DefaultPadding;
-                _table.RowStyles[0].SizeType = SizeType.Percent;
-                _table.RowStyles[0].Height = 100;
-                _table.RowStyles[1].SizeType = SizeType.AutoSize;
+                _table.RowStyles[1].SizeType = SizeType.Percent;
+                _table.RowStyles[1].Height = 100;
+                _table.RowStyles[2].SizeType = SizeType.AutoSize;
 
-                _table.Controls.Add(_listBox = ui.NewListBox(), 0, 0);
+                _table.Controls.Add(_topButtonFlow = ui.NewFlowRow());
+                {
+                    _topButtonFlow.Margin = ui.BottomSpacing;
+
+                    _topButtonFlow.Controls.Add(
+                        _newButton = ui.NewButton($"New {type.SingularName.ToLowerInvariant()}...")
+                    );
+                    {
+                        _newButton.Click += NewButton_Click;
+                    }
+                }
+
+                _table.Controls.Add(_listBox = ui.NewListBox(), 0, 1);
                 {
                     _listBox.Margin = ui.BottomSpacing;
                     _listBox.DoubleClick += ListBox_DoubleClick;
                 }
 
-                _table.Controls.Add(_groupLabel = ui.NewLabel($"\"{type.PluralName}\" group:"), 0, 1);
+                _table.Controls.Add(ui.NewLabel($"\"{type.PluralName}\" group:"), 0, 2);
 
-                _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 2);
+                _table.Controls.Add(_bottomButtonFlow = ui.NewFlowRow(), 0, 3);
                 {
-                    _buttonFlow.Controls.Add(_leftButton = ui.NewButton("← Move left"));
-                    _leftButton.Click += LeftButton_Click;
+                    _bottomButtonFlow.Controls.Add(_groupMoveLeftButton = ui.NewButton("← Move left"));
+                    {
+                        _groupMoveLeftButton.Enabled = !isFirst;
+                        _groupMoveLeftButton.Click += GroupMoveLeftButton_Click;
+                    }
 
-                    _buttonFlow.Controls.Add(_rightButton = ui.NewButton("Move right →"));
-                    _rightButton.Click += RightButton_Click;
+                    _bottomButtonFlow.Controls.Add(_groupMoveRightButton = ui.NewButton("Move right →"));
+                    {
+                        _groupMoveRightButton.Enabled = !isLast;
+                        _groupMoveRightButton.Click += GroupMoveRightButton_Click;
+                    }
 
-                    _buttonFlow.Controls.Add(_renameButton = ui.NewButton("Rename..."));
-                    _renameButton.Click += RenameButton_Click;
+                    _bottomButtonFlow.Controls.Add(_groupRenameButton = ui.NewButton("Rename..."));
+                    {
+                        _groupRenameButton.Click += GroupRenameButton_Click;
+                    }
 
-                    _buttonFlow.Controls.Add(_deleteButton = ui.NewButton("Delete"));
-                    _deleteButton.Click += DeleteButton_Click;
+                    _bottomButtonFlow.Controls.Add(_groupDeleteButton = ui.NewButton("Delete"));
+                    {
+                        _groupDeleteButton.Click += GroupDeleteButton_Click;
+                    }
                 }
             }
 
             UseVisualStyleBackColor = true;
         }
 
-        private void DeleteButton_Click(object? sender, EventArgs e)
+        private void NewButton_Click(object? sender, EventArgs e)
         {
-            throw new NotImplementedException(); //TODO
+            EditTag(null);
         }
 
-        private void RenameButton_Click(object? sender, EventArgs e)
+        private void GroupDeleteButton_Click(object? sender, EventArgs e)
         {
-            throw new NotImplementedException(); //TODO
+            var tagType = _libraryProvider.GetTagType(TagTypeId);
+
+            var response = MessageBox.Show(
+                this,
+                $"Are you sure you want to delete the \"{tagType.PluralName}\" tag group?",
+                "Delete",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question
+            );
+            if (response != DialogResult.OK)
+                return;
+
+            SimpleProgressForm.Do(
+                this,
+                "Deleting tag group...",
+                async (updateProgress, cancel) =>
+                {
+                    await _libraryProvider.DeleteTagTypeAsync(TagTypeId, updateProgress, cancel).ConfigureAwait(true);
+                }
+            );
+
+            TagTypeChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        private void RightButton_Click(object? sender, EventArgs e)
+        private void GroupRenameButton_Click(object? sender, EventArgs e)
         {
-            throw new NotImplementedException(); //TODO
+            var tagType = _libraryProvider.GetTagType(TagTypeId);
+
+            using var f = _serviceProvider.GetRequiredService<EditTagsRenameTagTypeForm>();
+            f.Initialize(tagType);
+            if (f.ShowDialog(FindForm()) == DialogResult.OK)
+                TagTypeChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        private void LeftButton_Click(object? sender, EventArgs e)
+        private void GroupMoveRightButton_Click(object? sender, EventArgs e)
         {
-            throw new NotImplementedException(); //TODO
+            GroupMove(1);
+        }
+
+        private void GroupMoveLeftButton_Click(object? sender, EventArgs e)
+        {
+            GroupMove(-1);
+        }
+
+        private void GroupMove(int direction)
+        {
+            var tagTypes = _libraryProvider.GetTagTypes().OrderBy(x => x.SortIndex).ToList();
+
+            var tagTypeIndex = -1;
+            for (var i = 0; i < tagTypes.Count; i++)
+            {
+                if (tagTypes[i].Id == TagTypeId)
+                {
+                    tagTypeIndex = i;
+                    break;
+                }
+            }
+            Debug.Assert(tagTypeIndex != -1);
+
+            var swapIndex = tagTypeIndex + direction;
+            Debug.Assert(swapIndex >= 0 && swapIndex < tagTypes.Count);
+
+            (tagTypes[tagTypeIndex], tagTypes[swapIndex]) = (tagTypes[swapIndex], tagTypes[tagTypeIndex]);
+
+            for (var i = 0; i < tagTypes.Count; i++)
+            {
+                tagTypes[i] = tagTypes[i] with { SortIndex = i };
+            }
+
+            SimpleProgressForm.Do(
+                this,
+                "Moving tag group...",
+                async (updateProgress, cancel) =>
+                {
+                    await _libraryProvider.UpdateTagTypesAsync(tagTypes, updateProgress, cancel).ConfigureAwait(true);
+                }
+            );
+
+            TagTypeChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void ListBox_DoubleClick(object? sender, EventArgs e)
@@ -197,15 +311,11 @@ public sealed class EditTagsForm : Form
 
         private void ActivateSelectedItem()
         {
-            if (_listBox.SelectedIndex >= _tags.Count)
+            var i = _listBox.SelectedIndex;
+
+            if (i >= 0 && i < _listBox.Items.Count)
             {
-                // New
-                EditTag(null);
-            }
-            else if (_listBox.SelectedIndex >= 0)
-            {
-                // Edit
-                var id = _tags[_listBox.SelectedIndex].Id;
+                var id = _tags[i].Id;
                 EditTag(id);
             }
         }
@@ -223,19 +333,18 @@ public sealed class EditTagsForm : Form
 
         private void EditTag(TagId? id)
         {
-            using var f = _serviceProvider.GetRequiredService<EditTagForm>();
-            f.OpenTag(_type, id);
+            using var f = _serviceProvider.GetRequiredService<EditTagsEditTagForm>();
+            f.Initialize(_type, id);
             if (f.ShowDialog(FindForm()) == DialogResult.OK)
                 UpdateList();
         }
 
         public void UpdateList()
         {
-            _tags = _libraryProvider.GetTags(_type.Id).OrderBy(x => x.Name).ToList();
+            _tags = [.. _libraryProvider.GetTags(_type.Id).OrderBy(x => x.Name)];
             _listBox.Items.Clear();
             foreach (var x in _tags)
                 _listBox.Items.Add(x.Name);
-            _listBox.Items.Add($"(New {_type.SingularName.ToLower()}...)");
         }
     }
 
@@ -264,8 +373,10 @@ public sealed class EditTagsForm : Form
                 _flow.Controls.Add(p);
 
                 (p, _pluralNameText) = ui.NewLabeledTextBox("&Plural name:", 125);
-                p.Margin = ui.TopSpacing;
                 _flow.Controls.Add(p);
+                {
+                    p.Margin = ui.TopSpacing;
+                }
 
                 _flow.Controls.Add(_createButton = ui.NewButton("&Create tag group"));
                 {
