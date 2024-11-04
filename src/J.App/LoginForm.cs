@@ -350,8 +350,30 @@ public sealed class LoginForm : Form
         }
     }
 
-    private AccountSettings GetAccountSettings() =>
-        new(
+    private AccountSettings GetAccountSettings()
+    {
+        if (string.IsNullOrWhiteSpace(_endpointText.Text))
+            throw new Exception("Please enter an endpoint.");
+
+        if (string.IsNullOrWhiteSpace(_accessKeyIdText.Text))
+            throw new Exception("Please enter a keyID.");
+
+        if (string.IsNullOrWhiteSpace(_secretAccessKeyText.Text))
+            throw new Exception("Please enter an applicationKey.");
+
+        if (string.IsNullOrWhiteSpace(_bucketText.Text))
+            throw new Exception("Please enter a bucket name.");
+
+        if (string.IsNullOrWhiteSpace(_passwordText.Text))
+            throw new Exception("Please enter an encryption password.");
+
+        if (_enableM3u8FolderCheck.Checked)
+        {
+            if (string.IsNullOrWhiteSpace(_m3u8FolderText.Text))
+                throw new Exception("Please enter a folder for .M3U8 files.");
+        }
+
+        return new(
             _endpointText.Text,
             _accessKeyIdText.Text,
             _secretAccessKeyText.Text,
@@ -361,6 +383,7 @@ public sealed class LoginForm : Form
             _m3u8FolderText.Text,
             _m3u8HostnameText.Text
         );
+    }
 
     private void SetAccountSettings(AccountSettings settings)
     {
