@@ -188,13 +188,11 @@ public sealed partial class MainForm : Form
                 separator1.Alignment = ToolStripItemAlignment.Right;
             }
 
-            _toolStrip.Items.Add(_pageLabel = ui.NewToolStripLabel(""));
+            _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(200));
             {
-                _pageLabel.Alignment = ToolStripItemAlignment.Right;
-                var pageLabelHeight = _pageLabel.Height;
-                _pageLabel.AutoSize = false;
-                _pageLabel.Size = ui.GetSize(75, pageLabelHeight);
-                _pageLabel.TextAlign = ContentAlignment.MiddleCenter;
+                _searchText.Alignment = ToolStripItemAlignment.Right;
+                _searchText.KeyPress += SearchText_KeyPress;
+                ui.SetCueText(_searchText.TextBox, "Search");
             }
 
             var separator2 = ui.NewToolStripSeparator();
@@ -232,13 +230,6 @@ public sealed partial class MainForm : Form
                 }
 
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
-            }
-
-            _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(200));
-            {
-                _searchText.Alignment = ToolStripItemAlignment.Right;
-                _searchText.KeyPress += SearchText_KeyPress;
-                ui.SetCueText(_searchText.TextBox, "Search");
             }
 
             _toolStrip.Items.Add(_menuButton = ui.NewToolStripDropDownButton("Menu"));
@@ -324,6 +315,10 @@ public sealed partial class MainForm : Form
                 };
                 _titleLabel.Font = titleFont;
             }
+
+            _toolStrip.Items.Add(ui.NewToolStripSeparator());
+
+            _toolStrip.Items.Add(_pageLabel = ui.NewToolStripLabel(""));
         }
 
         var browserTable = ui.NewTable(1, 1);
