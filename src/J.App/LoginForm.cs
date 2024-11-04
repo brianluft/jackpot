@@ -39,8 +39,12 @@ public sealed class LoginForm : Form
         _b2KeyLink;
     private readonly PictureBox _b2BucketPicture,
         _b2BucketHelpPicture,
+        _b2BucketIconPicture,
         _b2KeyPicture,
-        _b2KeyHelpPicture;
+        _b2KeyHelpPicture,
+        _b2KeyIconPicture,
+        _encryptionIconPicture;
+    private readonly Label _encryptionHelpLabel;
 
     public LoginForm(AccountSettingsProvider accountSettingsProvider)
     {
@@ -61,16 +65,26 @@ public sealed class LoginForm : Form
 
                 _tabControl.TabPages.Add(_bucketPage = ui.NewTabPage("B2 Bucket"));
                 {
-                    _bucketPage.Controls.Add(_bucketTable = ui.NewTable(1, 4));
+                    _bucketPage.Controls.Add(_bucketTable = ui.NewTable(2, 4));
                     {
                         _bucketTable.Padding = ui.DefaultPadding;
 
-                        _bucketText = ui.AddPairToTable(_bucketTable, 0, 0, ui.NewLabeledTextBox("Bucket name:", 300));
+                        _bucketText = ui.AddPairToTable(_bucketTable, 1, 0, ui.NewLabeledTextBox("Bucket name:", 300));
 
-                        _endpointText = ui.AddPairToTable(_bucketTable, 0, 1, ui.NewLabeledTextBox("Endpoint:", 300));
+                        _endpointText = ui.AddPairToTable(_bucketTable, 1, 1, ui.NewLabeledTextBox("Endpoint:", 300));
+
+                        _bucketTable.Controls.Add(
+                            _b2BucketIconPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Bucket.png", 32, 32)),
+                            0,
+                            0
+                        );
+                        {
+                            _b2BucketIconPicture.Padding = ui.DefaultPadding;
+                        }
 
                         _bucketTable.Controls.Add(_bucketHelpFlow = ui.NewFlowRow(), 0, 2);
                         {
+                            _bucketTable.SetColumnSpan(_bucketHelpFlow, 2);
                             _bucketHelpFlow.Margin = ui.GetPadding(0, 32, 0, 0);
 
                             _bucketHelpFlow.Controls.Add(
@@ -92,12 +106,13 @@ public sealed class LoginForm : Form
 
                         _bucketTable.Controls.Add(
                             _b2BucketPicture = ui.NewPictureBox(
-                                ui.GetScaledBitmapResource("B2BucketHelp.png", 420, 179)
+                                ui.GetScaledBitmapResource("B2BucketHelp.png", 448, 191)
                             ),
                             0,
                             3
                         );
                         {
+                            _bucketTable.SetColumnSpan(_b2BucketPicture, 2);
                             _b2BucketPicture.Margin = ui.TopSpacing;
 
                             _b2BucketPicture.BorderStyle = BorderStyle.FixedSingle;
@@ -107,15 +122,24 @@ public sealed class LoginForm : Form
 
                 _tabControl.TabPages.Add(_accountPage = ui.NewTabPage("B2 Application Key"));
                 {
-                    _accountPage.Controls.Add(_accountTable = ui.NewTable(1, 4));
+                    _accountPage.Controls.Add(_accountTable = ui.NewTable(2, 4));
                     {
                         _accountTable.Padding = ui.DefaultPadding;
 
-                        _accessKeyIdText = ui.AddPairToTable(_accountTable, 0, 0, ui.NewLabeledTextBox("keyID:", 300));
+                        _accountTable.Controls.Add(
+                            _b2KeyIconPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Key.png", 32, 32)),
+                            0,
+                            0
+                        );
+                        {
+                            _b2KeyIconPicture.Padding = ui.DefaultPadding;
+                        }
+
+                        _accessKeyIdText = ui.AddPairToTable(_accountTable, 1, 0, ui.NewLabeledTextBox("keyID:", 300));
 
                         _secretAccessKeyText = ui.AddPairToTable(
                             _accountTable,
-                            0,
+                            1,
                             1,
                             ui.NewLabeledTextBox("applicationKey:", 300)
                         );
@@ -125,6 +149,7 @@ public sealed class LoginForm : Form
 
                         _accountTable.Controls.Add(_keyHelpFlow = ui.NewFlowRow(), 0, 2);
                         {
+                            _accountTable.SetColumnSpan(_keyHelpFlow, 2);
                             _keyHelpFlow.Margin = ui.GetPadding(0, 32, 0, 0);
 
                             _keyHelpFlow.Controls.Add(
@@ -150,6 +175,7 @@ public sealed class LoginForm : Form
                             3
                         );
                         {
+                            _accountTable.SetColumnSpan(_b2KeyPicture, 2);
                             _b2KeyPicture.Margin = ui.TopSpacing;
 
                             _b2KeyPicture.BorderStyle = BorderStyle.FixedSingle;
@@ -159,27 +185,41 @@ public sealed class LoginForm : Form
 
                 _tabControl.TabPages.Add(_encryptionPage = ui.NewTabPage("Encryption"));
                 {
-                    _encryptionPage.Controls.Add(_encryptionTable = ui.NewTable(1, 2));
+                    _encryptionPage.Controls.Add(_encryptionTable = ui.NewTable(2, 2));
                     {
                         _encryptionTable.Padding = ui.DefaultPadding;
 
+                        _encryptionTable.Controls.Add(
+                            _encryptionIconPicture = ui.NewPictureBox(
+                                ui.GetScaledBitmapResource("Encryption.png", 32, 32)
+                            ),
+                            0,
+                            0
+                        );
+                        {
+                            _encryptionIconPicture.Padding = ui.DefaultPadding;
+                        }
+
                         _passwordText = ui.AddPairToTable(
                             _encryptionTable,
-                            0,
+                            1,
                             0,
                             ui.NewLabeledTextBox("Encryption password:", 300)
                         );
                         _passwordText.Margin += ui.BottomSpacingBig;
 
                         _encryptionTable.Controls.Add(
-                            ui.NewLabel(
-                                "This password protects all files in your bucket.\n\n"
+                            _encryptionHelpLabel = ui.NewLabel(
+                                "Your content is secured with end-to-end encryption.\n\n"
                                     + "When creating a new library, choose a new password.\n\n"
                                     + "To connect to an existing library, make sure to use the right password."
                             ),
-                            0,
+                            1,
                             1
                         );
+                        {
+                            _encryptionTable.SetColumnSpan(_encryptionHelpLabel, 2);
+                        }
                     }
                 }
 
@@ -192,12 +232,12 @@ public sealed class LoginForm : Form
 
                         _m3u8Flow.Controls.Add(
                             ui.NewLabel(
-                                "Non-Windows devices can stream videos through Jackpot using the VLC app.\n\nJackpot can maintain a folder of .m3u8 files for them to access via Windows file sharing."
+                                "Non-Windows devices can stream videos through Jackpot using the VLC app.\n\nJackpot can maintain a folder of .M3U8 files for them to access via Windows file sharing."
                             )
                         );
 
                         _m3u8Flow.Controls.Add(
-                            _enableM3u8FolderCheck = ui.NewCheckBox("Store .m3u8 files in a local folder")
+                            _enableM3u8FolderCheck = ui.NewCheckBox("Store .M3U8 files in a local folder")
                         );
                         {
                             _enableM3u8FolderCheck.Margin += ui.TopSpacingBig;
@@ -206,7 +246,7 @@ public sealed class LoginForm : Form
                         (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
                         _m3u8Flow.Controls.Add(p);
 
-                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in .m3u8 files:", 200);
+                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in .M3U8 files:", 200);
                         _m3u8Flow.Controls.Add(p);
                     }
                 }
