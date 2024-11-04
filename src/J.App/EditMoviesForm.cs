@@ -1,11 +1,12 @@
 ﻿using System.Collections.Frozen;
 using System.Data;
+using System.Text.RegularExpressions;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace J.App;
 
-public sealed class EditMoviesForm : Form
+public sealed partial class EditMoviesForm : Form
 {
     private readonly ContextMenuStrip _contextMenuStrip;
     private readonly LibraryProviderAdapter _libraryProvider;
@@ -13,6 +14,10 @@ public sealed class EditMoviesForm : Form
     private readonly MovieExporter _movieExporter;
     private readonly DataGridView _grid;
     private readonly DataTable _data;
+    private readonly TableLayoutPanel _table;
+    private readonly FlowLayoutPanel _buttonFlow;
+    private readonly Button _closeButton;
+    private readonly TextBox _searchText;
 
     public EditMoviesForm(
         LibraryProviderAdapter libraryProvider,
@@ -52,32 +57,54 @@ public sealed class EditMoviesForm : Form
             _contextMenuStrip.Items.Add("Delete", null, DeleteMovie_Click);
         }
 
-        Controls.Add(_grid = ui.NewDataGridView());
+        Controls.Add(_table = ui.NewTable(1, 2));
         {
-            _grid.ContextMenuStrip = _contextMenuStrip;
-            _grid.DataSource = _data;
-
-            var col_name = _grid.Columns[_grid.Columns.Add("name", "Name")];
+            _table.Controls.Add(_buttonFlow = ui.NewFlowRow());
             {
-                col_name.Width = ui.GetLength(550);
-                col_name.DataPropertyName = "name";
-                col_name.Frozen = true;
-            }
+                _buttonFlow.Padding = ui.DefaultPadding;
 
-            var col_date_added = _grid.Columns[_grid.Columns.Add("date_added", "Date Added")];
-            {
-                col_date_added.Width = ui.GetLength(225);
-                col_date_added.DataPropertyName = "date_added";
-                col_date_added.DividerWidth = ui.GetLength(3);
-                col_date_added.Frozen = true;
-            }
-
-            foreach (var tagType in tagTypes)
-            {
-                var col = _grid.Columns[_grid.Columns.Add(tagType.Id.Value, tagType.PluralName)];
+                _buttonFlow.Controls.Add(_closeButton = ui.NewButton("Close"));
                 {
-                    col.Width = ui.GetLength(200);
-                    col.DataPropertyName = tagType.Id.Value;
+                    _closeButton.Margin += ui.RightSpacing;
+                    _closeButton.Click += CloseButton_Click;
+                }
+
+                _buttonFlow.Controls.Add(_searchText = ui.NewTextBox(200));
+                {
+                    ui.SetBigFont(_searchText);
+                    _searchText.Margin += ui.GetPadding(0, 4);
+                    ui.SetCueText(_searchText, "Search");
+                    _searchText.KeyPress += SearchText_KeyPress;
+                }
+            }
+
+            _table.Controls.Add(_grid = ui.NewDataGridView(), 0, 1);
+            {
+                _grid.ContextMenuStrip = _contextMenuStrip;
+                _grid.DataSource = _data;
+
+                var col_name = _grid.Columns[_grid.Columns.Add("name", "Name")];
+                {
+                    col_name.Width = ui.GetLength(550);
+                    col_name.DataPropertyName = "name";
+                    col_name.Frozen = true;
+                }
+
+                var col_date_added = _grid.Columns[_grid.Columns.Add("date_added", "Date Added")];
+                {
+                    col_date_added.Width = ui.GetLength(225);
+                    col_date_added.DataPropertyName = "date_added";
+                    col_date_added.DividerWidth = ui.GetLength(3);
+                    col_date_added.Frozen = true;
+                }
+
+                foreach (var tagType in tagTypes)
+                {
+                    var col = _grid.Columns[_grid.Columns.Add(tagType.Id.Value, tagType.PluralName)];
+                    {
+                        col.Width = ui.GetLength(200);
+                        col.DataPropertyName = tagType.Id.Value;
+                    }
                 }
             }
         }
@@ -93,6 +120,21 @@ public sealed class EditMoviesForm : Form
         ShowIcon = true;
         ShowInTaskbar = false;
         WindowState = FormWindowState.Maximized;
+    }
+
+    private void SearchText_KeyPress(object? sender, KeyPressEventArgs e)
+    {
+        // Did they press the enter key with no modifiers?
+        if (e.KeyChar == (char)Keys.Enter && ModifierKeys == Keys.None)
+        {
+            e.Handled = true;
+            UpdateList();
+        }
+    }
+
+    private void CloseButton_Click(object? sender, EventArgs e)
+    {
+        Close();
     }
 
     protected override void Dispose(bool disposing)
@@ -317,6 +359,36 @@ public sealed class EditMoviesForm : Form
         var tags = _libraryProvider.GetTags().ToDictionary(x => x.Id);
         var movieTags = _libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId);
 
+        var searchTerms = WhitespaceRegex().Split(_searchText.Text);
+        movies = movies
+            .Where(movie =>
+            {
+                var thisMovieTags = movieTags[movie.Id].Select(tagId => tags[tagId]).ToList();
+
+                foreach (var term in searchTerms)
+                {
+                    if (movie.Filename.Contains(term, StringComparison.InvariantCultureIgnoreCase))
+                        continue;
+
+                    var match = false;
+                    foreach (var tag in thisMovieTags)
+                    {
+                        if (tag.Name.Contains(term, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (match)
+                        continue;
+
+                    return false;
+                }
+
+                return true;
+            })
+            .ToList();
+
         _grid.DataSource = null;
         _data.Rows.Clear();
 
@@ -355,6 +427,7 @@ public sealed class EditMoviesForm : Form
             _grid.FirstDisplayedScrollingColumnIndex = firstColumnIndex;
 
         // Re-select the originally selected rows, if possible (they might have been deleted).
+        _grid.ClearSelection();
         foreach (DataGridViewRow viewRow in _grid.Rows)
         {
             var row = ((DataRowView)viewRow.DataBoundItem).Row;
@@ -425,4 +498,7 @@ public sealed class EditMoviesForm : Form
             );
         }
     }
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
 }

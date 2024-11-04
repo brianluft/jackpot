@@ -68,7 +68,17 @@ public sealed partial class Ui(Control parent)
 
     public Padding RightSpacing => new(0, 0, GetLength(DefaultUnscaledPadding), 0);
 
-    public Font NewListFont() => new("Segoe UI", 11f);
+    public Font NewBigFont() => new("Segoe UI", 11f);
+
+    public void SetBigFont(Control control)
+    {
+        var font = NewBigFont();
+        control.Disposed += delegate
+        {
+            font.Dispose();
+        };
+        control.Font = font;
+    }
 
     public (Control Parent, TextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
@@ -421,7 +431,7 @@ public sealed partial class Ui(Control parent)
 
     public ToolStripTextBox NewToolStripTextBox(int unscaledWidth)
     {
-        var font = NewListFont();
+        var font = NewBigFont();
         ToolStripTextBox box =
             new()
             {
@@ -482,7 +492,7 @@ public sealed partial class Ui(Control parent)
 
     public ListBox NewListBox()
     {
-        var font = NewListFont();
+        var font = NewBigFont();
         ListBox listBox =
             new()
             {
@@ -557,7 +567,7 @@ public sealed partial class Ui(Control parent)
 
     public DataGridView NewDataGridView()
     {
-        var font = NewListFont();
+        var font = NewBigFont();
         DoubleBufferedDataGridView grid =
             new()
             {
@@ -633,7 +643,7 @@ public sealed partial class Ui(Control parent)
 
     public TextBox NewTextBox(int unscaledWidth)
     {
-        return new() { AutoSize = false, Width = GetLength(unscaledWidth) };
+        return new() { AutoSize = true, Width = GetLength(unscaledWidth) };
     }
 
     public CheckBox NewCheckBox(string text)
