@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -47,6 +46,14 @@ public sealed partial class LibraryProvider : IDisposable
         connection.Open();
     }
 
+    private static string GetDatabaseFilePath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var dir = Path.Combine(appData, "Jackpot");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "library.db");
+    }
+
     public void Connect()
     {
         lock (_lock)
@@ -54,8 +61,7 @@ public sealed partial class LibraryProvider : IDisposable
             _connection?.Dispose();
             _connection = null;
 
-            SqliteConnectionStringBuilder builder =
-                new() { DataSource = _accountSettingsProvider.Current.DatabaseFilePath, Pooling = false };
+            SqliteConnectionStringBuilder builder = new() { DataSource = GetDatabaseFilePath(), Pooling = false };
             SqliteConnection connection = new(builder.ConnectionString);
             connection.Open();
             _connection = connection;

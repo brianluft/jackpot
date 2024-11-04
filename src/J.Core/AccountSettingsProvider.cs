@@ -69,7 +69,7 @@ public sealed class AccountSettingsProvider
             if (!File.Exists(filePath))
             {
                 Console.Error.WriteLine("Account settings file doesn't exist: " + filePath);
-                return new("https://", "", "", "", "", "", false, "", "");
+                return new("https://", "", "", "", "", false, "", "");
             }
             var bytes = File.ReadAllBytes(filePath);
             var json = Decrypt(bytes);
@@ -78,7 +78,7 @@ public sealed class AccountSettingsProvider
         catch (Exception ex)
         {
             Console.Error.WriteLine("Failed to load account settings: " + ex.Message);
-            return new("https://", "", "", "", "", "", false, "", "");
+            return new("https://", "", "", "", "", false, "", "");
         }
     }
 

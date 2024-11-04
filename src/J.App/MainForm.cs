@@ -234,7 +234,7 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_menuButton = ui.NewToolStripDropDownButton("Menu"));
             {
-                _menuButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+                _menuButton.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
                 _menuButton.Margin = _menuButton.Margin with { Left = 0 };
                 _menuButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Menu.png", 16, 16));
                 _menuButton.DropDownOpened += MenuButton_DropDownOpened;

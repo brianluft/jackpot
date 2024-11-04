@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics;
+using System.Text.Json;
 using J.Core;
 using J.Core.Data;
 
@@ -8,27 +9,38 @@ public sealed class LoginForm : Form
 {
     private readonly AccountSettingsProvider _accountSettingsProvider;
     private readonly TableLayoutPanel _formTable,
-        _cloudTable;
+        _accountTable,
+        _bucketTable,
+        _encryptionTable;
     private readonly TextBox _endpointText,
         _accessKeyIdText,
         _secretAccessKeyText,
         _bucketText,
-        _databaseFilePathText,
         _passwordText,
         _m3u8FolderText,
         _m3u8HostnameText;
-    private readonly Button _createDatabaseButton,
-        _saveButton,
+    private readonly Button _saveButton,
         _cancelButton,
         _copySettingsButton,
         _pasteSettingsButton;
     private readonly FlowLayoutPanel _saveCancelButtonsFlow,
-        _localFlow,
-        _copyPasteButtonsFlow;
+        _m3u8Flow,
+        _copyPasteButtonsFlow,
+        _bucketHelpFlow,
+        _keyHelpFlow;
     private readonly TabControl _tabControl;
-    private readonly TabPage _cloudPage,
-        _localPage;
+    private readonly TabPage _accountPage,
+        _bucketPage,
+        _m3u8Page,
+        _encryptionPage,
+        _importExportPage;
     private readonly CheckBox _enableM3u8FolderCheck;
+    private readonly LinkLabel _b2BucketLink,
+        _b2KeyLink;
+    private readonly PictureBox _b2BucketPicture,
+        _b2BucketHelpPicture,
+        _b2KeyPicture,
+        _b2KeyHelpPicture;
 
     public LoginForm(AccountSettingsProvider accountSettingsProvider)
     {
@@ -47,95 +59,182 @@ public sealed class LoginForm : Form
                 _formTable.RowStyles[0].SizeType = SizeType.Percent;
                 _formTable.RowStyles[0].Height = 100;
 
-                _tabControl.TabPages.Add(_cloudPage = ui.NewTabPage("Cloud"));
+                _tabControl.TabPages.Add(_bucketPage = ui.NewTabPage("B2 Bucket"));
                 {
-                    _cloudPage.Controls.Add(_cloudTable = ui.NewTable(1, 9));
+                    _bucketPage.Controls.Add(_bucketTable = ui.NewTable(1, 4));
                     {
-                        _cloudTable.Padding = ui.DefaultPadding;
+                        _bucketTable.Padding = ui.DefaultPadding;
 
-                        _endpointText = ui.AddPairToTable(
-                            _cloudTable,
-                            0,
-                            0,
-                            ui.NewLabeledTextBox("Endpoint URL:", 400)
-                        );
+                        _bucketText = ui.AddPairToTable(_bucketTable, 0, 0, ui.NewLabeledTextBox("Bucket name:", 300));
 
-                        _accessKeyIdText = ui.AddPairToTable(
-                            _cloudTable,
+                        _endpointText = ui.AddPairToTable(_bucketTable, 0, 1, ui.NewLabeledTextBox("Endpoint:", 300));
+
+                        _bucketTable.Controls.Add(_bucketHelpFlow = ui.NewFlowRow(), 0, 2);
+                        {
+                            _bucketHelpFlow.Margin = ui.GetPadding(0, 32, 0, 0);
+
+                            _bucketHelpFlow.Controls.Add(
+                                _b2BucketHelpPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Help.png", 16, 16))
+                            );
+                            {
+                                _b2BucketHelpPicture.Dock = DockStyle.Bottom;
+                            }
+
+                            _bucketHelpFlow.Controls.Add(ui.NewLabel("Create a bucket on the"));
+
+                            _bucketHelpFlow.Controls.Add(_b2BucketLink = ui.NewLinkLabel("B2 Cloud Storage Buckets"));
+                            {
+                                _b2BucketLink.LinkClicked += B2BucketLink_LinkClicked;
+                            }
+
+                            _bucketHelpFlow.Controls.Add(ui.NewLabel("web page:"));
+                        }
+
+                        _bucketTable.Controls.Add(
+                            _b2BucketPicture = ui.NewPictureBox(
+                                ui.GetScaledBitmapResource("B2BucketHelp.png", 420, 179)
+                            ),
                             0,
-                            1,
-                            ui.NewLabeledTextBox("Access key ID:", 400)
+                            3
                         );
+                        {
+                            _b2BucketPicture.Margin = ui.TopSpacing;
+
+                            _b2BucketPicture.BorderStyle = BorderStyle.FixedSingle;
+                        }
+                    }
+                }
+
+                _tabControl.TabPages.Add(_accountPage = ui.NewTabPage("B2 Application Key"));
+                {
+                    _accountPage.Controls.Add(_accountTable = ui.NewTable(1, 4));
+                    {
+                        _accountTable.Padding = ui.DefaultPadding;
+
+                        _accessKeyIdText = ui.AddPairToTable(_accountTable, 0, 0, ui.NewLabeledTextBox("keyID:", 300));
 
                         _secretAccessKeyText = ui.AddPairToTable(
-                            _cloudTable,
+                            _accountTable,
                             0,
-                            2,
-                            ui.NewLabeledTextBox("Secret access key:", 400)
+                            1,
+                            ui.NewLabeledTextBox("applicationKey:", 300)
                         );
                         {
                             _secretAccessKeyText.PasswordChar = '•';
                         }
 
-                        _bucketText = ui.AddPairToTable(_cloudTable, 0, 3, ui.NewLabeledTextBox("Bucket:", 400));
+                        _accountTable.Controls.Add(_keyHelpFlow = ui.NewFlowRow(), 0, 2);
+                        {
+                            _keyHelpFlow.Margin = ui.GetPadding(0, 32, 0, 0);
+
+                            _keyHelpFlow.Controls.Add(
+                                _b2KeyHelpPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Help.png", 16, 16))
+                            );
+                            {
+                                _b2KeyHelpPicture.Dock = DockStyle.Bottom;
+                            }
+
+                            _keyHelpFlow.Controls.Add(ui.NewLabel("Create an application key on the"));
+
+                            _keyHelpFlow.Controls.Add(_b2KeyLink = ui.NewLinkLabel("B2 Application Keys"));
+                            {
+                                _b2KeyLink.LinkClicked += B2KeyLink_LinkClicked;
+                            }
+
+                            _keyHelpFlow.Controls.Add(ui.NewLabel("web page:"));
+                        }
+
+                        _accountTable.Controls.Add(
+                            _b2KeyPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("B2KeyHelp.png", 500, 191)),
+                            0,
+                            3
+                        );
+                        {
+                            _b2KeyPicture.Margin = ui.TopSpacing;
+
+                            _b2KeyPicture.BorderStyle = BorderStyle.FixedSingle;
+                        }
+                    }
+                }
+
+                _tabControl.TabPages.Add(_encryptionPage = ui.NewTabPage("Encryption"));
+                {
+                    _encryptionPage.Controls.Add(_encryptionTable = ui.NewTable(1, 2));
+                    {
+                        _encryptionTable.Padding = ui.DefaultPadding;
 
                         _passwordText = ui.AddPairToTable(
-                            _cloudTable,
+                            _encryptionTable,
                             0,
-                            4,
-                            ui.NewLabeledTextBox("Choose an encryption password:", 400)
+                            0,
+                            ui.NewLabeledTextBox("Encryption password:", 300)
+                        );
+                        _passwordText.Margin += ui.BottomSpacingBig;
+
+                        _encryptionTable.Controls.Add(
+                            ui.NewLabel(
+                                "This password protects all files in your bucket.\n\n"
+                                    + "When creating a new library, choose a new password.\n\n"
+                                    + "To connect to an existing library, make sure to use the right password."
+                            ),
+                            0,
+                            1
                         );
                     }
                 }
 
-                _tabControl.TabPages.Add(_localPage = ui.NewTabPage("Local"));
+                _tabControl.TabPages.Add(_m3u8Page = ui.NewTabPage(".M3U8 Sync"));
                 {
-                    _localPage.Controls.Add(_localFlow = ui.NewFlowColumn());
+                    _m3u8Page.Controls.Add(_m3u8Flow = ui.NewFlowColumn());
                     {
-                        _localFlow.Padding = ui.DefaultPadding;
+                        _m3u8Flow.Padding = ui.DefaultPadding;
                         Control p;
 
-                        (p, _databaseFilePathText) = ui.NewLabeledOpenFileTextBox(
-                            "Database file:",
-                            400,
-                            ConfigureOpenFileDialog
+                        _m3u8Flow.Controls.Add(
+                            ui.NewLabel(
+                                "Non-Windows devices can stream videos through Jackpot using the VLC app.\n\nJackpot can maintain a folder of .m3u8 files for them to access via Windows file sharing."
+                            )
                         );
-                        _localFlow.Controls.Add(p);
 
-                        _localFlow.Controls.Add(_createDatabaseButton = ui.NewButton("Create database..."));
-                        {
-                            _createDatabaseButton.Margin = ui.TopSpacingBig;
-                            _createDatabaseButton.Click += CreateDatabaseButton_Click;
-                        }
-
-                        _localFlow.Controls.Add(
+                        _m3u8Flow.Controls.Add(
                             _enableM3u8FolderCheck = ui.NewCheckBox("Store .m3u8 files in a local folder")
                         );
                         {
-                            _enableM3u8FolderCheck.Margin = ui.TopSpacingBig;
+                            _enableM3u8FolderCheck.Margin += ui.TopSpacingBig;
                         }
 
-                        (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox(".m3u8 folder:", 400, _ => { });
-                        _localFlow.Controls.Add(p);
+                        (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
+                        _m3u8Flow.Controls.Add(p);
 
                         (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in .m3u8 files:", 200);
-                        _localFlow.Controls.Add(p);
+                        _m3u8Flow.Controls.Add(p);
                     }
                 }
             }
 
-            _formTable.Controls.Add(_copyPasteButtonsFlow = ui.NewFlowRow(), 0, 1);
+            _tabControl.TabPages.Add(_importExportPage = ui.NewTabPage("Import/Export Settings"));
             {
-                _copyPasteButtonsFlow.Margin = ui.TopSpacingBig;
-
-                _copyPasteButtonsFlow.Controls.Add(_copySettingsButton = ui.NewButton("Copy"));
+                _importExportPage.Controls.Add(_copyPasteButtonsFlow = ui.NewFlowColumn());
                 {
-                    _copySettingsButton.Click += CopySettingsButton_Click;
-                }
+                    _copyPasteButtonsFlow.Padding = ui.DefaultPadding;
 
-                _copyPasteButtonsFlow.Controls.Add(_pasteSettingsButton = ui.NewButton("Paste"));
-                {
-                    _pasteSettingsButton.Click += PasteSettingsButton_Click;
+                    _copyPasteButtonsFlow.Controls.Add(
+                        ui.NewLabel(
+                            "Use the buttons below to import or export a copy of your login information.\n\nSave this text in your password manager for safe keeping."
+                        )
+                    );
+
+                    _copyPasteButtonsFlow.Controls.Add(_copySettingsButton = ui.NewButton("Copy JSON"));
+                    {
+                        _copySettingsButton.Margin += ui.TopSpacingBig;
+                        _copySettingsButton.Click += CopySettingsButton_Click;
+                    }
+
+                    _copyPasteButtonsFlow.Controls.Add(_pasteSettingsButton = ui.NewButton("Paste JSON"));
+                    {
+                        _pasteSettingsButton.Margin += ui.TopSpacing + ui.BottomSpacingBig;
+                        _pasteSettingsButton.Click += PasteSettingsButton_Click;
+                    }
                 }
             }
 
@@ -169,7 +268,7 @@ public sealed class LoginForm : Form
 
         Text = "Jackpot Login";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(460, 450);
+        MinimumSize = Size = ui.GetSize(560, 515);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -185,42 +284,16 @@ public sealed class LoginForm : Form
         };
     }
 
-    private void CreateDatabaseButton_Click(object? sender, EventArgs e)
+    private void B2KeyLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
-        using SaveFileDialog d =
-            new()
-            {
-                AddToRecent = false,
-                AutoUpgradeEnabled = true,
-                CheckFileExists = false,
-                CheckPathExists = false,
-                DefaultExt = "key",
-                Filter = "Database files (*.db)|*.db",
-                RestoreDirectory = true,
-                ShowHelp = false,
-                SupportMultiDottedExtensions = true,
-                Title = "Save new database file",
-            };
-        if (d.ShowDialog(this) != DialogResult.OK)
-            return;
-
-        LibraryProvider.Create(d.FileName);
-        _databaseFilePathText.Text = d.FileName;
+        ProcessStartInfo psi = new("https://secure.backblaze.com/app_keys.htm") { UseShellExecute = true };
+        Process.Start(psi)!.Dispose();
     }
 
-    private void ConfigureOpenFileDialog(System.Windows.Forms.OpenFileDialog dialog)
+    private void B2BucketLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
-        dialog.AddToRecent = false;
-        dialog.AutoUpgradeEnabled = true;
-        dialog.CheckFileExists = true;
-        dialog.CheckPathExists = true;
-        dialog.Filter = "Database files (*.db)|*.db";
-        dialog.Multiselect = false;
-        dialog.RestoreDirectory = true;
-        dialog.SelectReadOnly = true;
-        dialog.ShowHelp = false;
-        dialog.ShowReadOnly = false;
-        dialog.Title = "Select key file";
+        ProcessStartInfo psi = new("https://secure.backblaze.com/b2_buckets.htm") { UseShellExecute = true };
+        Process.Start(psi)!.Dispose();
     }
 
     private void SaveButton_Click(object? sender, EventArgs e)
@@ -243,7 +316,6 @@ public sealed class LoginForm : Form
             _accessKeyIdText.Text,
             _secretAccessKeyText.Text,
             _bucketText.Text,
-            _databaseFilePathText.Text,
             _passwordText.Text,
             _enableM3u8FolderCheck.Checked,
             _m3u8FolderText.Text,
@@ -256,7 +328,6 @@ public sealed class LoginForm : Form
         _accessKeyIdText.Text = settings.AccessKeyId;
         _secretAccessKeyText.Text = settings.SecretAccessKey;
         _bucketText.Text = settings.Bucket;
-        _databaseFilePathText.Text = settings.DatabaseFilePath;
         _passwordText.Text = settings.PasswordText;
         _enableM3u8FolderCheck.Checked = settings.EnableLocalM3u8Folder;
         _m3u8FolderText.Text = settings.LocalM3u8FolderPath;

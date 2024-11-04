@@ -5,7 +5,6 @@ public readonly record struct AccountSettings(
     string AccessKeyId,
     string SecretAccessKey,
     string Bucket,
-    string DatabaseFilePath,
     string PasswordText,
     bool EnableLocalM3u8Folder,
     string LocalM3u8FolderPath,
@@ -19,6 +18,5 @@ public readonly record struct AccountSettings(
         && !string.IsNullOrWhiteSpace(AccessKeyId)
         && !string.IsNullOrWhiteSpace(SecretAccessKey)
         && !string.IsNullOrWhiteSpace(Bucket)
-        && !string.IsNullOrWhiteSpace(DatabaseFilePath)
         && !string.IsNullOrWhiteSpace(PasswordText);
 }
