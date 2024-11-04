@@ -8,6 +8,10 @@
     <LangVersion>latest</LangVersion>
 	<AssemblyName>Jackpot.Server</AssemblyName>
 	<ApplicationIcon>..\J.App\Resources\App.ico</ApplicationIcon>
+	<ServerGarbageCollection>false</ServerGarbageCollection>
+	<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+	<RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+	<GCLargeObjectHeapCompactionMode>1</GCLargeObjectHeapCompactionMode>
   </PropertyGroup>
 
   <ItemGroup>
