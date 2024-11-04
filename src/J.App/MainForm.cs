@@ -567,11 +567,6 @@ public sealed partial class MainForm : Form
         GoHome();
     }
 
-    private void NavigateBlank()
-    {
-        _browser.Source = new("about:blank");
-    }
-
     private void Navigate(string path)
     {
         var url = $"http://localhost:{_client.Port}{path}";
