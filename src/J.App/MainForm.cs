@@ -715,7 +715,7 @@ public sealed partial class MainForm : Form
     private async Task UpdateFiltersAsync()
     {
         await _client.SetFilterAsync(new(_filterOr, _filterRules), CancellationToken.None).ConfigureAwait(true);
-        _browser.Reload();
+        PageFirstOrLast(first: true);
 
         // Update the filter menu. Start by removing anything after the last separator.
         var separatorIndex = -1;
