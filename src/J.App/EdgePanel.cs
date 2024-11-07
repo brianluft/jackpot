@@ -36,6 +36,7 @@ public sealed class EdgePanel : Panel
         _pageNextBitmap = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("PageNext.png", 16, 16));
         _pageEndBitmap = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("PageEnd.png", 16, 16));
         _longHeight = _pageEndBitmap.Height + _padding * 2;
+        DoubleBuffered = true;
     }
 
     protected override void OnMouseClick(MouseEventArgs e)
