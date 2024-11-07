@@ -210,44 +210,6 @@ function New-Msix
 	Write-Host "--- End: MakeAppx pack ---`n"
 }
 
-function Add-TemporarySignature
-{
-	Write-Host "Signing MSIX package with self-signed certificate."
-
-	$cert = New-SelfSignedCertificate `
-		-Type Custom `
-		-Subject "CN=Brian Luft" `
-		-KeyUsage DigitalSignature `
-		-KeyAlgorithm RSA `
-		-KeyLength 2048 `
-		-CertStoreLocation "Cert:\CurrentUser\My" `
-		-NotAfter (Get-Date).AddDays(7) `
-		-FriendlyName "Temporary CI Build Certificate" `
-		-TextExtension @("2.5.29.19={text}CA=false&pathlength=0")
-
-	try
-	{
-		# Export to .pfx (public key + private key).
-		$password = ConvertTo-SecureString -String "password" -Force -AsPlainText
-		Export-PfxCertificate -Cert $cert -FilePath "$publishDir\private.pfx" -Password $password | Out-Null
-
-		# Export to .cer (public key only).
-		Export-Certificate -Cert $cert -FilePath "$publishDir\ci-certificate.cer" | Out-Null
-
-		# Sign the .msix.
-		& "$root\src\Add-MsixSignature.ps1" -CertificatePath "$publishDir\private.pfx" -CertificatePassword "password"
-	}
-	finally
-	{
-		# Destroy the private certificate.
-		Remove-Item -Path $cert.PSPath
-
-		if (Test-Path "$publishDir\private.pfx") {
-			Remove-Item -Path "$publishDir\private.pfx" -Force
-		}
-	}
-}
-
 Copy-MiscFiles
 Publish-Launcher
 Publish-App -Arch "x64"
@@ -256,4 +218,3 @@ Get-FfmpegX64
 Get-FfmpegArm64
 Get-Vlc
 New-Msix
-Add-TemporarySignature
