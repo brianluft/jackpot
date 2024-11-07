@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Web;
 using J.Core.Data;
@@ -24,6 +25,7 @@ public sealed partial class MainForm : Form
     private readonly ToolStripDropDownButton _menuButton,
         _filterButton;
     private readonly ToolStripMenuItem _logOutButton,
+        _aboutButton,
         _addToLibraryButton,
         _editTagsButton,
         _manageMoviesButton,
@@ -270,6 +272,11 @@ public sealed partial class MainForm : Form
                 {
                     _logOutButton.Click += DisconnectButton_Click;
                 }
+
+                _menuButton.DropDownItems.Add(_aboutButton = ui.NewToolStripMenuItem("About Jackpot"));
+                {
+                    _aboutButton.Click += AboutButton_Click;
+                }
             }
 
             _toolStrip.Items.Add(_browseBackButton = ui.NewToolStripButton("Back"));
@@ -385,6 +392,36 @@ public sealed partial class MainForm : Form
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;
+    }
+
+    private void AboutButton_Click(object? sender, EventArgs e)
+    {
+        var assembly = typeof(MainForm).Assembly;
+        var version = assembly.GetName().Version;
+
+        TaskDialogPage taskDialogPage =
+            new()
+            {
+                Heading = "Jackpot Media Library",
+                Caption = "About Jackpot",
+                Icon = TaskDialogIcon.Information,
+                Text = $"Version {version}",
+            };
+        taskDialogPage.Buttons.Add("License info");
+        taskDialogPage.Buttons.Add(TaskDialogButton.OK);
+        taskDialogPage.DefaultButton = taskDialogPage.Buttons[1];
+        var clicked = TaskDialog.ShowDialog(this, taskDialogPage);
+        if (clicked == taskDialogPage.Buttons[0])
+        {
+            Process
+                .Start(
+                    new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Resources", "License.html"))
+                    {
+                        UseShellExecute = true,
+                    }
+                )!
+                .Dispose();
+        }
     }
 
     protected override void OnShown(EventArgs e)
