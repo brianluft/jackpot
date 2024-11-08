@@ -7,6 +7,7 @@ using J.Core;
 using J.Core.Data;
 using J.Server;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Win32;
 
 const int BLOCKS_PER_PAGE = 25;
 
@@ -31,6 +32,17 @@ var accountSettingsProvider = app.Services.GetRequiredService<AccountSettingsPro
 var accountSettings = accountSettingsProvider.Current;
 var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
+
+bool isVlcInstalled;
+try
+{
+    using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
+    isVlcInstalled = key is not null;
+}
+catch
+{
+    isVlcInstalled = false;
+}
 
 object optionsLock = new();
 var optionShuffle = true;
@@ -413,13 +425,37 @@ app.MapPost(
         query["movieId"] = movie.Id.Value;
         query["sessionPassword"] = configuredSessionPassword;
         var url = $"http://localhost:{configuredPort}/movie.m3u8?{query}";
-        var isSystemVlc = accountSettingsProvider.IsVlcInstalled.Value;
+
+        var extraArgs = "";
+        if (!isVlcInstalled)
+        {
+            var configPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Jackpot",
+                "vlcrc"
+            );
+
+            if (!File.Exists(configPath))
+            {
+                File.WriteAllText(
+                    configPath,
+                    """
+                    metadata-network-access=0
+                    qt-updates-notif=0
+                    qt-privacy-ask=0
+                    """
+                );
+            }
+
+            extraArgs = $"--config \"{configPath}\"";
+        }
+
         ProcessStartInfo psi =
             new()
             {
-                FileName = isSystemVlc ? "vlc.exe" : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
-                Arguments = url,
-                UseShellExecute = isSystemVlc,
+                FileName = isVlcInstalled ? "vlc.exe" : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
+                Arguments = $"--no-plugins-scan --high-priority {extraArgs} -- {url}",
+                UseShellExecute = isVlcInstalled,
             };
         using var p = Process.Start(psi)!;
         ApplicationSubProcesses.Add(p);

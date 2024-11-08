@@ -19,4 +19,11 @@ public readonly record struct AccountSettings(
         && !string.IsNullOrWhiteSpace(SecretAccessKey)
         && !string.IsNullOrWhiteSpace(Bucket)
         && !string.IsNullOrWhiteSpace(PasswordText);
+
+    public static AccountSettings Empty => new("", "", "", "", "", false, "", "");
+
+    public AccountSettings Upgrade()
+    {
+        return this;
+    }
 }

@@ -1,8 +1,6 @@
-﻿using System.ComponentModel;
-using System.Drawing.Drawing2D;
+﻿using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using Microsoft.AspNetCore.Mvc;
 
 namespace J.App;
 

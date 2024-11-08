@@ -10,12 +10,7 @@ namespace J.Core;
 public sealed class AccountSettingsProvider
 {
     private readonly object _lock = new();
-    private AccountSettings _current;
-
-    public AccountSettingsProvider()
-    {
-        _current = Load();
-    }
+    private AccountSettings _current = Load();
 
     public event EventHandler? SettingsChanged;
 
@@ -69,16 +64,17 @@ public sealed class AccountSettingsProvider
             if (!File.Exists(filePath))
             {
                 Console.Error.WriteLine("Account settings file doesn't exist: " + filePath);
-                return new("https://", "", "", "", "", false, "", "");
+                return AccountSettings.Empty;
             }
             var bytes = File.ReadAllBytes(filePath);
             var json = Decrypt(bytes);
-            return JsonSerializer.Deserialize<AccountSettings>(json)!;
+            var settings = JsonSerializer.Deserialize<AccountSettings>(json)!;
+            return settings.Upgrade();
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine("Failed to load account settings: " + ex.Message);
-            return new("https://", "", "", "", "", false, "", "");
+            return AccountSettings.Empty;
         }
     }
 
@@ -97,7 +93,7 @@ public sealed class AccountSettingsProvider
     private static string GetFilePath()
     {
         var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Jackpot",
             "account-settings"
         );
@@ -105,19 +101,4 @@ public sealed class AccountSettingsProvider
         Console.Error.WriteLine("Account settings: " + path);
         return path;
     }
-
-    public Lazy<bool> IsVlcInstalled { get; } =
-        new(() =>
-        {
-            // Check that the registry key "Computer\HKEY_CLASSES_ROOT\Applications\vlc.exe" exists.
-            try
-            {
-                using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
-                return key is not null;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        });
 }
