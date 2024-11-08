@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using J.Core;
+﻿using J.Core;
 using J.Core.Data;
 
 namespace J.App;
@@ -248,10 +247,4 @@ public sealed partial class M3u8FolderSync(
 
     private string MakeFilesystemSafe(string name) =>
         string.Join("_", name.Split(_filesystemInvalidChars, StringSplitOptions.RemoveEmptyEntries));
-
-    [GeneratedRegex(@"[_'""\s\-\[\]\(\)]+")]
-    private static partial Regex WordSeparatorRegex();
-
-    [GeneratedRegex(@"^[\d\-\._]+$")]
-    private static partial Regex NumberRegex();
 }
