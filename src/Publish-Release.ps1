@@ -140,6 +140,17 @@ function Get-Vlc
 	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
 	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
 
+	# Generate plugins\plugins.dat by running vlc-cache-gen.
+	Push-Location $dstDir
+	try
+	{
+		& .\vlc-cache-gen.exe .\plugins | Out-Host
+	}
+	finally
+	{
+		Pop-Location
+	}
+
 	# Get the only subdirectory of $dstDir.
 	$subdir = Get-ChildItem -Path $dstDir -Directory | Select-Object -First 1
 
