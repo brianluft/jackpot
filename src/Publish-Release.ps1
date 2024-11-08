@@ -140,17 +140,6 @@ function Get-Vlc
 	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
 	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
 
-	# Generate plugins\plugins.dat by running vlc-cache-gen.
-	Push-Location $dstDir
-	try
-	{
-		& .\vlc-cache-gen.exe .\plugins | Out-Host
-	}
-	finally
-	{
-		Pop-Location
-	}
-
 	# Get the only subdirectory of $dstDir.
 	$subdir = Get-ChildItem -Path $dstDir -Directory | Select-Object -First 1
 
@@ -164,6 +153,25 @@ function Get-Vlc
 
 	# Delete $subdir.
 	Remove-Item -Path $subdir.FullName -Recurse -Force
+
+	# Generate plugins\plugins.dat by running vlc-cache-gen.
+	if (Test-Path "$dstDir\plugins\plugins.dat") {
+		throw "plugins.dat already exists."
+	}
+
+	Push-Location $dstDir
+	try
+	{
+		& .\vlc-cache-gen.exe .\plugins | Out-Host
+	}
+	finally
+	{
+		Pop-Location
+	}
+
+	if (-not (Test-Path "$dstDir\plugins\plugins.dat")) {
+		throw "Failed to generate plugins.dat."
+	}
 }
 
 function Copy-MiscFiles
