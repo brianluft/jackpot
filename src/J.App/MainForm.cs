@@ -38,7 +38,8 @@ public sealed partial class MainForm : Form
         _exitButton,
         _browseBackButton,
         _browseForwardButton,
-        _shuffleButton;
+        _shuffleButton,
+        _filterClearButton;
     private readonly ToolStripTextBox _searchText;
     private readonly ToolStripLabel _titleLabel,
         _pageLabel;
@@ -203,12 +204,14 @@ public sealed partial class MainForm : Form
                 separator2.Alignment = ToolStripItemAlignment.Right;
             }
 
-            _toolStrip.Items.Add(_shuffleButton = ui.NewToolStripButton("Shuffle"));
+            _toolStrip.Items.Add(_filterClearButton = ui.NewToolStripButton("Clear Filter", true));
             {
-                _shuffleButton.Alignment = ToolStripItemAlignment.Right;
-                _shuffleButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Shuffle.png", 16, 16));
-                _shuffleButton.Checked = true;
-                _shuffleButton.Click += ShuffleButton_Click;
+                _filterClearButton.Alignment = ToolStripItemAlignment.Right;
+                _filterClearButton.Image = ui.InvertColorsInPlace(
+                    ui.GetScaledBitmapResource("FilterClear.png", 16, 16)
+                );
+                _filterClearButton.Visible = false;
+                _filterClearButton.Click += FilterClearButton_Click;
             }
 
             _toolStrip.Items.Add(_filterButton = ui.NewToolStripDropDownButton("Filter"));
@@ -232,6 +235,14 @@ public sealed partial class MainForm : Form
                 }
 
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
+            }
+
+            _toolStrip.Items.Add(_shuffleButton = ui.NewToolStripButton("Shuffle"));
+            {
+                _shuffleButton.Alignment = ToolStripItemAlignment.Right;
+                _shuffleButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Shuffle.png", 16, 16));
+                _shuffleButton.Checked = true;
+                _shuffleButton.Click += ShuffleButton_Click;
             }
 
             _toolStrip.Items.Add(_menuButton = ui.NewToolStripDropDownButton("Menu"));
@@ -786,8 +797,15 @@ public sealed partial class MainForm : Form
             }
         }
 
-        // Highlight filter button.
+        // Update toolbar buttons.
         _filterButton.BackColor = _filterRules.Count > 0 ? Color.Gray : DefaultBackColor;
+        _filterClearButton.Visible = _filterRules.Count > 0;
+    }
+
+    private async void FilterClearButton_Click(object? sender, EventArgs e)
+    {
+        _filterRules.Clear();
+        await UpdateFiltersAsync().ConfigureAwait(true);
     }
 
     private async void FilterOrButton_Click(object? sender, EventArgs e)

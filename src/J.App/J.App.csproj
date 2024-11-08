@@ -67,6 +67,9 @@
     <None Update="Resources\Filter.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\FilterClear.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\Help.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
