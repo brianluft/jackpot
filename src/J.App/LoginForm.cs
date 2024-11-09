@@ -22,7 +22,8 @@ public sealed class LoginForm : Form
     private readonly Button _saveButton,
         _cancelButton,
         _copySettingsButton,
-        _pasteSettingsButton;
+        _pasteSettingsButton,
+        _deleteAllLocalDataButton;
     private readonly FlowLayoutPanel _saveCancelButtonsFlow,
         _m3u8Flow,
         _copyPasteButtonsFlow,
@@ -223,7 +224,7 @@ public sealed class LoginForm : Form
                     }
                 }
 
-                _tabControl.TabPages.Add(_m3u8Page = ui.NewTabPage(".M3U8 Sync"));
+                _tabControl.TabPages.Add(_m3u8Page = ui.NewTabPage("M3U8 Sync"));
                 {
                     _m3u8Page.Controls.Add(_m3u8Flow = ui.NewFlowColumn());
                     {
@@ -232,12 +233,12 @@ public sealed class LoginForm : Form
 
                         _m3u8Flow.Controls.Add(
                             ui.NewLabel(
-                                "Non-Windows devices can stream videos through Jackpot using the VLC app.\n\nJackpot can maintain a folder of .M3U8 files for them to access via Windows file sharing."
+                                "Non-Windows devices can stream videos through Jackpot using the VLC app.\n\nJackpot can maintain a folder of M3U8 files for them to access via Windows file sharing."
                             )
                         );
 
                         _m3u8Flow.Controls.Add(
-                            _enableM3u8FolderCheck = ui.NewCheckBox("Store .M3U8 files in a local folder")
+                            _enableM3u8FolderCheck = ui.NewCheckBox("Store M3U8 files in a local folder")
                         );
                         {
                             _enableM3u8FolderCheck.Margin += ui.TopSpacingBig;
@@ -246,7 +247,7 @@ public sealed class LoginForm : Form
                         (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
                         _m3u8Flow.Controls.Add(p);
 
-                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in .M3U8 files:", 200);
+                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 200);
                         _m3u8Flow.Controls.Add(p);
                     }
                 }
@@ -272,8 +273,22 @@ public sealed class LoginForm : Form
 
                     _copyPasteButtonsFlow.Controls.Add(_pasteSettingsButton = ui.NewButton("Paste JSON"));
                     {
-                        _pasteSettingsButton.Margin += ui.TopSpacing + ui.BottomSpacingBig;
+                        _pasteSettingsButton.Margin += ui.TopSpacing + ui.GetPadding(0, 0, 0, 36);
                         _pasteSettingsButton.Click += PasteSettingsButton_Click;
+                    }
+
+                    _copyPasteButtonsFlow.Controls.Add(
+                        ui.NewLabel(
+                            "If you plan to uninstall Jackpot and not reinstall, use this button to remove Jackpot data\nfrom your computer."
+                        )
+                    );
+
+                    _copyPasteButtonsFlow.Controls.Add(
+                        _deleteAllLocalDataButton = ui.NewButton("Delete all local data")
+                    );
+                    {
+                        _deleteAllLocalDataButton.Margin = ui.TopSpacingBig;
+                        _deleteAllLocalDataButton.Click += DeleteAllLocalDataButton_Click;
                     }
                 }
             }
@@ -437,5 +452,63 @@ public sealed class LoginForm : Form
     {
         DialogResult = DialogResult.Cancel;
         Close();
+    }
+
+    private void DeleteAllLocalDataButton_Click(object? sender, EventArgs e)
+    {
+        // Are you sure?
+        var response = MessageBox.Show(
+            this,
+            "Are you sure you want to delete all local Jackpot data?\n\nThis will remove all settings and cached data from your computer.",
+            "Delete All Local Data",
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Warning
+        );
+        if (response != DialogResult.OK)
+            return;
+
+        try
+        {
+            SimpleProgressForm.Do(
+                this,
+                "Deleting local data...",
+                (updateProgress, cancel) =>
+                {
+                    Delete(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Jackpot")
+                    );
+                    Delete(
+                        Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "Jackpot"
+                        )
+                    );
+                }
+            );
+
+            MessageBox.Show(
+                this,
+                "All local data has been deleted.",
+                "Delete All Local Data",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                "There was a problem deleting the local data.\n\n" + ex.Message,
+                "Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
+
+        static void Delete(string dir)
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
+        }
     }
 }
