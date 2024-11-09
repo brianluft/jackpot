@@ -1,22 +1,27 @@
 <h1 align="center"><img src="../src/J.App/Resources/App.png" width=64 height=64><br>Jackpot Media Library</h1>
 
-### Browse and stream videos directly from [Backblaze B2 storage](https://www.backblaze.com/cloud-storage)
- 
-- View your library as a wall of moving video clips.
-- Stream videos using the [VLC app](https://www.videolan.org/vlc/) on any device on your local network.
-- No complex setup. Jackpot is a regular Windows app and it comes with everything you need.
-- Simple tagging and filtering for media organization.
-- Fullscreen, mouse-driven design.
-- All content is end-to-end encrypted.
+<h3 align="center">Free Windows app to browse and stream videos directly from <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</h3>
 
-<br>
-<p align="center"><img src="img/main-screenshot.jpg" width=640 height=360></p>
+<p align="center">
+<a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360></a>
+</p>
+
+## Features
+ 
+- Browse your library as a wall of moving video clips.
+- Stream videos using the [VLC app](https://www.videolan.org/vlc/) on any device on your local network.
+- No server and no complex setup. Jackpot is a Windows app that comes with everything you need.
+- Simple tagging, searching, and filtering for media organization.
+- Fullscreen, mouse-driven design.
+- All content is protected with end-to-end encryption.
 
 ## Pricing
 
 The Jackpot app is free and open source.
-You'll just need a [Backblaze B2 account](https://www.backblaze.com/sign-up/cloud-storage) with monthly costs based on storage used and data transferred.
-Any S3-compatible provider will work, but Backblaze has the best pricing for this purpose.
+You just need a [Backblaze B2 account](https://www.backblaze.com/sign-up/cloud-storage).
+They charge monthly based on storage used and data transferred.
+Any S3-compatible provider will work, but Backblaze is the cheapest.
+Prices are in U.S. dollars.
 
 <table>
 <tr>
