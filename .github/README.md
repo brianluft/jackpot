@@ -68,3 +68,10 @@ Prices are in U.S. dollars.
 <td>Free</td>
 </tr>
 </table>
+
+## Requirements
+
+- Windows 10 (20H1) or newer.
+- S3-compatible storage account.
+- Fast, reliable Internet connection.
+- Your videos must be in MP4 format. If they aren't, you'll have to transcode them using [ffmpeg](https://ffmpeg.org/) or [Handbrake](https://handbrake.fr/) first.
