@@ -4,11 +4,13 @@ using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Web;
 using J.Base;
+using J.Core;
 using J.Core.Data;
 
 namespace J.App;
 
-public sealed class Client(IHttpClientFactory httpClientFactory) : IDisposable
+public sealed class Client(IHttpClientFactory httpClientFactory, AccountSettingsProvider accountSettingsProvider)
+    : IDisposable
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
 
@@ -38,7 +40,8 @@ public sealed class Client(IHttpClientFactory httpClientFactory) : IDisposable
                 };
 
             Port = FindRandomUnusedPort();
-            psi.Environment["ASPNETCORE_URLS"] = $"http://*:{Port}";
+            var bindHost = accountSettingsProvider.Current.EnableLocalM3u8Folder ? "*" : "localhost";
+            psi.Environment["ASPNETCORE_URLS"] = $"http://{bindHost}:{Port}";
             psi.Environment["JACKPOT_SESSION_PASSWORD"] = SessionPassword;
 
             _process = Process.Start(psi)!;

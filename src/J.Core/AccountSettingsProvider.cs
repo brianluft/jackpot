@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using Amazon.S3;
 using J.Core.Data;
-using Microsoft.Win32;
 
 namespace J.Core;
 
