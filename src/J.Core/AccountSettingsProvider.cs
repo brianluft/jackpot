@@ -36,10 +36,14 @@ public sealed class AccountSettingsProvider
 
     public IAmazonS3 CreateAmazonS3Client()
     {
+        var endpoint = _current.Endpoint;
+        if (!endpoint.StartsWith("http"))
+            endpoint = "https://" + endpoint;
+
         AmazonS3Config config =
             new()
             {
-                ServiceURL = _current.Endpoint,
+                ServiceURL = endpoint,
                 Timeout = TimeSpan.FromSeconds(30),
                 MaxErrorRetry = 3,
             };
