@@ -308,7 +308,7 @@ public sealed class LoginForm : Form
 
         Text = "Jackpot Login";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(560, 515);
+        MinimumSize = Size = ui.GetSize(560, 540);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -316,7 +316,7 @@ public sealed class LoginForm : Form
         CancelButton = _cancelButton;
         Icon = ui.GetIconResource("App.ico");
         ShowIcon = true;
-        ShowInTaskbar = false;
+        ShowInTaskbar = true;
 
         Load += delegate
         {

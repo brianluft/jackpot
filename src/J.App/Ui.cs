@@ -113,7 +113,7 @@ public sealed partial class Ui(Control parent)
         var form = parent as Form ?? parent.FindForm()!;
         form.Load += delegate
         {
-            textBox.Width = GetLength(unscaledWidth - 10) - button.Width;
+            textBox.Width = GetLength(unscaledWidth - 15) - button.Width;
         };
         button.Click += delegate
         {
@@ -150,7 +150,7 @@ public sealed partial class Ui(Control parent)
         var form = parent as Form ?? parent.FindForm()!;
         form.Load += delegate
         {
-            textBox.Width = GetLength(unscaledWidth - 10) - button.Width;
+            textBox.Width = GetLength(unscaledWidth - 15) - button.Width;
         };
         button.Click += delegate
         {

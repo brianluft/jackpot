@@ -71,6 +71,7 @@ public sealed class SimpleProgressForm : Form
 
         Text = "Progress";
         StartPosition = FormStartPosition.CenterScreen;
+        Size = new(0, 0);
         MinimumSize = ui.GetSize(300, 150);
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowOnly;
