@@ -1,19 +1,46 @@
 <h1 align="center"><img src="../src/J.App/Resources/App.png" width=64 height=64><br>Jackpot Media Library</h1>
 
-<h3 align="center">Free Windows app to browse and stream videos directly from <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</h3>
+<h3 align="center"><i>Free Windows app to browse and stream videos directly from <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</i></h3>
 
-<p align="center">
-<a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360></a>
-</p>
+<hr>
 
-## Features
- 
-- Browse your library as a wall of moving video clips.
-- Stream videos using the [VLC app](https://www.videolan.org/vlc/) on any device on your local network.
-- No server and no complex setup. Jackpot is a Windows app that comes with everything you need.
-- Simple tagging, searching, and filtering for media organization.
-- Fullscreen, mouse-driven design.
-- All content is protected with end-to-end encryption.
+<h3 align="center">Browse a wall of moving video clips</h3>
+
+<p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360></a></p>
+
+<hr>
+
+<h3 align="center">Fullscreen, mouse-driven design</h3>
+
+<p align="center">Action buttons are along the edges of the screen.</p>
+
+<p align="center"><img src="img/main-help.png" width=640 height=191></p>
+
+<hr>
+
+<h3 align="center">Organize media with tagging</h3>
+
+<p align="center">Create your own tags and apply them to videos.</p>
+
+<hr>
+
+<h3 align="center">No server and no complex setup</h3>
+
+<p align="center">Jackpot is a Windows app that comes with everything you need.<br>It runs on your computer and connects directly to the cloud storage provider.</p>
+
+<hr>
+
+<h3 align="center">Standard file formats with end-to-end encryption</h3>
+
+<p align="center">Imported <code>MP4</code> videos are losslessly encoded into streaming-ready <code>M3U8</code> + <code>TS</code> format.<br>All data in the cloud is stored in AES-encrypted <code>ZIP</code> files with a password that only you know. </p>
+
+<hr>
+
+<h3 align="center">Stream videos using the <a href="https://www.videolan.org/vlc/">VLC app</a></h3>
+
+<p align="center">Jackpot integrates with the best Windows video player.<br>Share a folder of <code>M3U8</code> files to allow non-Windows devices to stream videos through your PC.</p>
+
+<hr>
 
 ## Pricing
 
@@ -41,10 +68,3 @@ Prices are in U.S. dollars.
 <td>Free</td>
 </tr>
 </table>
-
-## Requirements
-
-- Windows 10 (version 20H1) or higher
-- Backblaze B2 or other S3-compatible cloud storage account
-- Internet speed: 20&nbsp;Mbps per 1080p stream
-- A video collection in MP4 format
