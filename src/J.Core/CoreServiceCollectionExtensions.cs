@@ -9,5 +9,6 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<AccountSettingsProvider>();
         services.AddSingleton<LibraryProvider>();
         services.AddSingleton<ProcessTempDir>();
+        services.AddSingleton<Preferences>();
     }
 }
