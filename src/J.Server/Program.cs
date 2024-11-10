@@ -44,8 +44,9 @@ catch
     isVlcInstalled = false;
 }
 
+var preferences = app.Services.GetRequiredService<Preferences>();
 object optionsLock = new();
-var optionShuffle = true;
+var optionShuffle = preferences.GetBoolean(Preferences.Key.Shared_UseShuffle);
 Filter optionFilter = new(true, []);
 Dictionary<ListPageKey, Lazy<List<Page>>> listPages = [];
 Dictionary<TagId, Lazy<List<Page>>> tagPages = [];

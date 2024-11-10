@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Web;
+using J.Core;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
@@ -14,10 +15,10 @@ public sealed partial class MainForm : Form
     private readonly IServiceProvider _serviceProvider;
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly Client _client;
-    private readonly M3u8FolderSync _m3u8FolderSync;
     private readonly ImportProgressFormFactory _importProgressFormFactory;
     private readonly CoreWebView2Environment _coreWebView2Environment;
     private readonly SingleInstanceManager _singleInstanceManager;
+    private readonly Preferences _preferences;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly EdgePanel _leftPanel,
@@ -56,19 +57,19 @@ public sealed partial class MainForm : Form
         IServiceProvider serviceProvider,
         LibraryProviderAdapter libraryProvider,
         Client client,
-        M3u8FolderSync m3u8FolderSync,
         ImportProgressFormFactory importProgressFormFactory,
         CoreWebView2Environment coreWebView2Environment,
-        SingleInstanceManager singleInstanceManager
+        SingleInstanceManager singleInstanceManager,
+        Preferences preferences
     )
     {
         _serviceProvider = serviceProvider;
         _libraryProvider = libraryProvider;
         _client = client;
-        _m3u8FolderSync = m3u8FolderSync;
         _importProgressFormFactory = importProgressFormFactory;
         _coreWebView2Environment = coreWebView2Environment;
         _singleInstanceManager = singleInstanceManager;
+        _preferences = preferences;
         Ui ui = new(this);
         _ui = ui;
 
@@ -242,7 +243,7 @@ public sealed partial class MainForm : Form
             {
                 _shuffleButton.Alignment = ToolStripItemAlignment.Right;
                 _shuffleButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Shuffle.png", 16, 16));
-                _shuffleButton.Checked = true;
+                _shuffleButton.Checked = preferences.GetBoolean(Preferences.Key.Shared_UseShuffle);
                 _shuffleButton.Click += ShuffleButton_Click;
             }
 
@@ -737,6 +738,7 @@ public sealed partial class MainForm : Form
     {
         var check = !_shuffleButton.Checked;
         _shuffleButton.Checked = check;
+        _preferences.SetBoolean(Preferences.Key.Shared_UseShuffle, check);
         await _client.SetShuffleAsync(check, CancellationToken.None).ConfigureAwait(true);
         _browser.Reload();
     }

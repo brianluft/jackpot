@@ -11,6 +11,7 @@ public sealed class Preferences : IDisposable
 
     public enum Key
     {
+        Shared_UseShuffle,
         ConvertMoviesForm_VideoQuality,
         ConvertMoviesForm_CompressionLevel,
         ConvertMoviesForm_AudioBitrate,
@@ -21,6 +22,7 @@ public sealed class Preferences : IDisposable
     {
         _defaults = new Dictionary<Key, object>
         {
+            [Key.Shared_UseShuffle] = 1L,
             [Key.ConvertMoviesForm_VideoQuality] = "17 (recommended)",
             [Key.ConvertMoviesForm_CompressionLevel] = "slow (recommended)",
             [Key.ConvertMoviesForm_AudioBitrate] = "256 kbps (recommended)",
@@ -51,6 +53,8 @@ public sealed class Preferences : IDisposable
             _connection = null;
         }
     }
+
+    public void SetBoolean(Key key, bool value) => Set(key, value ? 1L : 0L);
 
     public void SetInteger(Key key, long value) => Set(key, value);
 
@@ -87,6 +91,8 @@ public sealed class Preferences : IDisposable
             transaction.Commit();
         }
     }
+
+    public bool GetBoolean(Key key) => Get<long>(key) != 0;
 
     public long GetInteger(Key key) => Get<long>(key);
 
