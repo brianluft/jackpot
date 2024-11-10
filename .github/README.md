@@ -2,51 +2,49 @@
 
 <h3 align="center"><i>Personal streaming video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</i></h3>
 
-<hr>
+<br><br>
 
 <h3 align="center">Browse a wall of moving video clips</h3>
 
 <p align="center">A fun, visual way to find something to watch in your collection.</p>
 
-<p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360 border=1></a></p>
+<p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360></a></p>
 
-<hr>
+<br><br>
 
 <h3 align="center">Fullscreen, mouse-driven design</h3>
 
 <p align="center">Action buttons are along the edges of the screen.</p>
 
-<p align="center"><img src="img/main-help.png" width=640 height=191 border=1></p>
+<p align="center"><img src="img/main-help.png" width=640 height=191></p>
 
-<hr>
+<br><br>
 
-<h3 align="center">Organize your media with tagging</h3>
+<h3 align="center">Organize your media with custom tags</h3>
 
 <p align="center">Create your own tags and apply them to your videos.</p>
 
-<p align="center"><img src="img/edit-movies.png" width=640 height=221 border=1></p>
+<p align="center"><img src="img/edit-movies.png" width=640 height=221></p>
 
-<hr>
+<br><br>
 
 <h3 align="center">Stream videos using the <a href="https://www.videolan.org/vlc/">VLC app</a> on local devices</h3>
 
 <p align="center">Share a folder of <code>M3U8</code> files to allow non-Windows devices to stream through your PC.</p>
 
-<p align="center"><img src="img/share.jpg" width=640 height=237 border=1></p>
+<p align="center"><img src="img/share.jpg" width=640 height=237></p>
 
-<hr>
+<br><br>
 
 <h3 align="center">End-to-end encryption</h3>
 
 <p align="center">All data in the cloud is stored in AES-encrypted <code>ZIP</code> files with a password that only you know. </p>
 
-<hr>
+<br><br>
 
 <h3 align="center">No Linux, no Docker, and no complex setup</h3>
 
 <p align="center">Jackpot is a Windows app that comes with everything you need.</p>
-
-<hr>
 
 ## Pricing
 
