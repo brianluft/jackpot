@@ -9,12 +9,23 @@ public sealed class Preferences : IDisposable
     private readonly FrozenDictionary<Key, object> _defaults;
     private SqliteConnection? _connection;
 
-    public enum Key { }
+    public enum Key
+    {
+        ConvertMoviesForm_VideoQuality,
+        ConvertMoviesForm_CompressionLevel,
+        ConvertMoviesForm_AudioBitrate,
+        ConvertMoviesForm_OutputDirectory,
+    }
 
     public Preferences()
     {
-        Dictionary<Key, object> defaults = [];
-        _defaults = defaults.ToFrozenDictionary();
+        _defaults = new Dictionary<Key, object>
+        {
+            [Key.ConvertMoviesForm_VideoQuality] = "17 (recommended)",
+            [Key.ConvertMoviesForm_CompressionLevel] = "slow (recommended)",
+            [Key.ConvertMoviesForm_AudioBitrate] = "256 kbps (recommended)",
+            [Key.ConvertMoviesForm_OutputDirectory] = "",
+        }.ToFrozenDictionary();
 
         // Make sure every default is one of the four supported types.
         foreach (var value in _defaults.Values)
@@ -63,6 +74,17 @@ public sealed class Preferences : IDisposable
             command.Parameters.AddWithValue("@key", key.ToString());
             command.Parameters.AddWithValue("@value", value);
             command.ExecuteNonQuery();
+        }
+    }
+
+    public void WithTransaction(Action action)
+    {
+        lock (_lock)
+        {
+            Connect();
+            using var transaction = _connection!.BeginTransaction();
+            action();
+            transaction.Commit();
         }
     }
 

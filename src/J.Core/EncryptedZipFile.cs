@@ -14,13 +14,20 @@ public static class EncryptedZipFile
         AddZipEntry(zipStream, entryStream, entryName, DateTime.Now, CompressionMethod.Deflated);
     }
 
-    public static void CreateMovieZip(string zipFilePath, string dir, Password password, out ZipIndex zipIndex)
+    public static void CreateMovieZip(
+        string zipFilePath,
+        string dir,
+        Password password,
+        out ZipIndex zipIndex,
+        CancellationToken cancel
+    )
     {
         using (var fileStream = File.Create(zipFilePath))
         {
             using ZipOutputStream zipStream = new(fileStream) { Password = password.Value };
             foreach (var filePath in Directory.GetFiles(dir))
             {
+                cancel.ThrowIfCancellationRequested();
                 using var entryStream = File.OpenRead(filePath);
                 AddZipEntry(
                     zipStream,
@@ -31,7 +38,9 @@ public static class EncryptedZipFile
             }
         }
 
+        cancel.ThrowIfCancellationRequested();
         zipIndex = GetZipIndex(zipFilePath, password);
+        cancel.ThrowIfCancellationRequested();
         AppendZipIndex(zipFilePath, zipIndex);
     }
 

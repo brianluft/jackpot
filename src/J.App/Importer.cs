@@ -34,9 +34,9 @@ public sealed class Importer(
         ZipIndex zipIndex;
         lock (_cpuLock)
         {
-            var duration = GetMovieDuration(sourceFilePath);
+            var duration = GetMovieDuration(sourceFilePath, cancel);
 
-            MakeClip(sourceFilePath, duration, clipFilePath);
+            MakeClip(sourceFilePath, duration, clipFilePath, cancel);
             cancel.ThrowIfCancellationRequested();
 
             movieEncoder.Encode(
@@ -45,7 +45,8 @@ public sealed class Importer(
                 clipFilePath,
                 encodedFullMovieFilePath,
                 m3u8FilePath,
-                out zipIndex
+                out zipIndex,
+                cancel
             );
             cancel.ThrowIfCancellationRequested();
         }
@@ -107,46 +108,35 @@ public sealed class Importer(
         return ms.ToArray();
     }
 
-    private TimeSpan GetMovieDuration(string filePath)
+    private TimeSpan GetMovieDuration(string filePath, CancellationToken cancel)
     {
-        ProcessStartInfo psi =
-            new()
-            {
-#if DEBUG
-                // For debug builds, use ffprobe.exe in PATH since the ffmpeg install gets inserted only for releases.
-                FileName = "ffprobe.exe",
-#else
-                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffprobe.exe"),
-#endif
-                Arguments = $"-i \"{filePath}\" -show_entries format=duration -v quiet -of csv=\"p=0\"",
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-            };
-
-        using var p = Process.Start(psi)!;
-        ApplicationSubProcesses.Add(p);
-
         TimeSpan? duration = null;
-        p.OutputDataReceived += (sender, e) =>
-        {
-            if (e.Data is null)
-                return;
 
-            if (double.TryParse(e.Data.Trim(), out var seconds))
-                duration = TimeSpan.FromSeconds(seconds);
-        };
+        var (exitCode, log) = Ffmpeg.Run(
+            $"-i \"{filePath}\" -show_entries format=duration -v quiet -of csv=\"p=0\"",
+            output =>
+            {
+                if (double.TryParse(output.Trim(), out var seconds))
+                    duration = TimeSpan.FromSeconds(seconds);
+            },
+            "ffprobe.exe",
+            cancel
+        );
 
-        p.BeginOutputReadLine();
-        p.WaitForExit();
+        if (exitCode != 0)
+            throw new Exception(
+                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe failed with exit code {exitCode}.\n\nFFprobe output:\n{log}"
+            );
 
         if (duration is null)
-            throw new Exception("Failed to parse movie duration from ffprobe output.");
+            throw new Exception(
+                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe returned successfully, but did not produce the movie duration.\n\nFFprobe output:\n{log}"
+            );
 
         return duration.Value;
     }
 
-    private void MakeClip(string sourceFilePath, TimeSpan sourceDuration, string outFilePath)
+    private void MakeClip(string sourceFilePath, TimeSpan sourceDuration, string outFilePath, CancellationToken cancel)
     {
         List<TimeSpan> clipStartTimes = [];
 
@@ -178,51 +168,48 @@ public sealed class Importer(
             {
                 string clipFilename = $"clip{i}.mov";
                 var clipFilePath = Path.Combine(dir.Path, clipFilename);
-                MakeSingleClip(sourceFilePath, clipFilePath, clipStartTimes[i], TimeSpan.FromSeconds(1));
+                MakeSingleClip(sourceFilePath, clipFilePath, clipStartTimes[i], TimeSpan.FromSeconds(1), cancel);
                 clipFilenames[i] = clipFilename;
             }
         );
 
-        ConcatenateClipsAndEncodeAsH264(dir.Path, clipFilenames, outFilePath);
+        ConcatenateClipsAndEncodeAsH264(dir.Path, clipFilenames, outFilePath, cancel);
     }
 
-    private static void MakeSingleClip(string sourceFilePath, string outFilePath, TimeSpan offset, TimeSpan length)
+    private static void MakeSingleClip(
+        string sourceFilePath,
+        string outFilePath,
+        TimeSpan offset,
+        TimeSpan length,
+        CancellationToken cancel
+    )
     {
-        Ffmpeg(
-            $"-ss {offset.TotalSeconds} -i \"{sourceFilePath}\" -t {length.TotalSeconds} -vf \"scale=-2:432\" -r 30 -c:v prores -profile:v 3 -pix_fmt yuv422p10le -an -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\""
+        RunFfmpeg(
+            $"-ss {offset.TotalSeconds} -i \"{sourceFilePath}\" -t {length.TotalSeconds} -vf \"scale=-2:432\" -r 30 -c:v prores -profile:v 3 -pix_fmt yuv422p10le -an -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
+            cancel
         );
     }
 
-    private static void ConcatenateClipsAndEncodeAsH264(string dir, string[] clipFilenames, string outFilePath)
+    private static void ConcatenateClipsAndEncodeAsH264(
+        string dir,
+        string[] clipFilenames,
+        string outFilePath,
+        CancellationToken cancel
+    )
     {
         File.WriteAllLines(Path.Combine(dir, "file_list.txt"), clipFilenames.Select(f => $"file '{f}'"));
 
-        Ffmpeg(
-            $"-f concat -safe 0 -i \"{Path.Combine(dir, "file_list.txt")}\" -c:v libx264 -crf 25 -pix_fmt yuv420p -preset veryslow -an -movflags +faststart -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\""
+        RunFfmpeg(
+            $"-f concat -safe 0 -i \"{Path.Combine(dir, "file_list.txt")}\" -c:v libx264 -crf 25 -pix_fmt yuv420p -preset veryslow -an -movflags +faststart -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
+            cancel
         );
     }
 
-    private static void Ffmpeg(string arguments)
+    private static void RunFfmpeg(string arguments, CancellationToken cancel)
     {
-        ProcessStartInfo psi =
-            new()
-            {
-#if DEBUG
-                // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
-                FileName = "ffmpeg.exe",
-#else
-                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
-#endif
-                Arguments = arguments,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-            };
-
-        using var p = Process.Start(psi)!;
-        ApplicationSubProcesses.Add(p);
-        p.WaitForExit();
-        if (p.ExitCode != 0)
-            throw new Exception($"ffmpeg failed with exit code: {p.ExitCode}");
+        var (exitCode, log) = Ffmpeg.Run(arguments, cancel);
+        if (exitCode != 0)
+            throw new Exception($"FFmpeg failed with exit code: {exitCode}\n\nFFmpeg output: {log}");
     }
 
     private void UploadEncodedFullMovie(string encodedFilePath, out string outS3Key, CancellationToken cancel)

@@ -20,25 +20,42 @@ public sealed class ImportForm : Form
         Ui ui = new(this);
 
         Controls.Add(_table = ui.NewTable(1, 3));
-        _table.Padding = ui.DefaultPadding;
-        _table.RowStyles[1].SizeType = SizeType.Percent;
-        _table.RowStyles[1].Height = 100;
-        _table.Controls.Add(_label = ui.NewLabel("Drag-and-drop movie files below."), 0, 0);
-        _label.Margin = ui.BottomSpacingBig;
-        _table.Controls.Add(_listBox = ui.NewListBox(), 0, 1);
-        _listBox.AllowDrop = true;
-        _listBox.DragEnter += ListBox_DragEnter;
-        _listBox.DragDrop += ListBox_DragDrop;
-        _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 2);
-        _buttonFlow.Dock = DockStyle.Right;
-        _buttonFlow.Margin = ui.TopSpacingBig;
-        _buttonFlow.Controls.Add(_startButton = ui.NewButton("Start"));
-        _startButton.Click += StartButton_Click;
-        _buttonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));
-        _cancelButton.Click += delegate
         {
-            Close();
-        };
+            _table.Padding = ui.DefaultPadding;
+            _table.RowStyles[1].SizeType = SizeType.Percent;
+            _table.RowStyles[1].Height = 100;
+
+            _table.Controls.Add(_label = ui.NewLabel("Drag-and-drop movie files below."), 0, 0);
+            {
+                _label.Margin = ui.BottomSpacingBig;
+            }
+
+            _table.Controls.Add(_listBox = ui.NewListBox(), 0, 1);
+            {
+                _listBox.AllowDrop = true;
+                _listBox.DragEnter += ListBox_DragEnter;
+                _listBox.DragDrop += ListBox_DragDrop;
+            }
+
+            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 2);
+            {
+                _buttonFlow.Dock = DockStyle.Right;
+                _buttonFlow.Margin = ui.TopSpacingBig;
+            }
+
+            _buttonFlow.Controls.Add(_startButton = ui.NewButton("Start"));
+            {
+                _startButton.Click += StartButton_Click;
+            }
+
+            _buttonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));
+            {
+                _cancelButton.Click += delegate
+                {
+                    Close();
+                };
+            }
+        }
 
         Text = "Add to Library";
         StartPosition = FormStartPosition.CenterScreen;

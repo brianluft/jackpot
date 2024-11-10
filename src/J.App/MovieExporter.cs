@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using Amazon.S3.Transfer;
-using J.Base;
+﻿using Amazon.S3.Transfer;
 using J.Core;
 using J.Core.Data;
 
@@ -20,26 +18,11 @@ public sealed class MovieExporter(AccountSettingsProvider accountSettingsProvide
         EncryptedZipFile.ExtractToDirectory(zipFilePath, dir.Path, password);
 
         var m3u8Path = Path.Combine(dir.Path, "movie.m3u8");
-        ProcessStartInfo psi =
-            new()
-            {
-#if DEBUG
-                // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
-                FileName = "ffmpeg.exe",
-#else
-                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe"),
-#endif
-                Arguments = $"-y -i \"{m3u8Path}\" -codec copy \"{outFilePath}\"",
-                WorkingDirectory = "",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-
-        using var p = Process.Start(psi)!;
-        ApplicationSubProcesses.Add(p);
-        p.WaitForExit();
-        if (p.ExitCode != 0)
-            throw new Exception($"Failed to export movie with ffmpeg. Exit code: {p.ExitCode}");
+        var (exitCode, log) = Ffmpeg.Run($"-y -i \"{m3u8Path}\" -codec copy \"{outFilePath}\"", cancel);
+        if (exitCode != 0)
+            throw new Exception(
+                $"Failed to export \"{movie.Filename}\". FFmpeg failed with exit code {exitCode}.\n\nFFmpeg output:\n{log}"
+            );
     }
 
     private void DownloadZipFile(
