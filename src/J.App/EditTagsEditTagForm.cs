@@ -22,7 +22,7 @@ public sealed class EditTagsEditTagForm : Form
 
         Controls.Add(_table = ui.NewTable(2, 2));
         {
-            _nameTextBox = ui.AddPairToTable(_table, 0, 0, ui.NewLabeledTextBox("&Name:", 300), 2);
+            _nameTextBox = _table.AddPair(0, 0, ui.NewLabeledTextBox("&Name:", 300), 2);
 
             _table.Controls.Add(_leftButtonFlow = ui.NewFlowRow(), 0, 1);
             {

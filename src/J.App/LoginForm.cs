@@ -28,7 +28,8 @@ public sealed class LoginForm : Form
         _m3u8Flow,
         _copyPasteButtonsFlow,
         _bucketHelpFlow,
-        _keyHelpFlow;
+        _keyHelpFlow,
+        _encryptionHelpFlow;
     private readonly TabControl _tabControl;
     private readonly TabPage _accountPage,
         _bucketPage,
@@ -44,14 +45,16 @@ public sealed class LoginForm : Form
         _b2KeyPicture,
         _b2KeyHelpPicture,
         _b2KeyIconPicture,
-        _encryptionIconPicture;
-    private readonly Label _encryptionHelpLabel;
+        _encryptionIconPicture,
+        _encryptionHelpPicture;
 
     public LoginForm(AccountSettingsProvider accountSettingsProvider)
     {
         _accountSettingsProvider = accountSettingsProvider;
 
         Ui ui = new(this);
+        Label label;
+        Control p;
 
         Controls.Add(_formTable = ui.NewTable(2, 2));
         {
@@ -70,9 +73,9 @@ public sealed class LoginForm : Form
                     {
                         _bucketTable.Padding = ui.DefaultPadding;
 
-                        _bucketText = ui.AddPairToTable(_bucketTable, 1, 0, ui.NewLabeledTextBox("Bucket name:", 300));
+                        _bucketText = _bucketTable.AddPair(1, 0, ui.NewLabeledTextBox("Bucket name:", 300));
 
-                        _endpointText = ui.AddPairToTable(_bucketTable, 1, 1, ui.NewLabeledTextBox("Endpoint:", 300));
+                        _endpointText = _bucketTable.AddPair(1, 1, ui.NewLabeledTextBox("Endpoint:", 300));
 
                         _bucketTable.Controls.Add(
                             _b2BucketIconPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Bucket.png", 32, 32)),
@@ -95,14 +98,30 @@ public sealed class LoginForm : Form
                                 _b2BucketHelpPicture.Dock = DockStyle.Bottom;
                             }
 
-                            _bucketHelpFlow.Controls.Add(ui.NewLabel("Create a bucket on the"));
+                            _bucketHelpFlow.Controls.Add(label = ui.NewLabel("Create a bucket on the"));
+                            {
+                                label.Margin = label.Margin with { Right = 0 };
+                                label.Padding = label.Padding with { Right = 0 };
+                                label.Dock = DockStyle.Fill;
+                                label.TextAlign = ContentAlignment.MiddleCenter;
+                            }
 
                             _bucketHelpFlow.Controls.Add(_b2BucketLink = ui.NewLinkLabel("B2 Cloud Storage Buckets"));
                             {
+                                _b2BucketLink.Margin = label.Margin with { Left = 0, Right = 0 };
+                                _b2BucketLink.Padding = label.Padding with { Left = 0, Right = 0 };
                                 _b2BucketLink.LinkClicked += B2BucketLink_LinkClicked;
+                                _b2BucketLink.Dock = DockStyle.Fill;
+                                _b2BucketLink.TextAlign = ContentAlignment.MiddleCenter;
                             }
 
-                            _bucketHelpFlow.Controls.Add(ui.NewLabel("web page:"));
+                            _bucketHelpFlow.Controls.Add(label = ui.NewLabel("web page:"));
+                            {
+                                label.Margin = label.Margin with { Left = 0 };
+                                label.Padding = label.Padding with { Left = 0 };
+                                label.Dock = DockStyle.Fill;
+                                label.TextAlign = ContentAlignment.MiddleCenter;
+                            }
                         }
 
                         _bucketTable.Controls.Add(
@@ -136,10 +155,9 @@ public sealed class LoginForm : Form
                             _b2KeyIconPicture.Padding = ui.DefaultPadding;
                         }
 
-                        _accessKeyIdText = ui.AddPairToTable(_accountTable, 1, 0, ui.NewLabeledTextBox("keyID:", 300));
+                        _accessKeyIdText = _accountTable.AddPair(1, 0, ui.NewLabeledTextBox("keyID:", 300));
 
-                        _secretAccessKeyText = ui.AddPairToTable(
-                            _accountTable,
+                        _secretAccessKeyText = _accountTable.AddPair(
                             1,
                             1,
                             ui.NewLabeledTextBox("applicationKey:", 300)
@@ -160,14 +178,30 @@ public sealed class LoginForm : Form
                                 _b2KeyHelpPicture.Dock = DockStyle.Bottom;
                             }
 
-                            _keyHelpFlow.Controls.Add(ui.NewLabel("Create an application key on the"));
+                            _keyHelpFlow.Controls.Add(label = ui.NewLabel("Create an application key on the"));
+                            {
+                                label.Margin = label.Margin with { Right = 0 };
+                                label.Padding = label.Padding with { Right = 0 };
+                                label.Dock = DockStyle.Fill;
+                                label.TextAlign = ContentAlignment.MiddleCenter;
+                            }
 
                             _keyHelpFlow.Controls.Add(_b2KeyLink = ui.NewLinkLabel("B2 Application Keys"));
                             {
                                 _b2KeyLink.LinkClicked += B2KeyLink_LinkClicked;
+                                _b2KeyLink.Margin = label.Margin with { Left = 0, Right = 0 };
+                                _b2KeyLink.Padding = label.Padding with { Left = 0, Right = 0 };
+                                _b2KeyLink.Dock = DockStyle.Fill;
+                                _b2KeyLink.TextAlign = ContentAlignment.MiddleCenter;
                             }
 
-                            _keyHelpFlow.Controls.Add(ui.NewLabel("web page:"));
+                            _keyHelpFlow.Controls.Add(label = ui.NewLabel("web page:"));
+                            {
+                                label.Margin = label.Margin with { Left = 0 };
+                                label.Padding = label.Padding with { Left = 0 };
+                                label.Dock = DockStyle.Fill;
+                                label.TextAlign = ContentAlignment.MiddleCenter;
+                            }
                         }
 
                         _accountTable.Controls.Add(
@@ -201,25 +235,32 @@ public sealed class LoginForm : Form
                             _encryptionIconPicture.Padding = ui.DefaultPadding;
                         }
 
-                        _passwordText = ui.AddPairToTable(
-                            _encryptionTable,
-                            1,
-                            0,
-                            ui.NewLabeledTextBox("Encryption password:", 300)
-                        );
-                        _passwordText.Margin += ui.BottomSpacingBig;
-
-                        _encryptionTable.Controls.Add(
-                            _encryptionHelpLabel = ui.NewLabel(
-                                "Your content is secured with end-to-end encryption.\n\n"
-                                    + "When creating a new library, choose a new password.\n\n"
-                                    + "To connect to an existing library, make sure to use the right password."
-                            ),
-                            1,
-                            1
-                        );
+                        (p, _passwordText) = ui.NewLabeledTextBox("Encryption password:", 300);
                         {
-                            _encryptionTable.SetColumnSpan(_encryptionHelpLabel, 2);
+                            _encryptionTable.Controls.Add(p, 1, 0);
+                            p.Margin += ui.GetPadding(0, 0, 0, 32);
+                        }
+
+                        _encryptionTable.Controls.Add(_encryptionHelpFlow = ui.NewFlowRow(), 1, 1);
+                        {
+                            _encryptionTable.SetColumnSpan(_encryptionHelpFlow, 2);
+
+                            _encryptionHelpFlow.Controls.Add(
+                                _encryptionHelpPicture = ui.NewPictureBox(
+                                    ui.GetScaledBitmapResource("Help.png", 16, 16)
+                                )
+                            );
+                            {
+                                _encryptionHelpPicture.Dock = DockStyle.Bottom;
+                            }
+
+                            _encryptionHelpFlow.Controls.Add(
+                                label = ui.NewLabel("When creating a new library, choose a new password.")
+                            );
+                            {
+                                label.Dock = DockStyle.Fill;
+                                label.TextAlign = ContentAlignment.MiddleCenter;
+                            }
                         }
                     }
                 }
@@ -229,7 +270,6 @@ public sealed class LoginForm : Form
                     _m3u8Page.Controls.Add(_m3u8Flow = ui.NewFlowColumn());
                     {
                         _m3u8Flow.Padding = ui.DefaultPadding;
-                        Control p;
 
                         _m3u8Flow.Controls.Add(
                             ui.NewLabel(
@@ -241,14 +281,19 @@ public sealed class LoginForm : Form
                             _enableM3u8FolderCheck = ui.NewCheckBox("Store M3U8 files in a local folder")
                         );
                         {
-                            _enableM3u8FolderCheck.Margin += ui.TopSpacingBig;
+                            _enableM3u8FolderCheck.Margin += ui.TopSpacingBig + ui.BottomSpacing;
                         }
 
                         (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
-                        _m3u8Flow.Controls.Add(p);
+                        {
+                            _m3u8Flow.Controls.Add(p);
+                            p.Margin = ui.BottomSpacing;
+                        }
 
-                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 200);
-                        _m3u8Flow.Controls.Add(p);
+                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 250);
+                        {
+                            _m3u8Flow.Controls.Add(p);
+                        }
                     }
                 }
             }
@@ -309,17 +354,6 @@ public sealed class LoginForm : Form
                 }
             }
         }
-
-        void Space(Control c)
-        {
-            if (c is Label l)
-            {
-                l.Margin = ui.GetPadding(0, 8, 0, 1);
-            }
-            foreach (Control cc in c.Controls)
-                Space(cc);
-        }
-        Space(this);
 
         Text = "Jackpot Login";
         StartPosition = FormStartPosition.CenterScreen;

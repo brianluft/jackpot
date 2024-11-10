@@ -81,6 +81,7 @@ public sealed partial class Ui(Control parent)
     public (Control Parent, TextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
         Label label = new() { Text = text, AutoSize = true };
+        label.Margin += GetPadding(0, 0, 0, 2);
         TextBox textBox = new() { Width = GetLength(unscaledWidth) };
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
@@ -95,6 +96,7 @@ public sealed partial class Ui(Control parent)
     )
     {
         Label label = new() { Text = text, AutoSize = true };
+        label.Margin += GetPadding(0, 0, 0, 2);
         TextBox textBox = new() { };
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
@@ -132,6 +134,7 @@ public sealed partial class Ui(Control parent)
     )
     {
         Label label = new() { Text = text, AutoSize = true };
+        label.Margin += GetPadding(0, 0, 0, 2);
         TextBox textBox = new() { };
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
@@ -162,18 +165,15 @@ public sealed partial class Ui(Control parent)
         return (table, textBox);
     }
 
-    public T AddPairToTable<T>(
-        TableLayoutPanel table,
-        int column,
-        int row,
-        (Control Parent, T Child) pair,
-        int columnSpan = 1
-    )
+    public (Control Parent, T Child) NewLabeledPair<T>(string text, T child)
         where T : Control
     {
-        table.Controls.Add(pair.Parent, column, row);
-        table.SetColumnSpan(pair.Parent, columnSpan);
-        return pair.Child;
+        Label label = new() { Text = text, AutoSize = true };
+        label.Margin += GetPadding(0, 0, 0, 2);
+        var flow = NewFlowColumn();
+        flow.Controls.Add(label);
+        flow.Controls.Add(child);
+        return (flow, child);
     }
 
     public Button NewButton(string text, DialogResult? dialogResult = null)
@@ -717,11 +717,40 @@ public sealed partial class Ui(Control parent)
         return new() { Image = image, SizeMode = PictureBoxSizeMode.AutoSize };
     }
 
+    public NumericUpDown NewNumericUpDown(int unscaledWidth)
+    {
+        return new() { AutoSize = true, MinimumSize = GetSize(unscaledWidth, 0) };
+    }
+
     private static partial class NativeMethods
     {
         [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
         public static partial IntPtr SendMessageW(IntPtr hWnd, uint msg, IntPtr wParam, string lParam);
 
         public const uint EM_SETCUEBANNER = 0x1501;
+    }
+}
+
+public static class UiExtensions
+{
+    public static T AddPair<T>(
+        this TableLayoutPanel table,
+        int column,
+        int row,
+        (Control Parent, T Child) pair,
+        int columnSpan = 1
+    )
+        where T : Control
+    {
+        table.Controls.Add(pair.Parent, column, row);
+        table.SetColumnSpan(pair.Parent, columnSpan);
+        return pair.Child;
+    }
+
+    public static T AddPair<T>(this FlowLayoutPanel flow, (Control Parent, T Child) pair)
+        where T : Control
+    {
+        flow.Controls.Add(pair.Parent);
+        return pair.Child;
     }
 }

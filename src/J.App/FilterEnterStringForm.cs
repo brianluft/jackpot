@@ -21,7 +21,7 @@ public sealed class FilterEnterStringForm : Form
         {
             _table.Padding = ui.DefaultPadding;
 
-            _textBox = ui.AddPairToTable(_table, 0, 0, ui.NewLabeledTextBox("Filter phrase:", 200));
+            _textBox = _table.AddPair(0, 0, ui.NewLabeledTextBox("Filter phrase:", 200));
 
             _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 1);
             {

@@ -28,6 +28,7 @@ public sealed partial class MainForm : Form
         _aboutButton,
         _addToLibraryButton,
         _editTagsButton,
+        _convertMoviesButton,
         _manageMoviesButton,
         _moviesButton,
         _filterAndButton,
@@ -261,20 +262,29 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _menuButton.DropDownItems.Add(_addToLibraryButton = ui.NewToolStripMenuItem("Add Movies..."));
+                _menuButton.DropDownItems.Add(_addToLibraryButton = ui.NewToolStripMenuItem("Add movies..."));
                 {
                     _addToLibraryButton.Image = ui.GetScaledBitmapResource("Add.png", 16, 16);
                     _addToLibraryButton.Click += AddToLibraryButton_Click;
                 }
 
-                _menuButton.DropDownItems.Add(_manageMoviesButton = ui.NewToolStripMenuItem("Edit Movies..."));
+                _menuButton.DropDownItems.Add(_manageMoviesButton = ui.NewToolStripMenuItem("Edit movies..."));
                 {
                     _manageMoviesButton.Click += EditMoviesButton_Click;
                 }
 
-                _menuButton.DropDownItems.Add(_editTagsButton = ui.NewToolStripMenuItem("Edit Tags..."));
+                _menuButton.DropDownItems.Add(_editTagsButton = ui.NewToolStripMenuItem("Edit tags..."));
                 {
                     _editTagsButton.Click += EditTagsButton_Click;
+                }
+
+                _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
+
+                _menuButton.DropDownItems.Add(
+                    _convertMoviesButton = ui.NewToolStripMenuItem("Convert movies to MP4...")
+                );
+                {
+                    _convertMoviesButton.Click += ConvertMoviesButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
@@ -997,6 +1007,13 @@ public sealed partial class MainForm : Form
 
             await UpdateFiltersAsync().ConfigureAwait(true);
         }
+    }
+
+    private void ConvertMoviesButton_Click(object? sender, EventArgs e)
+    {
+        var f = _serviceProvider.GetRequiredService<ConvertMoviesForm>();
+        f.Show();
+        WindowState = FormWindowState.Minimized;
     }
 
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]
