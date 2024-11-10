@@ -592,7 +592,65 @@ public sealed partial class Ui(Control parent)
         {
             font.Dispose();
         };
+        FixRightClickSelection(grid);
         return grid;
+    }
+
+    private static void FixRightClickSelection(DataGridView dataGridView)
+    {
+        // Handle mouse down event to update selection before context menu shows
+        dataGridView.MouseDown += (sender, e) =>
+        {
+            // Only handle right mouse button
+            if (e.Button != MouseButtons.Right)
+                return;
+
+            // Get the cell under the mouse cursor
+            DataGridView.HitTestInfo hitTest = dataGridView.HitTest(e.X, e.Y);
+
+            if (hitTest.Type == DataGridViewHitTestType.Cell)
+            {
+                // We clicked on a cell (not header or empty space).
+                var clickedRow = dataGridView.Rows[hitTest.RowIndex];
+                var clickedCell = clickedRow.Cells[hitTest.ColumnIndex];
+
+                // Check if the clicked location is already selected
+                bool isAlreadySelected =
+                    dataGridView.SelectionMode == DataGridViewSelectionMode.FullRowSelect
+                        ? clickedRow.Selected // For full row selection, check row
+                        : clickedCell.Selected; // For cell selection, check cell
+
+                // Only modify selection if the clicked location isn't already selected
+                if (isAlreadySelected)
+                    return;
+
+                // Clear any existing selection if not holding Ctrl or Shift
+                dataGridView.ClearSelection();
+
+                // Select the appropriate element
+                if (dataGridView.SelectionMode == DataGridViewSelectionMode.FullRowSelect)
+                    clickedRow.Selected = true;
+                else
+                    clickedCell.Selected = true;
+
+                // Set the current cell to the clicked cell
+                try
+                {
+                    dataGridView.CurrentCell = clickedCell;
+                }
+                catch { }
+            }
+            else if (hitTest.Type == DataGridViewHitTestType.None)
+            {
+                // We clicked in the background (no rows/cells).
+                dataGridView.ClearSelection();
+                try
+                {
+                    dataGridView.CurrentCell = null;
+                }
+                catch { }
+            }
+        };
     }
 
     public Bitmap InvertColorsInPlace(Bitmap source)

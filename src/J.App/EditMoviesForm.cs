@@ -80,7 +80,7 @@ public sealed partial class EditMoviesForm : Form
 
             _table.Controls.Add(_grid = ui.NewDataGridView(), 0, 1);
             {
-                _grid.ContextMenuStrip = _contextMenuStrip;
+                _grid.RowContextMenuStripNeeded += Grid_RowContextMenuStripNeeded;
                 _grid.DataSource = _data;
 
                 var col_name = _grid.Columns[_grid.Columns.Add("name", "Name")];
@@ -120,6 +120,11 @@ public sealed partial class EditMoviesForm : Form
         ShowIcon = true;
         ShowInTaskbar = false;
         WindowState = FormWindowState.Maximized;
+    }
+
+    private void Grid_RowContextMenuStripNeeded(object? sender, DataGridViewRowContextMenuStripNeededEventArgs e)
+    {
+        e.ContextMenuStrip = _grid.SelectedRows.Count > 0 ? _contextMenuStrip : null;
     }
 
     private void SearchText_KeyPress(object? sender, KeyPressEventArgs e)
