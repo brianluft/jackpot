@@ -6,7 +6,7 @@
 
 <h3 align="center">Browse a wall of moving video clips</h3>
 
-<p align="center">A fun, visual way to find something to watch.</p>
+<p align="center">A fun, visual way to find something to watch in your collection.</p>
 
 <p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360 border=1></a></p>
 
@@ -30,7 +30,7 @@
 
 <h3 align="center">Stream videos using the <a href="https://www.videolan.org/vlc/">VLC app</a> on local devices</h3>
 
-<p align="center">Share a folder of <code>M3U8</code> files to allow non-Windows devices to stream videos through your PC.</p>
+<p align="center">Share a folder of <code>M3U8</code> files to allow non-Windows devices to stream through your PC.</p>
 
 <p align="center"><img src="img/share.jpg" width=640 height=237 border=1></p>
 
@@ -42,7 +42,7 @@
 
 <hr>
 
-<h3 align="center">No server and no complex setup</h3>
+<h3 align="center">No Linux, no Docker, and no complex setup</h3>
 
 <p align="center">Jackpot is a Windows app that comes with everything you need.</p>
 
