@@ -256,6 +256,10 @@ public sealed partial class Ui(Control parent)
 
     private sealed class MyToolStripRenderer(Ui ui) : ToolStripSystemRenderer
     {
+        private readonly Color _hoverColor = Color.FromArgb(0xFF, 0x9A, 0x00);
+        private readonly Color _pressColor = Color.FromArgb(0xBB, 0x71, 0x00);
+        private readonly Color _activeColor = Color.FromArgb(0xDE, 0x7F, 0x00);
+
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
 
         protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
@@ -263,13 +267,20 @@ public sealed partial class Ui(Control parent)
             var g = e.Graphics;
             Rectangle bounds = new(Point.Empty, e.Item.Size);
 
-            if (e.Item.Pressed || e.Item.Selected)
+            if (e.Item.Pressed)
             {
-                g.FillRectangle(SystemBrushes.Highlight, bounds);
+                using SolidBrush brush = new(_pressColor);
+                g.FillRectangle(brush, bounds);
             }
             else if (e.Item is ToolStripButton button && button.Checked)
             {
-                g.FillRectangle(Brushes.Gray, bounds);
+                using SolidBrush brush = new(_activeColor);
+                g.FillRectangle(brush, bounds);
+            }
+            else if (e.Item.Selected)
+            {
+                using SolidBrush brush = new(_hoverColor);
+                g.FillRectangle(brush, bounds);
             }
             else if (e.Item.BackColor != Control.DefaultBackColor)
             {
@@ -282,9 +293,15 @@ public sealed partial class Ui(Control parent)
         {
             var g = e.Graphics;
             Rectangle bounds = new(Point.Empty, e.Item.Size);
-            if (e.Item.Pressed || e.Item.Selected)
+            if (e.Item.Pressed)
             {
-                g.FillRectangle(SystemBrushes.Highlight, bounds);
+                using SolidBrush brush = new(_pressColor);
+                g.FillRectangle(brush, bounds);
+            }
+            else if (e.Item.Selected)
+            {
+                using SolidBrush brush = new(_hoverColor);
+                g.FillRectangle(brush, bounds);
             }
             else if (e.Item.BackColor != Control.DefaultBackColor)
             {
@@ -364,7 +381,29 @@ public sealed partial class Ui(Control parent)
 
         protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
         {
-            base.OnRenderMenuItemBackground(e);
+            Graphics g = e.Graphics;
+
+            if (e.Item is not ToolStripMenuItem item)
+                return;
+
+            Rectangle bounds = new(Point.Empty, item.Size);
+
+            // Modern MODE (no 3D edges)
+            // Draw blue filled highlight for toplevel items in themed platforms
+            // or items parented to a drop down
+            Rectangle fillRect = new(Point.Empty, item.Size);
+            if (item.IsOnDropDown)
+            {
+                // Scoot in by 2 pixels when selected
+                fillRect.X += 2;
+                fillRect.Width -= 3; //its already 1 away from the right edge
+            }
+
+            if ((item.Selected || item.Pressed) && item.Enabled)
+            {
+                using SolidBrush brush = new(_hoverColor);
+                g.FillRectangle(brush, fillRect);
+            }
 
             if (e.Item is ToolStripMenuItem mi && mi.Checked)
             {
