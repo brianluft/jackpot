@@ -74,8 +74,14 @@ public sealed class LoginForm : Form
                         _bucketTable.Padding = ui.DefaultPadding;
 
                         _bucketText = _bucketTable.AddPair(1, 0, ui.NewLabeledTextBox("Bucket name:", 300));
+                        {
+                            _bucketText.Font = ui.BigFont;
+                        }
 
                         _endpointText = _bucketTable.AddPair(1, 1, ui.NewLabeledTextBox("Endpoint:", 300));
+                        {
+                            _endpointText.Font = ui.BigFont;
+                        }
 
                         _bucketTable.Controls.Add(
                             _b2BucketIconPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Bucket.png", 32, 32)),
@@ -156,6 +162,9 @@ public sealed class LoginForm : Form
                         }
 
                         _accessKeyIdText = _accountTable.AddPair(1, 0, ui.NewLabeledTextBox("keyID:", 300));
+                        {
+                            _accessKeyIdText.Font = ui.BigFont;
+                        }
 
                         _secretAccessKeyText = _accountTable.AddPair(
                             1,
@@ -163,6 +172,7 @@ public sealed class LoginForm : Form
                             ui.NewLabeledTextBox("applicationKey:", 300)
                         );
                         {
+                            _secretAccessKeyText.Font = ui.BigFont;
                             _secretAccessKeyText.PasswordChar = '•';
                         }
 
@@ -237,6 +247,7 @@ public sealed class LoginForm : Form
 
                         (p, _passwordText) = ui.NewLabeledTextBox("Encryption password:", 300);
                         {
+                            _passwordText.Font = ui.BigFont;
                             _encryptionTable.Controls.Add(p, 1, 0);
                             _passwordText.PasswordChar = '•';
                             p.Margin += ui.GetPadding(0, 0, 0, 32);
@@ -287,12 +298,14 @@ public sealed class LoginForm : Form
 
                         (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
                         {
+                            _m3u8FolderText.Font = ui.BigFont;
                             _m3u8Flow.Controls.Add(p);
                             p.Margin = ui.BottomSpacing;
                         }
 
                         (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 250);
                         {
+                            _m3u8HostnameText.Font = ui.BigFont;
                             _m3u8Flow.Controls.Add(p);
                         }
                     }

@@ -11,6 +11,17 @@ public sealed partial class Ui(Control parent)
 
     private double Scale => parent.DeviceDpi / 96d;
 
+    private readonly Lazy<Font> _bigFont =
+        new(() =>
+        {
+            Font font = new("Segoe UI", 11f);
+            parent.Disposed += delegate
+            {
+                font.Dispose();
+            };
+            return font;
+        });
+
     public int GetLength(int unscaledLength)
     {
         var scale = Scale;
@@ -66,17 +77,7 @@ public sealed partial class Ui(Control parent)
 
     public Padding RightSpacing => new(0, 0, GetLength(DefaultUnscaledPadding), 0);
 
-    public Font NewBigFont() => new("Segoe UI", 11f);
-
-    public void SetBigFont(Control control)
-    {
-        var font = NewBigFont();
-        control.Disposed += delegate
-        {
-            font.Dispose();
-        };
-        control.Font = font;
-    }
+    public Font BigFont => _bigFont.Value;
 
     public (Control Parent, TextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
@@ -429,19 +430,12 @@ public sealed partial class Ui(Control parent)
 
     public ToolStripTextBox NewToolStripTextBox(int unscaledWidth)
     {
-        var font = NewBigFont();
-        ToolStripTextBox box =
-            new()
-            {
-                AutoSize = false,
-                Width = GetLength(unscaledWidth),
-                Font = font,
-            };
-        box.Disposed += delegate
+        return new()
         {
-            font.Dispose();
+            AutoSize = false,
+            Width = GetLength(unscaledWidth),
+            Font = BigFont,
         };
-        return box;
     }
 
     public ToolStripMenuItem NewToolStripMenuItem(string text)
@@ -490,19 +484,12 @@ public sealed partial class Ui(Control parent)
 
     public ListBox NewListBox()
     {
-        var font = NewBigFont();
-        ListBox listBox =
-            new()
-            {
-                IntegralHeight = false,
-                Dock = DockStyle.Fill,
-                Font = font,
-            };
-        listBox.Disposed += delegate
+        return new()
         {
-            font.Dispose();
+            IntegralHeight = false,
+            Dock = DockStyle.Fill,
+            Font = BigFont,
         };
-        return listBox;
     }
 
     public ProgressBar NewProgressBar(int unscaledWidth)
@@ -565,7 +552,6 @@ public sealed partial class Ui(Control parent)
 
     public DataGridView NewDataGridView()
     {
-        var font = NewBigFont();
         DoubleBufferedDataGridView grid =
             new()
             {
@@ -585,13 +571,9 @@ public sealed partial class Ui(Control parent)
                 ReadOnly = true,
                 BorderStyle = BorderStyle.None,
                 GridColor = Color.LightGray,
-                Font = font,
+                Font = BigFont,
             };
         grid.RowTemplate.Height = GetLength(26);
-        grid.Disposed += delegate
-        {
-            font.Dispose();
-        };
         FixRightClickSelection(grid);
         return grid;
     }

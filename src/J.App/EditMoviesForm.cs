@@ -71,7 +71,7 @@ public sealed partial class EditMoviesForm : Form
 
                 _buttonFlow.Controls.Add(_searchText = ui.NewTextBox(200));
                 {
-                    ui.SetBigFont(_searchText);
+                    _searchText.Font = ui.BigFont;
                     _searchText.Margin += ui.GetPadding(0, 4);
                     ui.SetCueText(_searchText, "Search");
                     _searchText.KeyPress += SearchText_KeyPress;
