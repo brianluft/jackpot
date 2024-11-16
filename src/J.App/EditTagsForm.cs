@@ -18,7 +18,7 @@ public sealed class EditTagsForm : Form
         _serviceProvider = serviceProvider;
         Ui ui = new(this);
 
-        Controls.Add(_tabs = ui.NewTabControl());
+        Controls.Add(_tabs = ui.NewTabControl(100));
         {
             _tabs.TabPages.Add(_newTab = new());
             {

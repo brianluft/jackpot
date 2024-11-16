@@ -194,7 +194,7 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(_moviesButton = ui.NewToolStripMenuItem("Movies"));
                 {
-                    _moviesButton.Image = ui.GetScaledBitmapResource("Movie.png", 16, 16);
+                    _moviesButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Movie.png", 16, 16));
                     _moviesButton.Click += MoviesButton_Click;
                 }
 
@@ -202,7 +202,7 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(_addToLibraryButton = ui.NewToolStripMenuItem("Add movies..."));
                 {
-                    _addToLibraryButton.Image = ui.GetScaledBitmapResource("Add.png", 16, 16);
+                    _addToLibraryButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Add.png", 16, 16));
                     _addToLibraryButton.Click += AddToLibraryButton_Click;
                 }
 

@@ -43,7 +43,7 @@ public sealed class OptionsForm : Form
             _table.RowStyles[0].SizeType = SizeType.Percent;
             _table.RowStyles[0].Height = 100;
 
-            _table.Controls.Add(_tabControl = ui.NewTabControl(), 0, 0);
+            _table.Controls.Add(_tabControl = ui.NewTabControl(100), 0, 0);
             {
                 _tabControl.TabPages.Add(_generalTab = ui.NewTabPage("General"));
                 {

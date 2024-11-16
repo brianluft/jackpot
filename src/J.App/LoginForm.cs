@@ -39,10 +39,8 @@ public sealed class LoginForm : Form
     private readonly CheckBox _enableM3u8FolderCheck;
     private readonly LinkLabel _b2BucketLink,
         _b2KeyLink;
-    private readonly PictureBox _b2BucketPicture,
-        _b2BucketHelpPicture,
+    private readonly PictureBox _b2BucketHelpPicture,
         _b2BucketIconPicture,
-        _b2KeyPicture,
         _b2KeyHelpPicture,
         _b2KeyIconPicture,
         _encryptionIconPicture,
@@ -61,7 +59,7 @@ public sealed class LoginForm : Form
             _formTable.Padding = ui.DefaultPadding;
             _formTable.Dock = DockStyle.Fill;
 
-            _formTable.Controls.Add(_tabControl = ui.NewTabControl(), 0, 0);
+            _formTable.Controls.Add(_tabControl = ui.NewTabControl(100), 0, 0);
             {
                 _formTable.SetColumnSpan(_tabControl, 2);
                 _formTable.RowStyles[0].SizeType = SizeType.Percent;
@@ -69,7 +67,7 @@ public sealed class LoginForm : Form
 
                 _tabControl.TabPages.Add(_bucketPage = ui.NewTabPage("B2 Bucket"));
                 {
-                    _bucketPage.Controls.Add(_bucketTable = ui.NewTable(2, 4));
+                    _bucketPage.Controls.Add(_bucketTable = ui.NewTable(2, 3));
                     {
                         _bucketTable.Padding = ui.DefaultPadding;
 
@@ -84,7 +82,9 @@ public sealed class LoginForm : Form
                         }
 
                         _bucketTable.Controls.Add(
-                            _b2BucketIconPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Bucket.png", 32, 32)),
+                            _b2BucketIconPicture = ui.NewPictureBox(
+                                ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Bucket.png", 32, 32))
+                            ),
                             0,
                             0
                         );
@@ -121,7 +121,7 @@ public sealed class LoginForm : Form
                                 _b2BucketLink.TextAlign = ContentAlignment.MiddleCenter;
                             }
 
-                            _bucketHelpFlow.Controls.Add(label = ui.NewLabel("web page:"));
+                            _bucketHelpFlow.Controls.Add(label = ui.NewLabel("web page."));
                             {
                                 label.Margin = label.Margin with { Left = 0 };
                                 label.Padding = label.Padding with { Left = 0 };
@@ -129,31 +129,19 @@ public sealed class LoginForm : Form
                                 label.TextAlign = ContentAlignment.MiddleCenter;
                             }
                         }
-
-                        _bucketTable.Controls.Add(
-                            _b2BucketPicture = ui.NewPictureBox(
-                                ui.GetScaledBitmapResource("B2BucketHelp.png", 448, 191)
-                            ),
-                            0,
-                            3
-                        );
-                        {
-                            _bucketTable.SetColumnSpan(_b2BucketPicture, 2);
-                            _b2BucketPicture.Margin = ui.TopSpacing;
-
-                            _b2BucketPicture.BorderStyle = BorderStyle.FixedSingle;
-                        }
                     }
                 }
 
-                _tabControl.TabPages.Add(_accountPage = ui.NewTabPage("B2 Application Key"));
+                _tabControl.TabPages.Add(_accountPage = ui.NewTabPage("B2 Key"));
                 {
-                    _accountPage.Controls.Add(_accountTable = ui.NewTable(2, 4));
+                    _accountPage.Controls.Add(_accountTable = ui.NewTable(2, 3));
                     {
                         _accountTable.Padding = ui.DefaultPadding;
 
                         _accountTable.Controls.Add(
-                            _b2KeyIconPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("Key.png", 32, 32)),
+                            _b2KeyIconPicture = ui.NewPictureBox(
+                                ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Key.png", 32, 32))
+                            ),
                             0,
                             0
                         );
@@ -205,25 +193,13 @@ public sealed class LoginForm : Form
                                 _b2KeyLink.TextAlign = ContentAlignment.MiddleCenter;
                             }
 
-                            _keyHelpFlow.Controls.Add(label = ui.NewLabel("web page:"));
+                            _keyHelpFlow.Controls.Add(label = ui.NewLabel("web page."));
                             {
                                 label.Margin = label.Margin with { Left = 0 };
                                 label.Padding = label.Padding with { Left = 0 };
                                 label.Dock = DockStyle.Fill;
                                 label.TextAlign = ContentAlignment.MiddleCenter;
                             }
-                        }
-
-                        _accountTable.Controls.Add(
-                            _b2KeyPicture = ui.NewPictureBox(ui.GetScaledBitmapResource("B2KeyHelp.png", 500, 191)),
-                            0,
-                            3
-                        );
-                        {
-                            _accountTable.SetColumnSpan(_b2KeyPicture, 2);
-                            _b2KeyPicture.Margin = ui.TopSpacing;
-
-                            _b2KeyPicture.BorderStyle = BorderStyle.FixedSingle;
                         }
                     }
                 }
@@ -236,7 +212,7 @@ public sealed class LoginForm : Form
 
                         _encryptionTable.Controls.Add(
                             _encryptionIconPicture = ui.NewPictureBox(
-                                ui.GetScaledBitmapResource("Encryption.png", 32, 32)
+                                ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Encryption.png", 32, 32))
                             ),
                             0,
                             0
@@ -310,44 +286,42 @@ public sealed class LoginForm : Form
                         }
                     }
                 }
-            }
 
-            _tabControl.TabPages.Add(_importExportPage = ui.NewTabPage("Import/Export Settings"));
-            {
-                _importExportPage.Controls.Add(_copyPasteButtonsFlow = ui.NewFlowColumn());
+                _tabControl.TabPages.Add(_importExportPage = ui.NewTabPage("Advanced"));
                 {
-                    _copyPasteButtonsFlow.Padding = ui.DefaultPadding;
-
-                    _copyPasteButtonsFlow.Controls.Add(
-                        ui.NewLabel(
-                            "Use the buttons below to import or export a copy of your login information.\n\nSave this text in your password manager for safe keeping."
-                        )
-                    );
-
-                    _copyPasteButtonsFlow.Controls.Add(_copySettingsButton = ui.NewButton("Copy JSON"));
+                    _importExportPage.Controls.Add(_copyPasteButtonsFlow = ui.NewFlowColumn());
                     {
-                        _copySettingsButton.Margin += ui.TopSpacingBig;
-                        _copySettingsButton.Click += CopySettingsButton_Click;
-                    }
+                        _copyPasteButtonsFlow.Padding = ui.DefaultPadding;
 
-                    _copyPasteButtonsFlow.Controls.Add(_pasteSettingsButton = ui.NewButton("Paste JSON"));
-                    {
-                        _pasteSettingsButton.Margin += ui.TopSpacing + ui.GetPadding(0, 0, 0, 36);
-                        _pasteSettingsButton.Click += PasteSettingsButton_Click;
-                    }
+                        _copyPasteButtonsFlow.Controls.Add(
+                            ui.NewLabel("Import or export a copy of your login information for safe keeping.")
+                        );
 
-                    _copyPasteButtonsFlow.Controls.Add(
-                        ui.NewLabel(
-                            "If you plan to uninstall Jackpot and not reinstall, use this button to remove Jackpot data\nfrom your computer."
-                        )
-                    );
+                        _copyPasteButtonsFlow.Controls.Add(_copySettingsButton = ui.NewButton("Copy JSON"));
+                        {
+                            _copySettingsButton.Margin += ui.TopSpacingBig;
+                            _copySettingsButton.Click += CopySettingsButton_Click;
+                        }
 
-                    _copyPasteButtonsFlow.Controls.Add(
-                        _deleteAllLocalDataButton = ui.NewButton("Delete all local data")
-                    );
-                    {
-                        _deleteAllLocalDataButton.Margin = ui.TopSpacingBig;
-                        _deleteAllLocalDataButton.Click += DeleteAllLocalDataButton_Click;
+                        _copyPasteButtonsFlow.Controls.Add(_pasteSettingsButton = ui.NewButton("Paste JSON"));
+                        {
+                            _pasteSettingsButton.Margin += ui.TopSpacing + ui.GetPadding(0, 0, 0, 36);
+                            _pasteSettingsButton.Click += PasteSettingsButton_Click;
+                        }
+
+                        _copyPasteButtonsFlow.Controls.Add(
+                            ui.NewLabel(
+                                "If you plan to uninstall Jackpot and not reinstall, remove all Jackpot user files\nfrom your computer."
+                            )
+                        );
+
+                        _copyPasteButtonsFlow.Controls.Add(
+                            _deleteAllLocalDataButton = ui.NewButton("Delete all local data")
+                        );
+                        {
+                            _deleteAllLocalDataButton.Margin = ui.TopSpacingBig;
+                            _deleteAllLocalDataButton.Click += DeleteAllLocalDataButton_Click;
+                        }
                     }
                 }
             }
@@ -371,7 +345,7 @@ public sealed class LoginForm : Form
 
         Text = "Jackpot Login";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(560, 540);
+        MinimumSize = Size = ui.GetSize(575, 400);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;

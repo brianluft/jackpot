@@ -194,7 +194,12 @@ public sealed partial class Ui(Control parent)
 
     public LinkLabel NewLinkLabel(string text)
     {
-        return new() { Text = text, AutoSize = true };
+        return new()
+        {
+            Text = text,
+            AutoSize = true,
+            LinkColor = Color.FromArgb(0x92, 0xB1, 0xE2),
+        };
     }
 
     public FlowLayoutPanel NewFlowRow()
@@ -256,9 +261,9 @@ public sealed partial class Ui(Control parent)
 
     private sealed class MyToolStripRenderer(Ui ui) : ToolStripSystemRenderer
     {
-        private readonly Color _hoverColor = Color.FromArgb(0xFF, 0x9A, 0x00);
-        private readonly Color _pressColor = Color.FromArgb(0xBB, 0x71, 0x00);
-        private readonly Color _activeColor = Color.FromArgb(0xDE, 0x7F, 0x00);
+        private readonly Color _hoverColor = Color.FromArgb(0x00, 0x7A, 0xD7);
+        private readonly Color _pressColor = Color.FromArgb(0x00, 0x4C, 0x87);
+        private readonly Color _activeColor = Color.FromArgb(0xD2, 0x78, 0x00);
 
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
 
@@ -322,7 +327,7 @@ public sealed partial class Ui(Control parent)
 
             ToolStripItem? item = e.Item;
             Graphics g = e.Graphics;
-            Color textColor = e.TextColor;
+            Color textColor = Color.White;
             Font? textFont = e.TextFont;
             string? text = e.Text;
             Rectangle textRect = e.TextRectangle;
@@ -352,20 +357,10 @@ public sealed partial class Ui(Control parent)
             {
                 var disposeImage = false;
 
-                if (e.Item is not null)
+                if (e.Item is not null && !e.Item.Enabled)
                 {
-                    if (!e.Item.Enabled)
-                    {
-                        image = CreateDisabledImage(image);
-                        disposeImage = true;
-                    }
-                    else if (e.Item.Owner!.IsDropDown && (e.Item.Pressed || e.Item.Selected))
-                    {
-                        Bitmap bitmap = new(image);
-                        ui.InvertColorsInPlace(bitmap);
-                        image = bitmap;
-                        disposeImage = true;
-                    }
+                    image = CreateDisabledImage(image);
+                    disposeImage = true;
                 }
 
                 e.Graphics.DrawImage(image, imageRect, new Rectangle(Point.Empty, imageRect.Size), GraphicsUnit.Pixel);
@@ -386,17 +381,11 @@ public sealed partial class Ui(Control parent)
             if (e.Item is not ToolStripMenuItem item)
                 return;
 
-            Rectangle bounds = new(Point.Empty, item.Size);
-
-            // Modern MODE (no 3D edges)
-            // Draw blue filled highlight for toplevel items in themed platforms
-            // or items parented to a drop down
             Rectangle fillRect = new(Point.Empty, item.Size);
             if (item.IsOnDropDown)
             {
-                // Scoot in by 2 pixels when selected
                 fillRect.X += 2;
-                fillRect.Width -= 3; //its already 1 away from the right edge
+                fillRect.Width -= 3;
             }
 
             if ((item.Selected || item.Pressed) && item.Enabled)
@@ -418,7 +407,7 @@ public sealed partial class Ui(Control parent)
                     checkmark,
                     mi.Font,
                     textRect,
-                    mi.Selected || mi.Pressed ? SystemColors.HighlightText : SystemColors.MenuText,
+                    Color.White,
                     TextFormatFlags.VerticalCenter
                 );
             }
@@ -536,14 +525,20 @@ public sealed partial class Ui(Control parent)
         return new() { Size = GetSize(unscaledWidth, 12) };
     }
 
-    public TabControl NewTabControl()
+    public TabControl NewTabControl(int unscaledTabWidth)
     {
-        return new() { Dock = DockStyle.Fill, Padding = GetPoint(8, 4) };
+        return new MyTabControl(BigFont)
+        {
+            Dock = DockStyle.Fill,
+            Padding = GetPoint(8, 12),
+            SizeMode = TabSizeMode.Fixed,
+            ItemSize = GetSize(unscaledTabWidth, 25),
+        };
     }
 
     public TabPage NewTabPage(string text)
     {
-        return new(text) { UseVisualStyleBackColor = true };
+        return new MyTabPage { Text = text, UseVisualStyleBackColor = true };
     }
 
     private sealed class DoubleBufferedDataGridView : DataGridView
