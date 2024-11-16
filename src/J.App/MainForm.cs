@@ -49,9 +49,7 @@ public sealed partial class MainForm : Form
     private readonly WebView2 _browser;
     private readonly List<FilterRule> _filterRules = [];
     private bool _filterOr = false;
-    private readonly System.Windows.Forms.Timer _edgeHideTimer;
     private int _pageCount;
-    private bool _keepEdgeUiShowing;
     private bool _importInProgress;
 
     public MainForm(
@@ -74,42 +72,8 @@ public sealed partial class MainForm : Form
         Ui ui = new(this);
         _ui = ui;
 
-        _edgeHideTimer = new() { Interval = 250, Enabled = false };
-        {
-            _edgeHideTimer.Tick += EdgeHideTimer_Tick;
-        }
-
-        _browser = new()
-        {
-            Dock = DockStyle.Fill,
-            Padding = Padding.Empty,
-            Margin = Padding.Empty,
-        };
-        _browser.CoreWebView2InitializationCompleted += delegate
-        {
-            var settings = _browser.CoreWebView2.Settings;
-            settings.AreBrowserAcceleratorKeysEnabled = false;
-            settings.AreDefaultContextMenusEnabled = false;
-            settings.AreDefaultScriptDialogsEnabled = false;
-            settings.AreDevToolsEnabled = false;
-            settings.AreHostObjectsAllowed = false;
-            settings.IsBuiltInErrorPageEnabled = false;
-            settings.IsGeneralAutofillEnabled = false;
-            settings.IsNonClientRegionSupportEnabled = false;
-            settings.IsPasswordAutosaveEnabled = false;
-            settings.IsPinchZoomEnabled = false;
-            settings.IsReputationCheckingRequired = false;
-            settings.IsScriptEnabled = true;
-            settings.IsStatusBarEnabled = false;
-            settings.IsSwipeNavigationEnabled = false;
-            settings.IsWebMessageEnabled = false;
-            settings.IsZoomControlEnabled = false;
-        };
-        _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment); // fire and forget?
-
         Controls.Add(_leftPanel = new(left: true));
         {
-            _leftPanel.Visible = false;
             _leftPanel.Dock = DockStyle.Left;
             _leftPanel.Width = ui.GetLength(25);
             _leftPanel.ShortJump += PagePreviousButton_Click;
@@ -118,7 +82,6 @@ public sealed partial class MainForm : Form
 
         Controls.Add(_rightPanel = new(left: false));
         {
-            _rightPanel.Visible = false;
             _rightPanel.Dock = DockStyle.Right;
             _rightPanel.Width = ui.GetLength(25);
             _rightPanel.ShortJump += PageNextButton_Click;
@@ -127,8 +90,8 @@ public sealed partial class MainForm : Form
 
         Controls.Add(_toolStrip = ui.NewToolStrip());
         {
+            _toolStrip.Dock = DockStyle.Top;
             _toolStrip.GripStyle = ToolStripGripStyle.Hidden;
-            _toolStrip.Visible = false;
             _toolStrip.MouseUp += ToolStrip_MouseUp;
 
             _toolStrip.Items.Add(_exitButton = ui.NewToolStripButton("Exit", true));
@@ -165,10 +128,6 @@ public sealed partial class MainForm : Form
                         // Leaving fullscreen
                         _minimizeButton!.Visible = false;
                         _exitButton.Visible = false;
-                        _toolStrip.Visible = true;
-                        _leftPanel.Visible = true;
-                        _rightPanel.Visible = true;
-                        _edgeHideTimer.Stop();
                         _fullscreenButton.Image = enlargeImage;
                         FormBorderStyle = FormBorderStyle.Sizable;
                         WindowState = FormWindowState.Normal;
@@ -221,8 +180,6 @@ public sealed partial class MainForm : Form
             {
                 _filterButton.Alignment = ToolStripItemAlignment.Right;
                 _filterButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Filter.png", 16, 16));
-                _filterButton.DropDownOpened += FilterButton_DropDownOpened;
-                _filterButton.DropDownClosed += FilterButton_DropDownClosed;
 
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
@@ -253,8 +210,6 @@ public sealed partial class MainForm : Form
                 _menuButton.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
                 _menuButton.Margin = _menuButton.Margin with { Left = 0 };
                 _menuButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Menu.png", 16, 16));
-                _menuButton.DropDownOpened += MenuButton_DropDownOpened;
-                _menuButton.DropDownClosed += MenuButton_DropDownClosed;
 
                 _menuButton.DropDownItems.Add(_moviesButton = ui.NewToolStripMenuItem("Movies"));
                 {
@@ -313,7 +268,7 @@ public sealed partial class MainForm : Form
                 _browseBackButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("BrowseBack.png", 16, 16));
                 _browseBackButton.Click += delegate
                 {
-                    _browser.GoBack();
+                    _browser!.GoBack();
                 };
             }
 
@@ -325,7 +280,7 @@ public sealed partial class MainForm : Form
                 );
                 _browseForwardButton.Click += delegate
                 {
-                    _browser.GoForward();
+                    _browser!.GoForward();
                 };
             }
 
@@ -356,59 +311,38 @@ public sealed partial class MainForm : Form
             _toolStrip.Items.Add(_pageLabel = ui.NewToolStripLabel(""));
         }
 
-        var browserTable = ui.NewTable(1, 1);
-        {
-            Controls.Add(browserTable);
-            browserTable.Dock = DockStyle.Fill;
-            browserTable.Margin = Padding.Empty;
-            browserTable.Padding = new(5, 5, 5, 5);
-            browserTable.Controls.Add(_browser, 0, 0);
-            _browser.NavigationCompleted += Browser_NavigationCompleted;
-
-            browserTable.MouseMove += delegate
+        Controls.Add(
+            _browser = new()
             {
-                MouseHandler();
-            };
-            _toolStrip.MouseLeave += delegate
-            {
-                MouseHandler();
-            };
-            _leftPanel.MouseLeave += delegate
-            {
-                MouseHandler();
-            };
-            _rightPanel.MouseLeave += delegate
-            {
-                MouseHandler();
-            };
-            void MouseHandler()
-            {
-                var xy = MousePosition;
-                var isTopEdge = xy.Y < _toolStrip.Height;
-                var isLeftEdge = xy.X < _leftPanel.Width;
-                var isRightEdge = xy.X > Width - _leftPanel.Width;
-                var isFullscreen = FormBorderStyle == FormBorderStyle.None;
-                var shouldBeVisible = !isFullscreen | _keepEdgeUiShowing | isTopEdge | isLeftEdge | isRightEdge;
-                var isVisible = _toolStrip.Visible;
-                if (isVisible)
-                {
-                    if (!shouldBeVisible && !_edgeHideTimer.Enabled)
-                    {
-                        _edgeHideTimer.Stop();
-                        _edgeHideTimer.Start();
-                    }
-                    else if (shouldBeVisible)
-                    {
-                        _edgeHideTimer.Stop();
-                    }
-                }
-                else if (!isVisible && shouldBeVisible)
-                {
-                    _toolStrip.Visible = true;
-                    _leftPanel.Visible = true;
-                    _rightPanel.Visible = true;
-                }
+                Dock = DockStyle.Fill,
+                Padding = Padding.Empty,
+                Margin = Padding.Empty,
             }
+        );
+        {
+            _browser.BringToFront();
+            _browser.CoreWebView2InitializationCompleted += delegate
+            {
+                var settings = _browser.CoreWebView2.Settings;
+                settings.AreBrowserAcceleratorKeysEnabled = false;
+                settings.AreDefaultContextMenusEnabled = false;
+                settings.AreDefaultScriptDialogsEnabled = false;
+                settings.AreDevToolsEnabled = false;
+                settings.AreHostObjectsAllowed = false;
+                settings.IsBuiltInErrorPageEnabled = false;
+                settings.IsGeneralAutofillEnabled = false;
+                settings.IsNonClientRegionSupportEnabled = false;
+                settings.IsPasswordAutosaveEnabled = false;
+                settings.IsPinchZoomEnabled = false;
+                settings.IsReputationCheckingRequired = false;
+                settings.IsScriptEnabled = true;
+                settings.IsStatusBarEnabled = false;
+                settings.IsSwipeNavigationEnabled = false;
+                settings.IsWebMessageEnabled = false;
+                settings.IsZoomControlEnabled = false;
+            };
+            _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment);
+            _browser.NavigationCompleted += Browser_NavigationCompleted;
         }
 
         Text = "Jackpot";
@@ -840,34 +774,6 @@ public sealed partial class MainForm : Form
         _filterOrButton.Checked = false;
         _filterAndButton.Checked = true;
         await UpdateFiltersAsync().ConfigureAwait(true);
-    }
-
-    private void MenuButton_DropDownOpened(object? sender, EventArgs e)
-    {
-        _keepEdgeUiShowing = true;
-    }
-
-    private void FilterButton_DropDownOpened(object? sender, EventArgs e)
-    {
-        _keepEdgeUiShowing = true;
-    }
-
-    private void MenuButton_DropDownClosed(object? sender, EventArgs e)
-    {
-        _keepEdgeUiShowing = false;
-    }
-
-    private void FilterButton_DropDownClosed(object? sender, EventArgs e)
-    {
-        _keepEdgeUiShowing = false;
-    }
-
-    private void EdgeHideTimer_Tick(object? sender, EventArgs e)
-    {
-        _edgeHideTimer.Enabled = false;
-        _toolStrip.Visible = false;
-        _leftPanel.Visible = false;
-        _rightPanel.Visible = false;
     }
 
     private void UpdateTagTypes()
