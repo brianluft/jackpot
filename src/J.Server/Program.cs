@@ -464,7 +464,7 @@ app.MapPost(
                     which == VlcInstallationToUse.System
                         ? "vlc.exe"
                         : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
-                Arguments = $"--high-priority {extraArgs} -- {url}",
+                Arguments = $"--fullscreen --high-priority {extraArgs} -- {url}",
                 UseShellExecute = which == VlcInstallationToUse.System,
             };
         using var p = Process.Start(psi)!;
