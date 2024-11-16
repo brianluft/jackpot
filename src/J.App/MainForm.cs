@@ -328,13 +328,24 @@ public sealed partial class MainForm : Form
 
         Text = "Jackpot";
         Size = ui.GetSize(1600, 900);
-        WindowState = FormWindowState.Maximized;
+        CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
         BackColor = Color.Black;
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;
+    }
+
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+
+        WindowState = FormWindowState.Maximized;
+        var json = _preferences.GetText(Preferences.Key.MainForm_CompleteWindowState);
+        var state = CompleteWindowState.FromJson(json);
+        state.Restore(this);
+        ApplyFullscreenPreference();
     }
 
     private void AboutButton_Click(object? sender, EventArgs e)
@@ -846,6 +857,9 @@ public sealed partial class MainForm : Form
             }
         }
 
+        var state = CompleteWindowState.Save(this);
+        _preferences.SetText(Preferences.Key.MainForm_CompleteWindowState, state.ToJson());
+
         base.OnFormClosing(e);
     }
 
@@ -926,13 +940,23 @@ public sealed partial class MainForm : Form
         var isFullscreen = FormBorderStyle == FormBorderStyle.None;
         var behavior = _preferences.GetEnum<WindowMaximizeBehavior>(Preferences.Key.MainForm_WindowMaximizeBehavior);
 
-        if (behavior == WindowMaximizeBehavior.Fullscreen && isMaximized && !isFullscreen)
+        if (isFullscreen && !isMaximized)
+        {
+            ExitFullscreen();
+        }
+        else if (behavior == WindowMaximizeBehavior.Fullscreen && isMaximized && !isFullscreen)
         {
             EnterFullscreen();
         }
         else if (behavior == WindowMaximizeBehavior.Windowed && isFullscreen)
         {
             ExitFullscreen();
+        }
+
+        isFullscreen = FormBorderStyle == FormBorderStyle.None;
+        if (isFullscreen)
+        {
+            Location = new(0, 0);
         }
     }
 
@@ -966,7 +990,7 @@ public sealed partial class MainForm : Form
         FormBorderStyle = FormBorderStyle.Sizable;
         ShowIcon = true;
         Icon = _ui.GetIconResource("App.ico");
-        WindowState = FormWindowState.Maximized;
+        WindowState = FormWindowState.Normal;
     }
 
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]

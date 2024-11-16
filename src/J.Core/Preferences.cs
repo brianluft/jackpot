@@ -19,6 +19,7 @@ public sealed class Preferences : IDisposable
         ConvertMoviesForm_AudioBitrate,
         ConvertMoviesForm_OutputDirectory,
         MainForm_WindowMaximizeBehavior,
+        MainForm_CompleteWindowState,
     }
 
     public Preferences()
@@ -32,6 +33,14 @@ public sealed class Preferences : IDisposable
             [Key.ConvertMoviesForm_AudioBitrate] = "256 kbps (recommended)",
             [Key.ConvertMoviesForm_OutputDirectory] = "",
             [Key.MainForm_WindowMaximizeBehavior] = WindowMaximizeBehavior.Fullscreen.ToString(),
+            [Key.MainForm_CompleteWindowState] = """
+                {
+                    "WindowState": 2,
+                    "UnscaledRestoreBounds": {},
+                    "UnscaledLocation": {},
+                    "UnscaledSize": {}
+                }
+                """,
         }.ToFrozenDictionary();
 
         // Make sure every default is one of the four supported types.

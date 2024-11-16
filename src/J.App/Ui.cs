@@ -6,7 +6,7 @@ namespace J.App;
 
 public sealed partial class Ui(Control parent)
 {
-    public string ResourcesDir { get; } =
+    public static string ResourcesDir { get; } =
         Path.Combine(Path.GetDirectoryName(typeof(Ui).Assembly.Location)!, "Resources");
 
     private double Scale => parent.DeviceDpi / 96d;
