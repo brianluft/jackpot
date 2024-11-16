@@ -1,4 +1,6 @@
-﻿namespace J.App;
+﻿using System.ComponentModel;
+
+namespace J.App;
 
 public sealed class EdgePanel : Panel
 {
@@ -14,6 +16,7 @@ public sealed class EdgePanel : Panel
     public event EventHandler? ShortJump;
     public event EventHandler? LongJump;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool JumpEnabled
     {
         get => _jumpEnabled;

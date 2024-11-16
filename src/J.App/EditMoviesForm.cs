@@ -167,7 +167,7 @@ public sealed partial class EditMoviesForm : Form
             List<(MovieId MovieId, TagId TagId)> list = [];
             foreach (DataGridViewRow viewRow in _grid.SelectedRows)
             {
-                var row = ((DataRowView)viewRow.DataBoundItem).Row;
+                var row = ((DataRowView)viewRow.DataBoundItem!).Row;
                 var movieId = (MovieId)row["id"];
                 list.Add((movieId, tagId));
             }
@@ -195,7 +195,7 @@ public sealed partial class EditMoviesForm : Form
         HashSet<TagId> tagIds = [];
         foreach (DataGridViewRow viewRow in _grid.SelectedRows)
         {
-            var row = ((DataRowView)viewRow.DataBoundItem).Row;
+            var row = ((DataRowView)viewRow.DataBoundItem!).Row;
             var movieId = (MovieId)row["id"];
             movieIds.Add(movieId);
             var movieTags = _libraryProvider.GetMovieTags(movieId);
@@ -254,7 +254,7 @@ public sealed partial class EditMoviesForm : Form
             return;
         }
 
-        var row = ((DataRowView)_grid.SelectedRows[0].DataBoundItem).Row;
+        var row = ((DataRowView)_grid.SelectedRows[0].DataBoundItem!).Row;
         var id = (MovieId)row["id"];
         var oldName = (string)row["name"];
 
@@ -296,7 +296,7 @@ public sealed partial class EditMoviesForm : Form
             List<MovieId> movieIds = [];
             foreach (DataGridViewRow viewRow in _grid.SelectedRows)
             {
-                var row = ((DataRowView)viewRow.DataBoundItem).Row;
+                var row = ((DataRowView)viewRow.DataBoundItem!).Row;
                 var id = (MovieId)row["id"];
                 movieIds.Add(id);
             }
@@ -354,7 +354,7 @@ public sealed partial class EditMoviesForm : Form
     {
         var selectedIds = _grid
             .SelectedRows.Cast<DataGridViewRow>()
-            .Select(x => (MovieId)((DataRowView)x.DataBoundItem).Row["id"])
+            .Select(x => (MovieId)((DataRowView)x.DataBoundItem!).Row["id"])
             .ToFrozenSet();
         var firstRowIndex = _grid.FirstDisplayedScrollingRowIndex;
         var firstColumnIndex = _grid.FirstDisplayedScrollingColumnIndex;
@@ -435,7 +435,7 @@ public sealed partial class EditMoviesForm : Form
         _grid.ClearSelection();
         foreach (DataGridViewRow viewRow in _grid.Rows)
         {
-            var row = ((DataRowView)viewRow.DataBoundItem).Row;
+            var row = ((DataRowView)viewRow.DataBoundItem!).Row;
             var id = (MovieId)row["id"];
             if (selectedIds.Contains(id))
                 viewRow.Selected = true;
@@ -468,7 +468,7 @@ public sealed partial class EditMoviesForm : Form
                     var i = 0;
                     foreach (DataGridViewRow viewRow in _grid.SelectedRows)
                     {
-                        var row = ((DataRowView)viewRow.DataBoundItem).Row;
+                        var row = ((DataRowView)viewRow.DataBoundItem!).Row;
                         var movieId = (MovieId)row["id"];
                         var movie = movies[movieId];
                         var outFilePath = Path.Combine(outDir, movie.Filename);

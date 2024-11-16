@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using J.Core.Data;
 
 namespace J.App;
@@ -15,6 +16,7 @@ public sealed class FilterChooseTagForm : Form
         _cancelButton;
     private List<Tag> _tags = [];
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public List<Tag> SelectedTags { get; private set; } = [];
 
     public FilterChooseTagForm(LibraryProviderAdapter libraryProvider)
@@ -48,8 +50,8 @@ public sealed class FilterChooseTagForm : Form
                 _grid.Margin = ui.TopSpacing;
                 _grid.BorderStyle = BorderStyle.Fixed3D;
                 _grid.Columns.Add("name", "Name");
-                _grid.Columns["name"].DataPropertyName = "name";
-                _grid.Columns["name"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                _grid.Columns["name"]!.DataPropertyName = "name";
+                _grid.Columns["name"]!.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                 _grid.ColumnHeadersVisible = false;
                 _grid.CellDoubleClick += Grid_CellDoubleClick;
             }
@@ -144,7 +146,7 @@ public sealed class FilterChooseTagForm : Form
     {
         Debug.Assert(_grid.SelectedCells.Count > 0);
 
-        SelectedTags = (from DataGridViewCell cell in _grid.SelectedCells select (Tag)cell.OwningRow.DataBoundItem)
+        SelectedTags = (from DataGridViewCell cell in _grid.SelectedCells select (Tag)cell.OwningRow!.DataBoundItem!)
             .Distinct()
             .ToList();
 

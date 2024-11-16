@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="Humanizer.Core" Version="2.14.1" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2849.39" />
   </ItemGroup>
 
   <ItemGroup>

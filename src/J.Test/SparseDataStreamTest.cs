@@ -49,7 +49,7 @@ public class SparseDataStreamTest
 
         // Act
         stream.Position = 5;
-        stream.Read(buffer, 0, 3);
+        stream.ReadExactly(buffer, 0, 3);
     }
 
     [TestMethod]
@@ -105,7 +105,7 @@ public class SparseDataStreamTest
 
         // Act
         stream.Position = 98;
-        stream.Read(buffer, 0, 4); // Attempting to read beyond the stream length
+        stream.ReadExactly(buffer, 0, 4); // Attempting to read beyond the stream length
     }
 
     [TestMethod]

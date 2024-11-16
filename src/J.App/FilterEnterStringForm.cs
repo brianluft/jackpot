@@ -1,4 +1,5 @@
-﻿using J.Core;
+﻿using System.ComponentModel;
+using J.Core;
 using J.Core.Data;
 
 namespace J.App;
@@ -11,6 +12,7 @@ public sealed class FilterEnterStringForm : Form
     private readonly Button _okButton,
         _cancelButton;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public string SelectedString { get; private set; } = "";
 
     public FilterEnterStringForm()

@@ -51,7 +51,7 @@ public sealed class TrackingFileStreamTest
         byte[] buffer = new byte[10];
 
         // Act
-        stream.Read(buffer, 0, buffer.Length);
+        stream.ReadExactly(buffer);
 
         // Assert
         Assert.IsNotNull(stream.ReadRange, "ReadRange should not be null after a read.");
@@ -71,8 +71,8 @@ public sealed class TrackingFileStreamTest
         byte[] buffer = new byte[10];
 
         // Act
-        stream.Read(buffer, 0, buffer.Length); // Read first 10 bytes
-        stream.Read(buffer, 0, buffer.Length); // Read next 10 bytes
+        stream.ReadExactly(buffer); // Read first 10 bytes
+        stream.ReadExactly(buffer); // Read next 10 bytes
 
         // Assert
         Assert.IsTrue(stream.ReadRange.HasValue);
@@ -88,7 +88,7 @@ public sealed class TrackingFileStreamTest
         byte[] buffer = new byte[10];
 
         // Act
-        stream.Read(buffer, 0, buffer.Length); // Read 10 bytes
+        stream.ReadExactly(buffer); // Read 10 bytes
         stream.ClearReadRange();
 
         // Assert
@@ -103,9 +103,9 @@ public sealed class TrackingFileStreamTest
         byte[] buffer = new byte[10];
 
         // Act
-        stream.Read(buffer, 0, buffer.Length); // Read 10 bytes
+        stream.ReadExactly(buffer); // Read 10 bytes
         stream.ClearReadRange(); // Clear the read range
-        stream.Read(buffer, 0, buffer.Length); // Read another 10 bytes
+        stream.ReadExactly(buffer); // Read another 10 bytes
 
         // Assert
         Assert.IsNotNull(stream.ReadRange, "ReadRange should not be null after a read following ClearReadRange.");

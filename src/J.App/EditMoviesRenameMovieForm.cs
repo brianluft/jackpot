@@ -1,4 +1,6 @@
-﻿namespace J.App;
+﻿using System.ComponentModel;
+
+namespace J.App;
 
 public sealed class EditMoviesRenameMovieForm : Form
 {
@@ -9,6 +11,7 @@ public sealed class EditMoviesRenameMovieForm : Form
     private readonly Button _okButton,
         _cancelButton;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public string NewName { get; private set; } = "";
 
     public EditMoviesRenameMovieForm(string name)

@@ -1,4 +1,5 @@
-﻿using System.Runtime.ExceptionServices;
+﻿using System.ComponentModel;
+using System.Runtime.ExceptionServices;
 
 namespace J.App;
 
@@ -18,6 +19,7 @@ public sealed class SimpleProgressForm : Form
         CancellationToken cancel
     );
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public ExceptionDispatchInfo? Exception { get; private set; }
 
     public static void Do(IWin32Window owner, string text, Func<Action<double>, CancellationToken, Task> action)

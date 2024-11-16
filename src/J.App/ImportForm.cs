@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using System.ComponentModel;
 
 namespace J.App;
 
@@ -12,6 +13,7 @@ public sealed class ImportForm : Form
     private readonly Button _startButton,
         _cancelButton;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public List<string> SelectedFilePaths { get; private set; } = [];
 
     public ImportForm(LibraryProviderAdapter libraryProvider)

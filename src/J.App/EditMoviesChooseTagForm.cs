@@ -1,4 +1,5 @@
-﻿using J.Core.Data;
+﻿using System.ComponentModel;
+using J.Core.Data;
 
 namespace J.App;
 
@@ -12,6 +13,7 @@ public sealed class EditMoviesChooseTagForm : Form
         _cancelButton;
     private List<Tag> _tags = [];
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public TagId? SelectedTag { get; private set; }
 
     public EditMoviesChooseTagForm(LibraryProviderAdapter libraryProvider)
