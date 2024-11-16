@@ -33,7 +33,8 @@ public sealed partial class MainForm : Form
         _manageMoviesButton,
         _moviesButton,
         _filterAndButton,
-        _filterOrButton;
+        _filterOrButton,
+        _optionsButton;
     private readonly ToolStripButton _homeButton,
         _minimizeButton,
         _fullscreenButton,
@@ -293,6 +294,11 @@ public sealed partial class MainForm : Form
                 _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Log out"));
                 {
                     _logOutButton.Click += DisconnectButton_Click;
+                }
+
+                _menuButton.DropDownItems.Add(_optionsButton = ui.NewToolStripMenuItem("Options..."));
+                {
+                    _optionsButton.Click += OptionsButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(_aboutButton = ui.NewToolStripMenuItem("About Jackpot"));
@@ -1016,6 +1022,12 @@ public sealed partial class MainForm : Form
         var f = _serviceProvider.GetRequiredService<ConvertMoviesForm>();
         f.Show();
         WindowState = FormWindowState.Minimized;
+    }
+
+    private void OptionsButton_Click(object? sender, EventArgs e)
+    {
+        using var f = _serviceProvider.GetRequiredService<OptionsForm>();
+        f.ShowDialog(this);
     }
 
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]

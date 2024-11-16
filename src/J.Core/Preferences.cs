@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using J.Core.Data;
 using Microsoft.Data.Sqlite;
 
 namespace J.Core;
@@ -12,6 +13,7 @@ public sealed class Preferences : IDisposable
     public enum Key
     {
         Shared_UseShuffle,
+        Shared_VlcInstallationToUse,
         ConvertMoviesForm_VideoQuality,
         ConvertMoviesForm_CompressionLevel,
         ConvertMoviesForm_AudioBitrate,
@@ -23,6 +25,7 @@ public sealed class Preferences : IDisposable
         _defaults = new Dictionary<Key, object>
         {
             [Key.Shared_UseShuffle] = 1L,
+            [Key.Shared_VlcInstallationToUse] = VlcInstallationToUse.Automatic.ToString(),
             [Key.ConvertMoviesForm_VideoQuality] = "17 (recommended)",
             [Key.ConvertMoviesForm_CompressionLevel] = "slow (recommended)",
             [Key.ConvertMoviesForm_AudioBitrate] = "256 kbps (recommended)",
@@ -64,6 +67,9 @@ public sealed class Preferences : IDisposable
 
     public void SetBlob(Key key, byte[] value) => Set(key, value);
 
+    public void SetEnum<T>(Key key, T value)
+        where T : struct => Set(key, value.ToString()!);
+
     private void Set(Key key, object value)
     {
         var expectedType = _defaults[key].GetType();
@@ -102,16 +108,31 @@ public sealed class Preferences : IDisposable
 
     public byte[] GetBlob(Key key) => Get<byte[]>(key);
 
+    public T GetEnum<T>(Key key)
+        where T : struct
+    {
+        if (Enum.TryParse<T>(Get<string>(key), out var parsed))
+            return parsed;
+        return Enum.Parse<T>((string)_defaults[key]);
+    }
+
     private T Get<T>(Key key)
     {
-        lock (_lock)
+        try
         {
-            Connect();
-            using var command = _connection!.CreateCommand();
-            command.CommandText = "SELECT value FROM preferences WHERE key = @key;";
-            command.Parameters.AddWithValue("@key", key.ToString());
-            using var reader = command.ExecuteReader();
-            return reader.Read() && reader[0] is T t ? t : (T)_defaults[key];
+            lock (_lock)
+            {
+                Connect();
+                using var command = _connection!.CreateCommand();
+                command.CommandText = "SELECT value FROM preferences WHERE key = @key;";
+                command.Parameters.AddWithValue("@key", key.ToString());
+                using var reader = command.ExecuteReader();
+                return reader.Read() && reader[0] is T t ? t : (T)_defaults[key];
+            }
+        }
+        catch
+        {
+            return (T)_defaults[key];
         }
     }
 

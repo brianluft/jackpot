@@ -33,17 +33,6 @@ var accountSettings = accountSettingsProvider.Current;
 var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
-bool isVlcInstalled;
-try
-{
-    using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
-    isVlcInstalled = key is not null;
-}
-catch
-{
-    isVlcInstalled = false;
-}
-
 var preferences = app.Services.GetRequiredService<Preferences>();
 object optionsLock = new();
 var optionShuffle = preferences.GetBoolean(Preferences.Key.Shared_UseShuffle);
@@ -289,6 +278,19 @@ void CheckSessionPassword(string sessionPassword)
         throw new Exception("Unrecognized caller.");
 }
 
+static bool IsVlcInstalled()
+{
+    try
+    {
+        using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
+        return key is not null;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
 RefreshLibrary();
 
 // ---
@@ -427,8 +429,12 @@ app.MapPost(
         query["sessionPassword"] = configuredSessionPassword;
         var url = $"http://localhost:{configuredPort}/movie.m3u8?{query}";
 
+        var which = preferences.GetEnum<VlcInstallationToUse>(Preferences.Key.Shared_VlcInstallationToUse);
+        if (which == VlcInstallationToUse.Automatic)
+            which = IsVlcInstalled() ? VlcInstallationToUse.System : VlcInstallationToUse.Bundled;
+
         var extraArgs = "";
-        if (!isVlcInstalled)
+        if (which == VlcInstallationToUse.Bundled)
         {
             var configPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -454,9 +460,12 @@ app.MapPost(
         ProcessStartInfo psi =
             new()
             {
-                FileName = isVlcInstalled ? "vlc.exe" : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
-                Arguments = $"--no-plugins-scan --high-priority {extraArgs} -- {url}",
-                UseShellExecute = isVlcInstalled,
+                FileName =
+                    which == VlcInstallationToUse.System
+                        ? "vlc.exe"
+                        : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
+                Arguments = $"--high-priority {extraArgs} -- {url}",
+                UseShellExecute = which == VlcInstallationToUse.System,
             };
         using var p = Process.Start(psi)!;
         ApplicationSubProcesses.Add(p);

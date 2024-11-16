@@ -61,6 +61,7 @@ public static class Program
         services.AddTransient<MainForm>();
         services.AddTransient<MovieEncoder>();
         services.AddTransient<MovieExporter>();
+        services.AddTransient<OptionsForm>();
 
         using var serviceProvider = services.BuildServiceProvider();
 

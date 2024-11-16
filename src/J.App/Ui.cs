@@ -165,7 +165,7 @@ public sealed partial class Ui(Control parent)
         return (table, textBox);
     }
 
-    public (Control Parent, T Child) NewLabeledPair<T>(string text, T child)
+    public Control NewLabeledPair<T>(string text, T child)
         where T : Control
     {
         Label label = new() { Text = text, AutoSize = true };
@@ -173,7 +173,7 @@ public sealed partial class Ui(Control parent)
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
         flow.Controls.Add(child);
-        return (flow, child);
+        return flow;
     }
 
     public Button NewButton(string text, DialogResult? dialogResult = null)
@@ -744,13 +744,6 @@ public static class UiExtensions
     {
         table.Controls.Add(pair.Parent, column, row);
         table.SetColumnSpan(pair.Parent, columnSpan);
-        return pair.Child;
-    }
-
-    public static T AddPair<T>(this FlowLayoutPanel flow, (Control Parent, T Child) pair)
-        where T : Control
-    {
-        flow.Controls.Add(pair.Parent);
         return pair.Child;
     }
 }
