@@ -238,6 +238,7 @@ public sealed class LoginForm : Form
                         (p, _passwordText) = ui.NewLabeledTextBox("Encryption password:", 300);
                         {
                             _encryptionTable.Controls.Add(p, 1, 0);
+                            _passwordText.PasswordChar = '•';
                             p.Margin += ui.GetPadding(0, 0, 0, 32);
                         }
 
