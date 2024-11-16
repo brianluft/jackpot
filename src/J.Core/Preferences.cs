@@ -26,7 +26,7 @@ public sealed class Preferences : IDisposable
     {
         _defaults = new Dictionary<Key, object>
         {
-            [Key.Shared_UseShuffle] = 1L,
+            [Key.Shared_UseShuffle] = 0L,
             [Key.Shared_VlcInstallationToUse] = VlcInstallationToUse.Automatic.ToString(),
             [Key.ConvertMoviesForm_VideoQuality] = "17 (recommended)",
             [Key.ConvertMoviesForm_CompressionLevel] = "slow (recommended)",
