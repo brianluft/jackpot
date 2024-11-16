@@ -96,7 +96,7 @@ public sealed class OptionsForm : Form
 
         Text = "Options";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(300, 300);
+        MinimumSize = Size = ui.GetSize(400, 400);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;

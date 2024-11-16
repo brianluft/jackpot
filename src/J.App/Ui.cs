@@ -4,23 +4,40 @@ using System.Runtime.InteropServices;
 
 namespace J.App;
 
-public sealed partial class Ui(Control parent)
+public sealed partial class Ui
 {
+    private readonly Control _parent;
+
     public static string ResourcesDir { get; } =
         Path.Combine(Path.GetDirectoryName(typeof(Ui).Assembly.Location)!, "Resources");
 
-    private double Scale => parent.DeviceDpi / 96d;
+    private double Scale => _parent.DeviceDpi / 96d;
 
-    private readonly Lazy<Font> _bigFont =
-        new(() =>
+    private readonly Lazy<Font> _bigFont;
+
+    public Ui(Control parent)
+    {
+        _parent = parent;
+
+        parent.Font = Font = new("Segoe UI", 11f);
+        parent.Disposed += delegate
         {
-            Font font = new("Segoe UI", 11f);
+            Font.Dispose();
+        };
+
+        _bigFont = new(() =>
+        {
+            Font font = new("Segoe UI", 13f);
             parent.Disposed += delegate
             {
                 font.Dispose();
             };
             return font;
         });
+    }
+
+    public Font Font { get; }
+    public Font BigFont => _bigFont.Value;
 
     public int GetLength(int unscaledLength)
     {
@@ -61,7 +78,7 @@ public sealed partial class Ui(Control parent)
         );
     }
 
-    public readonly int DefaultUnscaledPadding = 8;
+    public readonly int DefaultUnscaledPadding = 12;
 
     public Padding DefaultPadding => GetPadding(DefaultUnscaledPadding, DefaultUnscaledPadding);
 
@@ -77,13 +94,13 @@ public sealed partial class Ui(Control parent)
 
     public Padding RightSpacing => new(0, 0, GetLength(DefaultUnscaledPadding), 0);
 
-    public Font BigFont => _bigFont.Value;
+    public Padding ButtonSpacing => new(0, 0, GetLength(DefaultUnscaledPadding / 2), 0);
 
     public (Control Parent, TextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
         Label label = new() { Text = text, AutoSize = true };
         label.Margin += GetPadding(0, 0, 0, 2);
-        TextBox textBox = new() { Width = GetLength(unscaledWidth) };
+        TextBox textBox = NewTextBox(unscaledWidth);
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
         flow.Controls.Add(textBox);
@@ -98,7 +115,7 @@ public sealed partial class Ui(Control parent)
     {
         Label label = new() { Text = text, AutoSize = true };
         label.Margin += GetPadding(0, 0, 0, 2);
-        TextBox textBox = new() { };
+        TextBox textBox = NewTextBox(100);
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
         flow.Controls.Add(label);
@@ -113,7 +130,7 @@ public sealed partial class Ui(Control parent)
         table.ColumnStyles[0].Width = 100;
         table.Controls.Add(flow, 0, 0);
         table.Controls.Add(button, 1, 0);
-        var form = parent as Form ?? parent.FindForm()!;
+        var form = _parent as Form ?? _parent.FindForm()!;
         form.Load += delegate
         {
             textBox.Width = GetLength(unscaledWidth - 15) - button.Width;
@@ -136,7 +153,7 @@ public sealed partial class Ui(Control parent)
     {
         Label label = new() { Text = text, AutoSize = true };
         label.Margin += GetPadding(0, 0, 0, 2);
-        TextBox textBox = new() { };
+        TextBox textBox = NewTextBox(100);
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
         flow.Controls.Add(label);
@@ -151,7 +168,7 @@ public sealed partial class Ui(Control parent)
         table.ColumnStyles[0].Width = 100;
         table.Controls.Add(flow, 0, 0);
         table.Controls.Add(button, 1, 0);
-        var form = parent as Form ?? parent.FindForm()!;
+        var form = _parent as Form ?? _parent.FindForm()!;
         form.Load += delegate
         {
             textBox.Width = GetLength(unscaledWidth - 15) - button.Width;
@@ -522,7 +539,7 @@ public sealed partial class Ui(Control parent)
 
     public ProgressBar NewProgressBar(int unscaledWidth)
     {
-        return new() { Size = GetSize(unscaledWidth, 12) };
+        return new() { Size = GetSize(unscaledWidth, 12), BackColor = Color.FromArgb(45, 45, 45) };
     }
 
     public TabControl NewTabControl(int unscaledTabWidth)
@@ -532,7 +549,7 @@ public sealed partial class Ui(Control parent)
             Dock = DockStyle.Fill,
             Padding = GetPoint(8, 12),
             SizeMode = TabSizeMode.Fixed,
-            ItemSize = GetSize(unscaledTabWidth, 25),
+            ItemSize = GetSize(unscaledTabWidth, 40),
         };
     }
 
@@ -698,7 +715,7 @@ public sealed partial class Ui(Control parent)
         return new()
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
-            AutoSize = false,
+            AutoSize = true,
             Width = GetLength(unscaledWidth),
         };
     }
@@ -715,7 +732,12 @@ public sealed partial class Ui(Control parent)
 
     public TextBox NewTextBox(int unscaledWidth)
     {
-        return new() { AutoSize = true, Width = GetLength(unscaledWidth) };
+        return new()
+        {
+            AutoSize = true,
+            Width = GetLength(unscaledWidth),
+            Font = BigFont,
+        };
     }
 
     public CheckBox NewCheckBox(string text)

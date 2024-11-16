@@ -126,7 +126,7 @@ public sealed class EditTagsForm : Form
             tagsTab.UpdateList();
     }
 
-    private sealed class TagsTab : TabPage
+    private sealed class TagsTab : MyTabPage
     {
         private readonly TagType _type;
         private readonly LibraryProviderAdapter _libraryProvider;
@@ -153,8 +153,8 @@ public sealed class EditTagsForm : Form
             LibraryProviderAdapter libraryProvider,
             IServiceProvider serviceProvider
         )
-            : base(type.PluralName)
         {
+            Text = type.PluralName;
             _type = type;
             _libraryProvider = libraryProvider;
             _serviceProvider = serviceProvider;
@@ -348,7 +348,7 @@ public sealed class EditTagsForm : Form
         }
     }
 
-    private sealed class NewTagTypeTab : TabPage
+    private sealed class NewTagTypeTab : MyTabPage
     {
         private readonly FlowLayoutPanel _flow;
         private readonly TextBox _singularNameText,
@@ -360,8 +360,8 @@ public sealed class EditTagsForm : Form
         public event EventHandler<CreateEventArgs>? Create;
 
         public NewTagTypeTab()
-            : base("➕")
         {
+            Text = "➕";
             Ui ui = new(this);
 
             Controls.Add(_flow = ui.NewFlowColumn());

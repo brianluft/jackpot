@@ -1,6 +1,6 @@
 ﻿namespace J.App;
 
-public sealed class MyTabPage : TabPage
+public class MyTabPage : TabPage
 {
     private readonly Color _backgroundColor = Color.FromArgb(45, 45, 45);
 

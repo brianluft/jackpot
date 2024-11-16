@@ -56,7 +56,7 @@ public sealed class SimpleProgressForm : Form
 
             _table.Controls.Add(_label = ui.NewLabel("Starting."), 0, 0);
 
-            _table.Controls.Add(_progressBar = ui.NewProgressBar(300), 0, 1);
+            _table.Controls.Add(_progressBar = ui.NewProgressBar(450), 0, 1);
             {
                 _table.SetColumnSpan(_progressBar, 2);
                 _progressBar.Margin = ui.TopSpacing + ui.BottomSpacingBig;
@@ -74,7 +74,7 @@ public sealed class SimpleProgressForm : Form
         Text = "Progress";
         StartPosition = FormStartPosition.CenterScreen;
         Size = new(0, 0);
-        MinimumSize = ui.GetSize(300, 185);
+        MinimumSize = ui.GetSize(0, 250);
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowOnly;
         FormBorderStyle = FormBorderStyle.Fixed3D;
