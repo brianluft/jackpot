@@ -18,6 +18,7 @@ public sealed class Preferences : IDisposable
         ConvertMoviesForm_CompressionLevel,
         ConvertMoviesForm_AudioBitrate,
         ConvertMoviesForm_OutputDirectory,
+        MainForm_WindowMaximizeBehavior,
     }
 
     public Preferences()
@@ -30,6 +31,7 @@ public sealed class Preferences : IDisposable
             [Key.ConvertMoviesForm_CompressionLevel] = "slow (recommended)",
             [Key.ConvertMoviesForm_AudioBitrate] = "256 kbps (recommended)",
             [Key.ConvertMoviesForm_OutputDirectory] = "",
+            [Key.MainForm_WindowMaximizeBehavior] = WindowMaximizeBehavior.Fullscreen.ToString(),
         }.ToFrozenDictionary();
 
         // Make sure every default is one of the four supported types.

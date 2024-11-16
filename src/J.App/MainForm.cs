@@ -51,6 +51,7 @@ public sealed partial class MainForm : Form
     private bool _filterOr = false;
     private int _pageCount;
     private bool _importInProgress;
+    private FormWindowState _lastWindowState;
 
     public MainForm(
         IServiceProvider serviceProvider,
@@ -107,33 +108,13 @@ public sealed partial class MainForm : Form
             _toolStrip.Items.Add(_fullscreenButton = ui.NewToolStripButton("Fullscreen", true));
             {
                 _fullscreenButton.Alignment = ToolStripItemAlignment.Right;
-                var reduceImage = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Reduce.png", 16, 16));
-                var enlargeImage = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Enlarge.png", 16, 16));
-                _fullscreenButton.Image = reduceImage;
+                _fullscreenButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Reduce.png", 16, 16));
                 _fullscreenButton.Click += delegate
                 {
                     if (FormBorderStyle == FormBorderStyle.Sizable)
-                    {
-                        // Entering fullscreen
-                        if (WindowState == FormWindowState.Maximized)
-                            WindowState = FormWindowState.Normal;
-                        _minimizeButton!.Visible = true;
-                        _exitButton.Visible = true;
-                        _fullscreenButton.Image = reduceImage;
-                        FormBorderStyle = FormBorderStyle.None;
-                        WindowState = FormWindowState.Maximized;
-                    }
+                        EnterFullscreen();
                     else
-                    {
-                        // Leaving fullscreen
-                        _minimizeButton!.Visible = false;
-                        _exitButton.Visible = false;
-                        _fullscreenButton.Image = enlargeImage;
-                        FormBorderStyle = FormBorderStyle.Sizable;
-                        WindowState = FormWindowState.Normal;
-                        Icon = ui.GetIconResource("App.ico");
-                        ShowIcon = true;
-                    }
+                        ExitFullscreen();
                 };
             }
 
@@ -933,7 +914,59 @@ public sealed partial class MainForm : Form
     private void OptionsButton_Click(object? sender, EventArgs e)
     {
         using var f = _serviceProvider.GetRequiredService<OptionsForm>();
-        f.ShowDialog(this);
+        if (f.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        ApplyFullscreenPreference();
+    }
+
+    private void ApplyFullscreenPreference()
+    {
+        var isMaximized = WindowState == FormWindowState.Maximized;
+        var isFullscreen = FormBorderStyle == FormBorderStyle.None;
+        var behavior = _preferences.GetEnum<WindowMaximizeBehavior>(Preferences.Key.MainForm_WindowMaximizeBehavior);
+
+        if (behavior == WindowMaximizeBehavior.Fullscreen && isMaximized && !isFullscreen)
+        {
+            EnterFullscreen();
+        }
+        else if (behavior == WindowMaximizeBehavior.Windowed && isFullscreen)
+        {
+            ExitFullscreen();
+        }
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+
+        if (WindowState != _lastWindowState)
+        {
+            ApplyFullscreenPreference();
+            _lastWindowState = WindowState;
+        }
+    }
+
+    private void EnterFullscreen()
+    {
+        if (WindowState == FormWindowState.Maximized)
+            WindowState = FormWindowState.Normal;
+        _minimizeButton!.Visible = true;
+        _exitButton.Visible = true;
+        _fullscreenButton.Visible = true;
+        FormBorderStyle = FormBorderStyle.None;
+        WindowState = FormWindowState.Maximized;
+    }
+
+    private void ExitFullscreen()
+    {
+        _minimizeButton!.Visible = false;
+        _exitButton.Visible = false;
+        _fullscreenButton.Visible = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        ShowIcon = true;
+        Icon = _ui.GetIconResource("App.ico");
+        WindowState = FormWindowState.Maximized;
     }
 
     [GeneratedRegex(@"\((\d+)/(\d+)\)$")]

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using J.Core;
+﻿using J.Core;
 using J.Core.Data;
 
 namespace J.App;
@@ -16,16 +11,27 @@ public sealed class OptionsForm : Form
         _generalFlow;
     private readonly TabControl _tabControl;
     private readonly TabPage _generalTab;
-    private readonly ComboBox _vlcCombo;
+    private readonly ComboBox _vlcCombo,
+        _windowMaximizeBehaviorCombo;
     private readonly Button _okButton,
         _cancelButton;
 
+    // VLC installation to use for playback
     private readonly List<VlcInstallationToUse> _vlcValues =
     [
         VlcInstallationToUse.Automatic,
         VlcInstallationToUse.Bundled,
         VlcInstallationToUse.System,
     ];
+    private readonly string[] _vlcNames = ["Automatic (recommended)", "Bundled with Jackpot", "External install"];
+
+    // Window maximize behavior
+    private readonly List<WindowMaximizeBehavior> _windowMaximizeBehaviorValues =
+    [
+        WindowMaximizeBehavior.Fullscreen,
+        WindowMaximizeBehavior.Windowed,
+    ];
+    private readonly string[] _windowMaximizeBehaviorNames = ["Fullscreen", "Windowed"];
 
     public OptionsForm(Preferences preferences)
     {
@@ -49,13 +55,26 @@ public sealed class OptionsForm : Form
                             ui.NewLabeledPair("&VLC installation to use for playback:", _vlcCombo = ui.NewDropDown(200))
                         );
                         {
-                            _vlcCombo.Items.AddRange(
-                                ["Automatic (recommended)", "Bundled with Jackpot", "External install"]
-                            );
+                            _vlcCombo.Margin += ui.BottomSpacing;
+                            _vlcCombo.Items.AddRange(_vlcNames);
                             var value = preferences.GetEnum<VlcInstallationToUse>(
                                 Preferences.Key.Shared_VlcInstallationToUse
                             );
                             _vlcCombo.SelectedIndex = _vlcValues.IndexOf(value);
+                        }
+
+                        _generalFlow.Controls.Add(
+                            ui.NewLabeledPair(
+                                "Window &maximize behavior:",
+                                _windowMaximizeBehaviorCombo = ui.NewDropDown(200)
+                            )
+                        );
+                        {
+                            _windowMaximizeBehaviorCombo.Items.AddRange(_windowMaximizeBehaviorNames);
+                            var value = preferences.GetEnum<WindowMaximizeBehavior>(
+                                Preferences.Key.MainForm_WindowMaximizeBehavior
+                            );
+                            _windowMaximizeBehaviorCombo.SelectedIndex = _windowMaximizeBehaviorValues.IndexOf(value);
                         }
                     }
                 }
@@ -90,7 +109,15 @@ public sealed class OptionsForm : Form
 
     private void OkButton_Click(object? sender, EventArgs e)
     {
-        _preferences.SetEnum(Preferences.Key.Shared_VlcInstallationToUse, _vlcValues[_vlcCombo.SelectedIndex]);
+        _preferences.WithTransaction(() =>
+        {
+            _preferences.SetEnum(Preferences.Key.Shared_VlcInstallationToUse, _vlcValues[_vlcCombo.SelectedIndex]);
+            _preferences.SetEnum(
+                Preferences.Key.MainForm_WindowMaximizeBehavior,
+                _windowMaximizeBehaviorValues[_windowMaximizeBehaviorCombo.SelectedIndex]
+            );
+        });
+        DialogResult = DialogResult.OK;
         Close();
     }
 }
