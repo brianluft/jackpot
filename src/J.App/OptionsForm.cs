@@ -12,7 +12,8 @@ public sealed class OptionsForm : Form
     private readonly TabControl _tabControl;
     private readonly TabPage _generalTab;
     private readonly ComboBox _vlcCombo,
-        _windowMaximizeBehaviorCombo;
+        _windowMaximizeBehaviorCombo,
+        _columnCountCombo;
     private readonly Button _okButton,
         _cancelButton;
 
@@ -52,6 +53,18 @@ public sealed class OptionsForm : Form
                         _generalFlow.Padding = ui.DefaultPadding;
 
                         _generalFlow.Controls.Add(
+                            ui.NewLabeledPair("Thumbnail columns:", _columnCountCombo = ui.NewDropDown(200))
+                        );
+                        {
+                            _columnCountCombo.Margin += ui.BottomSpacing;
+                            _columnCountCombo.Items.AddRange(
+                                Enumerable.Range(1, 8).Select(i => i.ToString()).ToArray()
+                            );
+                            _columnCountCombo.SelectedIndex =
+                                (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount) - 1;
+                        }
+
+                        _generalFlow.Controls.Add(
                             ui.NewLabeledPair("&VLC installation:", _vlcCombo = ui.NewDropDown(200))
                         );
                         {
@@ -70,6 +83,7 @@ public sealed class OptionsForm : Form
                             )
                         );
                         {
+                            _windowMaximizeBehaviorCombo.Margin += ui.BottomSpacing;
                             _windowMaximizeBehaviorCombo.Items.AddRange(_windowMaximizeBehaviorNames);
                             var value = preferences.GetEnum<WindowMaximizeBehavior>(
                                 Preferences.Key.MainForm_WindowMaximizeBehavior
@@ -117,6 +131,7 @@ public sealed class OptionsForm : Form
                 Preferences.Key.MainForm_WindowMaximizeBehavior,
                 _windowMaximizeBehaviorValues[_windowMaximizeBehaviorCombo.SelectedIndex]
             );
+            _preferences.SetInteger(Preferences.Key.Shared_ColumnCount, _columnCountCombo.SelectedIndex + 1);
         });
         DialogResult = DialogResult.OK;
         Close();

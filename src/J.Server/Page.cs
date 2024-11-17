@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Text;
 using System.Text.Json;
 using System.Web;
 using J.Core.Data;
@@ -18,10 +17,8 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
     private readonly record struct BlockJson(string id, string url, string title);
 #pragma warning restore IDE1006 // Naming Styles
 
-    public string ToHtml(string sessionPassword)
+    public string ToHtml(string sessionPassword, int columnCount)
     {
-        StringBuilder rows = new();
-
         List<BlockJson> blockJsons = new(Blocks.Count);
 
         foreach (var block in Blocks)
@@ -110,9 +107,14 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                     // Video data injected from C#
                     const VIDEOS = {{JsonSerializer.Serialize(blockJsons)}};
 
-                    const GRID_SIZE = 5;  // Horizontal grid size only
-                    const BUFFER = 2;     // Buffer rows above and below visible area
-                    const GAP = 4;        // Gap between cells
+                    // Horizontal grid size only
+                    const GRID_SIZE = {{columnCount}};
+
+                    // Buffer rows above and below visible area
+                    const BUFFER = 2;
+
+                    // Gap between cells
+                    const GAP = 4;
 
                     const gridContainer = document.getElementById('gridContainer');
                     const virtualHeight = document.getElementById('virtualHeight');

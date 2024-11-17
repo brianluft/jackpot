@@ -20,6 +20,7 @@ public sealed class Preferences : IDisposable
         ConvertMoviesForm_OutputDirectory,
         MainForm_WindowMaximizeBehavior,
         MainForm_CompleteWindowState,
+        Shared_ColumnCount,
     }
 
     public Preferences()
@@ -41,6 +42,7 @@ public sealed class Preferences : IDisposable
                     "UnscaledSize": {}
                 }
                 """,
+            [Key.Shared_ColumnCount] = 5L,
         }.ToFrozenDictionary();
 
         // Make sure every default is one of the four supported types.

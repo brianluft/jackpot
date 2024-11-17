@@ -319,7 +319,8 @@ app.MapGet(
         ListPageKey key = new(listPageType, tagTypeId is null ? null : new(tagTypeId));
 
         response.ContentType = "text/html";
-        return listPages[key].Value.ToHtml(configuredSessionPassword);
+        var columnCount = (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount);
+        return listPages[key].Value.ToHtml(configuredSessionPassword, columnCount);
     }
 );
 
@@ -330,7 +331,8 @@ app.MapGet(
         CheckSessionPassword(sessionPassword);
 
         response.ContentType = "text/html";
-        return tagPages[new(tagId)].Value.ToHtml(configuredSessionPassword);
+        var columnCount = (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount);
+        return tagPages[new(tagId)].Value.ToHtml(configuredSessionPassword, columnCount);
     }
 );
 

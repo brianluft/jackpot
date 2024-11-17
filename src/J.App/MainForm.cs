@@ -840,13 +840,15 @@ public sealed partial class MainForm : Form
         WindowState = FormWindowState.Minimized;
     }
 
-    private void OptionsButton_Click(object? sender, EventArgs e)
+    private async void OptionsButton_Click(object? sender, EventArgs e)
     {
         using var f = _serviceProvider.GetRequiredService<OptionsForm>();
         if (f.ShowDialog(this) != DialogResult.OK)
             return;
 
         ApplyFullscreenPreference();
+        await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
+        _browser.Reload();
     }
 
     private void ApplyFullscreenPreference()
