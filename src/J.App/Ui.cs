@@ -75,6 +75,11 @@ public sealed partial class Ui
     public Font BigBoldFont => _bigBoldFont.Value;
     public Font TextBoxFont => _textboxFont.Value;
 
+    public int Unscale(int scaledLength)
+    {
+        return (int)(scaledLength / Scale);
+    }
+
     public int GetLength(int unscaledLength)
     {
         var scale = Scale;
