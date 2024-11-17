@@ -67,10 +67,10 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
 
                     .title-bar {
                         position: absolute;
-                        bottom: 0;
+                        bottom: -1px;  /* Ensure no gap between video bottom and title bottom */
                         left: 0;
                         right: 0;
-                        height: 20px;
+                        height: 22px; /* Includes extra 1px for the extra bottom: -1px */
                         background: rgba(0, 0, 0, 0.5);
                         padding: 0 6px;
                         display: flex;
@@ -80,7 +80,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                     }
 
                     .title-bar-tag {
-                        height: 40px;  /* Double height */
+                        height: 43px;  /* Double height, plus 1px for the extra bottom: -1px */
                         background: rgba(0, 0, 0, 0.5);
                         justify-content: left;
                     }
@@ -93,6 +93,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                         text-overflow: ellipsis;
                         font-family: system-ui, -apple-system, sans-serif;
                         font-weight: bold;
+                        transform: translateY(-1px);  /* Account for the extra bottom: -1px */
                     }
 
                     .title-text-tag {
