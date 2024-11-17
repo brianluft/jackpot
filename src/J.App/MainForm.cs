@@ -21,8 +21,6 @@ public sealed partial class MainForm : Form
     private readonly Preferences _preferences;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
-    private readonly EdgePanel _leftPanel,
-        _rightPanel;
     private readonly ToolStripDropDownButton _menuButton,
         _filterButton;
     private readonly ToolStripMenuItem _logOutButton,
@@ -49,7 +47,6 @@ public sealed partial class MainForm : Form
     private readonly WebView2 _browser;
     private readonly List<FilterRule> _filterRules = [];
     private bool _filterOr = false;
-    private int _pageCount;
     private bool _importInProgress;
     private FormWindowState _lastWindowState;
 
@@ -72,22 +69,6 @@ public sealed partial class MainForm : Form
         _preferences = preferences;
         Ui ui = new(this);
         _ui = ui;
-
-        Controls.Add(_leftPanel = new(left: true));
-        {
-            _leftPanel.Dock = DockStyle.Left;
-            _leftPanel.Width = ui.GetLength(25);
-            _leftPanel.ShortJump += PagePreviousButton_Click;
-            _leftPanel.LongJump += PageFirstButton_Click;
-        }
-
-        Controls.Add(_rightPanel = new(left: false));
-        {
-            _rightPanel.Dock = DockStyle.Right;
-            _rightPanel.Width = ui.GetLength(25);
-            _rightPanel.ShortJump += PageNextButton_Click;
-            _rightPanel.LongJump += PageLastButton_Click;
-        }
 
         Controls.Add(_toolStrip = ui.NewToolStrip());
         {
@@ -328,6 +309,7 @@ public sealed partial class MainForm : Form
 
         Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
+        MinimumSize = ui.GetSize(1000, 400);
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
@@ -571,78 +553,12 @@ public sealed partial class MainForm : Form
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
         var title = _browser.CoreWebView2.DocumentTitle;
-
-        // Parse (1/2) from the end of the title into 1 and 2, if present.
-        var match = TitlePageNumberRegex().Match(title);
-        if (match.Success)
-        {
-            var pageNumber = int.Parse(match.Groups[1].Value);
-            var totalPages = int.Parse(match.Groups[2].Value);
-            _pageLabel.Text = $"Page {pageNumber} of {totalPages}";
-            _leftPanel.JumpEnabled = pageNumber > 1;
-            _rightPanel.JumpEnabled = pageNumber < totalPages;
-            title = title[..match.Index].Trim();
-            _pageCount = totalPages;
-        }
-        else
-        {
-            _pageLabel.Text = "Page 1 of 1";
-        }
-
         if (title.Length > 100)
             title = title[..100] + "...";
 
         _titleLabel.Text = title?.Replace("&", "&&") ?? "";
         _browseBackButton.Enabled = _browser.CanGoBack;
         _browseForwardButton.Enabled = _browser.CanGoForward;
-    }
-
-    private void PagePreviousButton_Click(object? sender, EventArgs e)
-    {
-        PageNextOrPrevious(-1);
-    }
-
-    private void PageNextButton_Click(object? sender, EventArgs e)
-    {
-        PageNextOrPrevious(1);
-    }
-
-    private void PageFirstButton_Click(object? sender, EventArgs e)
-    {
-        PageFirstOrLast(true);
-    }
-
-    private void PageLastButton_Click(object? sender, EventArgs e)
-    {
-        PageFirstOrLast(false);
-    }
-
-    private void PageFirstOrLast(bool first)
-    {
-        var uri = _browser.Source;
-        if (uri is null)
-            return;
-
-        var query = HttpUtility.ParseQueryString(uri.Query);
-        query["pageIndex"] = (first ? 0 : _pageCount - 1).ToString();
-        Navigate($"{uri.AbsolutePath}?{query}");
-    }
-
-    private void PageNextOrPrevious(int offset)
-    {
-        var uri = _browser.Source;
-        if (uri is null)
-            return;
-
-        var query = HttpUtility.ParseQueryString(uri.Query);
-        if (!int.TryParse(query["pageIndex"], out var pageIndex))
-            return;
-
-        pageIndex += offset;
-        pageIndex = Math.Max(0, pageIndex);
-        pageIndex = Math.Min(_pageCount - 1, pageIndex);
-        query["pageIndex"] = pageIndex.ToString();
-        Navigate($"{uri.AbsolutePath}?{query}");
     }
 
     protected override void OnActivated(EventArgs e)
@@ -707,7 +623,6 @@ public sealed partial class MainForm : Form
     private async Task UpdateFiltersAsync()
     {
         await _client.SetFilterAsync(new(_filterOr, _filterRules), CancellationToken.None).ConfigureAwait(true);
-        PageFirstOrLast(first: true);
 
         // Update the filter menu. Start by removing anything after the last separator.
         var separatorIndex = -1;
@@ -992,9 +907,6 @@ public sealed partial class MainForm : Form
         Icon = _ui.GetIconResource("App.ico");
         WindowState = FormWindowState.Normal;
     }
-
-    [GeneratedRegex(@"\((\d+)/(\d+)\)$")]
-    private static partial Regex TitlePageNumberRegex();
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();

@@ -9,8 +9,6 @@ using J.Server;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Win32;
 
-const int BLOCKS_PER_PAGE = 25;
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCore();
 builder.Services.AddHttpLogging(o => { });
@@ -37,8 +35,8 @@ var preferences = app.Services.GetRequiredService<Preferences>();
 object optionsLock = new();
 var optionShuffle = preferences.GetBoolean(Preferences.Key.Shared_UseShuffle);
 Filter optionFilter = new(true, []);
-Dictionary<ListPageKey, Lazy<List<Page>>> listPages = [];
-Dictionary<TagId, Lazy<List<Page>>> tagPages = [];
+Dictionary<ListPageKey, Lazy<Page>> listPages = [];
+Dictionary<TagId, Lazy<Page>> tagPages = [];
 
 void RefreshLibrary()
 {
@@ -48,31 +46,15 @@ void RefreshLibrary()
 
         // List pages
         {
-            Dictionary<ListPageKey, Lazy<List<Page>>> dict = [];
+            Dictionary<ListPageKey, Lazy<Page>> dict = [];
             dict[new ListPageKey(ListPageType.Movies, null)] = new(
-                () =>
-                    SplitMoviesIntoPages(
-                        movies,
-                        "Movies",
-                        optionShuffle,
-                        n =>
-                            $"/list.html?sessionPassword={configuredSessionPassword}&type={ListPageType.Movies}&pageIndex={n - 1}"
-                    )
+                () => NewPageFromMovies(movies, optionShuffle, "Movies")
             );
 
             foreach (var tagType in libraryProvider.GetTagTypes())
             {
                 ListPageKey key = new(ListPageType.TagType, tagType.Id);
-                dict[key] = new(
-                    () =>
-                        GetTagListPage(
-                            libraryProvider,
-                            tagType,
-                            optionShuffle,
-                            n =>
-                                $"/list.html?sessionPassword={configuredSessionPassword}&type={ListPageType.TagType}&tagTypeId={tagType.Id.Value}&pageIndex={n - 1}"
-                        )
-                );
+                dict[key] = new(() => GetTagListPage(libraryProvider, tagType, optionShuffle));
             }
 
             listPages = dict;
@@ -80,18 +62,11 @@ void RefreshLibrary()
 
         // Individual tag pages
         {
-            Dictionary<TagId, Lazy<List<Page>>> dict = [];
+            Dictionary<TagId, Lazy<Page>> dict = [];
             var movieIds = movies.Select(x => x.Id).ToHashSet();
             foreach (var tag in libraryProvider.GetTags())
                 dict[tag.Id] = new(
-                    () =>
-                        SplitMoviesIntoPages(
-                            libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
-                            tag.Name,
-                            optionShuffle,
-                            n =>
-                                $"/tag.html?sessionPassword={configuredSessionPassword}&tagId={tag.Id.Value}&pageIndex={n - 1}"
-                        )
+                    () => NewPageFromMovies(libraryProvider.GetMoviesWithTag(movieIds, tag.Id), optionShuffle, tag.Name)
                 );
             tagPages = dict;
         }
@@ -165,12 +140,7 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
     }
 }
 
-static List<Page> GetTagListPage(
-    LibraryProvider libraryProvider,
-    TagType tagType,
-    bool shuffle,
-    Func<int, string> getUrlForPageNumber
-)
+static Page GetTagListPage(LibraryProvider libraryProvider, TagType tagType, bool shuffle)
 {
     var tags = libraryProvider.GetTags(tagType.Id);
     var dict = libraryProvider.GetRandomMoviePerTag(tagType);
@@ -183,57 +153,22 @@ static List<Page> GetTagListPage(
         Page.Block block = new(movieId, tag.Id, tag.Name);
         blocks.Add(block);
     }
-    return SplitBlocksIntoPages(blocks, tagType.PluralName, shuffle, getUrlForPageNumber);
+    return NewPageFromBlocks(blocks, shuffle, tagType.PluralName);
 }
 
-static List<Page> SplitMoviesIntoPages(
-    List<Movie> movies,
-    string title,
-    bool shuffle,
-    Func<int, string> getUrlForPageNumber
-)
-{
-    return SplitBlocksIntoPages(
-        (from x in movies select new Page.Block(x.Id, null, x.Filename)).ToList(),
-        title,
-        shuffle,
-        getUrlForPageNumber
-    );
-}
-
-static List<Page> SplitBlocksIntoPages(
-    List<Page.Block> blocks,
-    string title,
-    bool shuffle,
-    Func<int, string> getUrlForPageNumber
-)
+static Page NewPageFromBlocks(List<Page.Block> blocks, bool shuffle, string title)
 {
     if (shuffle)
         Shuffle(blocks);
     else
         blocks.Sort((a, b) => string.Compare(a.Title, b.Title, StringComparison.Ordinal));
 
-    List<Page> pages = new(blocks.Count / BLOCKS_PER_PAGE + 1);
-    var pageNumber = 1;
-    foreach (var chunk in blocks.Chunk(BLOCKS_PER_PAGE))
-    {
-        var previousPageUrl = pageNumber > 1 ? getUrlForPageNumber(pageNumber - 1) : "";
-        var nextPageUrl = getUrlForPageNumber(pageNumber + 1);
-        Page page = new([.. chunk], "", previousPageUrl, nextPageUrl);
-        pages.Add(page);
-        pageNumber++;
-    }
+    return new(blocks, title);
+}
 
-    // Blank out the NextPageUrl for the last page.
-    if (pages.Count > 0)
-        pages[^1] = pages[^1] with { NextPageUrl = "" };
-
-    for (var i = 0; i < pages.Count; i++)
-    {
-        pages[i] = pages[i] with { Title = $"{title} ({i + 1}/{pages.Count})" };
-    }
-
-    return pages;
+static Page NewPageFromMovies(List<Movie> movies, bool shuffle, string title)
+{
+    return NewPageFromBlocks((from x in movies select new Page.Block(x.Id, null, x.Filename)).ToList(), shuffle, title);
 }
 
 static void Shuffle<T>(List<T> list)
@@ -374,47 +309,28 @@ app.MapGet(
     (
         [FromQuery, Required] string type,
         [FromQuery] string? tagTypeId,
-        [FromQuery, Required] int pageIndex,
         [FromQuery, Required] string sessionPassword,
         HttpResponse response
     ) =>
     {
         CheckSessionPassword(sessionPassword);
-        Page page;
 
         var listPageType = (ListPageType)Enum.Parse(typeof(ListPageType), type);
         ListPageKey key = new(listPageType, tagTypeId is null ? null : new(tagTypeId));
-        var lazy = listPages[key];
-        if (pageIndex < 0 || pageIndex >= lazy.Value.Count)
-            page = new([], "Blank", "", "");
-        else
-            page = lazy.Value[pageIndex];
 
         response.ContentType = "text/html";
-        return page.ToHtml(configuredSessionPassword);
+        return listPages[key].Value.ToHtml(configuredSessionPassword);
     }
 );
 
 app.MapGet(
     "/tag.html",
-    (
-        [FromQuery, Required] string tagId,
-        [FromQuery, Required] int pageIndex,
-        [FromQuery, Required] string sessionPassword,
-        HttpResponse response
-    ) =>
+    ([FromQuery, Required] string tagId, [FromQuery, Required] string sessionPassword, HttpResponse response) =>
     {
         CheckSessionPassword(sessionPassword);
-        Page page;
-
-        var lazy = tagPages[new(tagId)];
-        if (pageIndex < 0 || pageIndex >= lazy.Value.Count)
-            page = new([], "", "", "");
-        else
-            page = lazy.Value[pageIndex];
 
         response.ContentType = "text/html";
-        return page.ToHtml(configuredSessionPassword);
+        return tagPages[new(tagId)].Value.ToHtml(configuredSessionPassword);
     }
 );
 

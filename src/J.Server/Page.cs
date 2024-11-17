@@ -1,11 +1,12 @@
 ﻿using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Web;
 using J.Core.Data;
 
 namespace J.Server;
 
-public readonly record struct Page(List<Page.Block> Blocks, string Title, string PreviousPageUrl, string NextPageUrl)
+public readonly record struct Page(List<Page.Block> Blocks, string Title)
 {
     public readonly record struct Block(
         MovieId MovieId, // movie to get the clip from
@@ -13,37 +14,23 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title, string
         string Title
     );
 
+#pragma warning disable IDE1006 // Naming Styles
+    private readonly record struct BlockJson(string id, string url, string title);
+#pragma warning restore IDE1006 // Naming Styles
+
     public string ToHtml(string sessionPassword)
     {
         StringBuilder rows = new();
 
-        foreach (var row in Blocks.Chunk(5))
+        List<BlockJson> blockJsons = new(Blocks.Count);
+
+        foreach (var block in Blocks)
         {
-            rows.Append("<tr>");
-            foreach (var block in row)
-            {
-                var query = HttpUtility.ParseQueryString("");
-                query["sessionPassword"] = sessionPassword;
-                query["movieId"] = block.MovieId.Value;
-                var onclick = block.TagId is null
-                    ? $"openMovie('{block.MovieId.Value}');return false;"
-                    : $"openTag('{block.TagId.Value}');return false;";
-                rows.Append(
-                    $"""
-                    <td>
-                        <div class="video-container">
-                            <video autoplay loop muted playsinline onclick="{onclick}">
-                                <source src="/clip.mp4?{query}" type="video/mp4">
-                            </video>
-                            <div class="video-title-container">
-                                <div class="video-title" onclick="{onclick}">{WebUtility.HtmlEncode(block.Title)}</div>
-                            </div>
-                        </div>
-                    </td>
-                    """
-                );
-            }
-            rows.Append("</tr>");
+            var query = HttpUtility.ParseQueryString("");
+            query["sessionPassword"] = sessionPassword;
+            query["movieId"] = block.MovieId.Value;
+
+            blockJsons.Add(new(block.TagId?.Value ?? block.MovieId.Value, $"/clip.mp4?{query}", block.Title));
         }
 
         var html = $$"""
@@ -56,61 +43,81 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title, string
                     body {
                         margin: 0;
                         padding: 0;
-                        background-color: black;
-                        user-select: none;
-                    }
-                    table {
-                        border-collapse: collapse;
-                    }
-                    table, tr, td {
-                        padding: 0;
-                        margin: 0;
-                        line-height: 0;
-                    }
-                    div.video-container {
-                        position: relative;
-                        padding: 0;
-                        margin: 0;
-                        cursor: pointer;
-                        background: black;
-                        width: 20vw;
-                        height: 20vh;
                         overflow: hidden;
                     }
-                    div.video-title-container {
-                        position: absolute;
-                        left: 0;
-                        top: calc(20vh - 20px);
-                        width: 20vw;
-                        height: 20px;
-                        margin: 0;
-                        padding: 0;
-                        background: rgba(0, 0, 0, 0.5);
+
+                    .grid-container {
+                        position: relative;
+                        height: 100vh;
+                        overflow-y: scroll;
+                        background: black;
+                        padding: 4px;
+                        box-sizing: border-box;
                     }
-                    div.video-title {
+
+                    .video-cell {
+                        position: absolute;
+                        cursor: pointer;
+                        box-sizing: border-box;
+                    }
+
+                    video {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        pointer-events: none;
+                    }
+
+                    .title-bar {
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 20px;
+                        background: rgba(0, 0, 0, 0.5);
+                        padding: 0 6px;
+                        display: flex;
+                        align-items: center;
+                        pointer-events: none;
+                        justify-content: center; 
+                    }
+
+                    .title-text {
                         color: white;
-                        font-family: 'Segoe UI';
                         font-size: 12px;
-                        font-weight: bold;
-                        text-align: center;
-                        padding-top: 9px;
-                        padding-left: 10px;
-                        padding-right: 10px;
-                        height: 15px;
+                        white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                        white-space: nowrap;
+                        font-family: system-ui, -apple-system, sans-serif;
+                        font-weight: bold;
                     }
-                    video {
-                        width: 20vw;
-                        height: 20vh;
-                        object-fit: contain;
-                        object-position: center;
-                        margin: 0;
-                        padding: 0;
+
+                    .virtual-height {
+                        width: 100%;
+                        pointer-events: none;
                     }
                 </style>
+            </head>
+            <body>
+                <div class="grid-container" id="gridContainer">
+                    <div class="virtual-height" id="virtualHeight"></div>
+                </div>
+
                 <script>
+                    // Disable context menu page-wide
+                    document.addEventListener('contextmenu', e => e.preventDefault());
+
+                    // Video data injected from C#
+                    const VIDEOS = {{JsonSerializer.Serialize(blockJsons)}};
+
+                    const GRID_SIZE = 5;  // Horizontal grid size only
+                    const BUFFER = 2;     // Buffer rows above and below visible area
+                    const GAP = 4;        // Gap between cells
+
+                    const gridContainer = document.getElementById('gridContainer');
+                    const virtualHeight = document.getElementById('virtualHeight');
+                    const activeVideos = new Map();
+
                     function openMovie(movieId) {
                         // Escape the movieId to safely use it in the URL
                         const escapedMovieId = encodeURIComponent(movieId);
@@ -132,48 +139,167 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title, string
                         location.href = '/tag.html?sessionPassword={{sessionPassword}}&tagId=' + encodeURIComponent(id) + '&pageIndex=0';
                     }
 
-                    // Disable context menu
-                    document.addEventListener('contextmenu', function(event) {
-                        event.preventDefault();
-                    });
+                    function open(id) {
+                        if (id.startsWith("movie-")) {
+                            openMovie(id);
+                        } else if (id.startsWith("tag-")) {
+                            openTag(id);
+                        } else {
+                            alert('Invalid ID: ' + id);
+                        }
+                    }
 
-                    // Handle mouse wheel
-                    (function() {
-                        // Handles mouse wheel navigation on a page with no scrolling.
-                        // - Prevents default wheel behavior (scrolling)
-                        // - First downward wheel triggers next page
-                        // - First upward wheel triggers previous page
-                        // - Each direction works exactly once
-                        document.addEventListener('wheel', (e) => { e.preventDefault(); }, { passive: false });
+                    function calculateDimensions() {
+                        const containerWidth = gridContainer.clientWidth - (2 * GAP); // subtract container padding
+                        const cellWidth = (containerWidth - (GAP * (GRID_SIZE - 1))) / GRID_SIZE;
+                        const cellHeight = (cellWidth * 9) / 16;
+                        const totalRows = Math.ceil(VIDEOS.length / GRID_SIZE);
+                        const rowHeight = cellHeight + GAP;
+                        return { cellWidth, cellHeight, rowHeight, totalRows };
+                    }
 
-                        let hasHandledUp = false;
-                        let hasHandledDown = false;
+                    function setVirtualHeight() {
+                        const { rowHeight, totalRows } = calculateDimensions();
+                        const totalHeight = rowHeight * totalRows;
+                        virtualHeight.style.height = `${totalHeight}px`;
+                    }
 
-                        const previousPageUrl = '{{PreviousPageUrl}}';
-                        const nextPageUrl = '{{NextPageUrl}}';
+                    function calculatePosition(index) {
+                        const { cellWidth, cellHeight } = calculateDimensions();
+                        const row = Math.floor(index / GRID_SIZE);
+                        const col = index % GRID_SIZE;
 
-                        document.addEventListener('wheel', (event) => {
-                            const isDownScroll = Math.sign(event.deltaY) > 0;
+                        const left = GAP + (col * (cellWidth + GAP));
+                        const top = GAP + (row * (cellHeight + GAP));
 
-                            if (isDownScroll && !hasHandledDown) {
-                                hasHandledDown = true;
-                                if (nextPageUrl !== '') {
-                                    location.href = nextPageUrl;
-                                }
-                            } else if (!isDownScroll && !hasHandledUp) {
-                                hasHandledUp = true;
-                                if (previousPageUrl !== '') {
-                                    location.href = previousPageUrl;
-                                }
+                        return { left, top, width: cellWidth, height: cellHeight };
+                    }
+
+                    function createVideoElement(index) {
+                        const videoData = VIDEOS[index];
+                        if (!videoData) return null;
+
+                        const cell = document.createElement('div');
+                        cell.className = 'video-cell';
+
+                        const pos = calculatePosition(index);
+                        cell.style.left = `${pos.left}px`;
+                        cell.style.top = `${pos.top}px`;
+                        cell.style.width = `${pos.width}px`;
+                        cell.style.height = `${pos.height}px`;
+
+                        cell.addEventListener('click', () => {
+                            if (typeof open === 'function') {
+                                open(videoData.id);
                             }
                         });
-                    })();
+
+                        const video = document.createElement('video');
+                        video.loop = true;
+                        video.muted = true;
+                        video.style.display = 'none';
+
+                        const source = document.createElement('source');
+                        source.src = videoData.url;
+                        source.type = 'video/mp4';
+                        video.appendChild(source);
+
+                        const titleBar = document.createElement('div');
+                        titleBar.className = 'title-bar';
+
+                        const titleText = document.createElement('div');
+                        titleText.className = 'title-text';
+                        titleText.textContent = videoData.title;
+
+                        titleBar.appendChild(titleText);
+
+                        cell.appendChild(video);
+                        cell.appendChild(titleBar);
+
+                        return cell;
+                    }
+
+                    function calculateVisibleRange() {
+                        const { rowHeight } = calculateDimensions();
+                        const scrollTop = gridContainer.scrollTop;
+                        const viewportHeight = gridContainer.clientHeight;
+
+                        const startRow = Math.max(0, Math.floor(scrollTop / rowHeight) - BUFFER);
+                        const visibleRows = Math.ceil(viewportHeight / rowHeight) + (BUFFER * 2);
+                        const endRow = Math.min(Math.ceil(VIDEOS.length / GRID_SIZE), startRow + visibleRows);
+
+                        return {
+                            start: startRow * GRID_SIZE,
+                            end: Math.min(endRow * GRID_SIZE, VIDEOS.length)
+                        };
+                    }
+
+                    function updateVisibleVideos() {
+                        const visibleRange = calculateVisibleRange();
+
+                        // Remove out-of-view videos
+                        for (const [key, element] of activeVideos) {
+                            const index = parseInt(key);
+                            if (index < visibleRange.start || index >= visibleRange.end) {
+                                const video = element.querySelector('video');
+                                if (video) {
+                                    video.pause();
+                                    video.style.display = 'none';
+                                }
+                                element.remove();
+                                activeVideos.delete(key);
+                            }
+                        }
+
+                        // Add new visible videos
+                        for (let i = visibleRange.start; i < visibleRange.end; i++) {
+                            if (!activeVideos.has(i.toString())) {
+                                const cell = createVideoElement(i);
+                                if (cell) {
+                                    gridContainer.appendChild(cell);
+                                    activeVideos.set(i.toString(), cell);
+                                    const video = cell.querySelector('video');
+                                    if (video) {
+                                        video.style.display = 'block';
+                                        video.play().catch(() => {});
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Scroll handler with debounce
+                    let scrollTimeout;
+                    gridContainer.addEventListener('scroll', () => {
+                        if (scrollTimeout) return;  // Skip if already waiting
+                        scrollTimeout = setTimeout(() => {
+                            updateVisibleVideos();
+                            scrollTimeout = null;
+                        }, 150);
+                    });
+
+                    // Window resize handler with debounce
+                    let resizeTimeout;
+                    window.addEventListener('resize', () => {
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            setVirtualHeight();
+                            // Update positions of existing videos
+                            for (const [index, element] of activeVideos) {
+                                const pos = calculatePosition(parseInt(index));
+                                element.style.left = `${pos.left}px`;
+                                element.style.top = `${pos.top}px`;
+                                element.style.width = `${pos.width}px`;
+                                element.style.height = `${pos.height}px`;
+                            }
+                            updateVisibleVideos();
+                        }, 150);
+                    });
+
+                    // Initial setup
+                    setVirtualHeight();
+                    updateVisibleVideos();
                 </script>
-            </head>
-            <body>
-                <table>
-                    {{rows}}
-                </table>
             </body>
             </html>
             """;
