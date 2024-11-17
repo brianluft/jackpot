@@ -79,6 +79,12 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                         justify-content: center; 
                     }
 
+                    .title-bar-tag {
+                        height: 40px;  /* Double height */
+                        background: rgba(0, 0, 0, 0.5);
+                        justify-content: left;
+                    }
+
                     .title-text {
                         color: white;
                         font-size: 12px;
@@ -87,6 +93,10 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                         text-overflow: ellipsis;
                         font-family: system-ui, -apple-system, sans-serif;
                         font-weight: bold;
+                    }
+
+                    .title-text-tag {
+                        font-size: 24px;  /* Larger font */
                     }
 
                     .virtual-height {
@@ -207,11 +217,17 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                         video.appendChild(source);
 
                         const titleBar = document.createElement('div');
-                        titleBar.className = 'title-bar';
-
                         const titleText = document.createElement('div');
-                        titleText.className = 'title-text';
-                        titleText.textContent = videoData.title;
+
+                        if (videoData.id.startsWith('tag-')) {
+                            titleBar.className = 'title-bar title-bar-tag';
+                            titleText.className = 'title-text title-text-tag';
+                            titleText.textContent = '📁 ' + videoData.title;
+                        } else {
+                            titleBar.className = 'title-bar';
+                            titleText.className = 'title-text';
+                            titleText.textContent = videoData.title;
+                        }
 
                         titleBar.appendChild(titleText);
 
