@@ -251,7 +251,7 @@ public sealed partial class Ui
         {
             Text = text,
             AutoSize = true,
-            LinkColor = Color.FromArgb(0x92, 0xB1, 0xE2),
+            LinkColor = MyColors.Link,
         };
     }
 
@@ -314,10 +314,6 @@ public sealed partial class Ui
 
     private sealed class MyToolStripRenderer(Ui ui) : ToolStripSystemRenderer
     {
-        private readonly Color _hoverColor = Color.FromArgb(0x00, 0x7A, 0xD7);
-        private readonly Color _pressColor = Color.FromArgb(0x00, 0x4C, 0x87);
-        private readonly Color _activeColor = Color.FromArgb(0xD2, 0x78, 0x00);
-
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
 
         protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
@@ -327,17 +323,17 @@ public sealed partial class Ui
 
             if (e.Item.Pressed)
             {
-                using SolidBrush brush = new(_pressColor);
+                using SolidBrush brush = new(MyColors.ToolStripPress);
                 g.FillRectangle(brush, bounds);
             }
             else if (e.Item is ToolStripButton button && button.Checked)
             {
-                using SolidBrush brush = new(_activeColor);
+                using SolidBrush brush = new(MyColors.ToolStripActive);
                 g.FillRectangle(brush, bounds);
             }
             else if (e.Item.Selected)
             {
-                using SolidBrush brush = new(_hoverColor);
+                using SolidBrush brush = new(MyColors.ToolStripHover);
                 g.FillRectangle(brush, bounds);
             }
             else if (e.Item.BackColor != Control.DefaultBackColor)
@@ -353,12 +349,12 @@ public sealed partial class Ui
             Rectangle bounds = new(Point.Empty, e.Item.Size);
             if (e.Item.Pressed)
             {
-                using SolidBrush brush = new(_pressColor);
+                using SolidBrush brush = new(MyColors.ToolStripPress);
                 g.FillRectangle(brush, bounds);
             }
             else if (e.Item.Selected)
             {
-                using SolidBrush brush = new(_hoverColor);
+                using SolidBrush brush = new(MyColors.ToolStripHover);
                 g.FillRectangle(brush, bounds);
             }
             else if (e.Item.BackColor != Control.DefaultBackColor)
@@ -380,7 +376,7 @@ public sealed partial class Ui
 
             ToolStripItem? item = e.Item;
             Graphics g = e.Graphics;
-            Color textColor = Color.White;
+            Color textColor = MyColors.MenuItemText;
             Font? textFont = e.TextFont;
             string? text = e.Text;
             Rectangle textRect = e.TextRectangle;
@@ -443,7 +439,7 @@ public sealed partial class Ui
 
             if ((item.Selected || item.Pressed) && item.Enabled)
             {
-                using SolidBrush brush = new(_hoverColor);
+                using SolidBrush brush = new(MyColors.ToolStripHover);
                 g.FillRectangle(brush, fillRect);
             }
 
@@ -460,7 +456,7 @@ public sealed partial class Ui
                     checkmark,
                     mi.Font,
                     textRect,
-                    Color.White,
+                    MyColors.MenuItemText,
                     TextFormatFlags.VerticalCenter
                 );
             }
@@ -473,8 +469,8 @@ public sealed partial class Ui
         {
             Padding = Padding.Empty,
             Renderer = new MyToolStripRenderer(this),
-            BackColor = Color.FromArgb(50, 50, 50),
-            ForeColor = Color.White,
+            BackColor = MyColors.ToolStripBackground,
+            ForeColor = MyColors.ToolStripForeground,
             Font = Font,
         };
     }
@@ -581,7 +577,7 @@ public sealed partial class Ui
 
     public ProgressBar NewProgressBar(int unscaledWidth)
     {
-        return new() { Size = GetSize(unscaledWidth, 12), BackColor = Color.FromArgb(45, 45, 45) };
+        return new() { Size = GetSize(unscaledWidth, 12), BackColor = MyColors.ProgressBarBackground };
     }
 
     public MyTabControl NewTabControl(int unscaledTabWidth)
@@ -608,7 +604,7 @@ public sealed partial class Ui
         public DoubleBufferedDataGridView()
         {
             DoubleBuffered = true;
-            DefaultCellStyle.SelectionForeColor = Color.White;
+            DefaultCellStyle.SelectionForeColor = MyColors.DataGridSelectionForeground;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -664,7 +660,7 @@ public sealed partial class Ui
                 MultiSelect = true,
                 ReadOnly = true,
                 BorderStyle = BorderStyle.None,
-                GridColor = Color.LightGray,
+                GridColor = MyColors.DataGridLines,
                 Font = BigFont,
             };
         grid.RowTemplate.Height = GetLength(26);

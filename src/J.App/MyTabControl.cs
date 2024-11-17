@@ -5,12 +5,6 @@ namespace J.App;
 
 public sealed partial class MyTabControl : TabControl
 {
-    private readonly Color _backgroundColor = Color.FromArgb(32, 32, 32);
-    private readonly Color _selectedTabColor = Color.FromArgb(45, 45, 45);
-    private readonly Color _unselectedTabColor = Color.FromArgb(38, 38, 38);
-    private readonly Color _borderColor = Color.FromArgb(60, 60, 60);
-    private readonly Color _textColor = Color.FromArgb(240, 240, 240);
-    private readonly Color _inactiveTextColor = Color.FromArgb(180, 180, 180);
     private readonly Font _font,
         _boldFont;
 
@@ -46,7 +40,7 @@ public sealed partial class MyTabControl : TabControl
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(_backgroundColor);
+        g.Clear(MyColors.TabBackground);
 
         // Draw tab headers, in reverse order so we are painting back to front.
 
@@ -71,9 +65,9 @@ public sealed partial class MyTabControl : TabControl
 
         // Fill and draw tab background
         using var path = CreateTabPath(tabRect, dpiScale);
-        using SolidBrush fillBrush = new(isSelected ? _selectedTabColor : _unselectedTabColor);
-        using SolidBrush textBrush = new(isSelected ? _textColor : _inactiveTextColor);
-        using Pen borderPen = new(_borderColor);
+        using SolidBrush fillBrush = new(isSelected ? MyColors.TabSelected : MyColors.TabUnselected);
+        using SolidBrush textBrush = new(isSelected ? MyColors.TabText : MyColors.TabInactiveText);
+        using Pen borderPen = new(MyColors.TabBorder);
 
         g.FillPath(fillBrush, path);
         g.DrawPath(borderPen, path);

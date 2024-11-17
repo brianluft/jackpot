@@ -42,8 +42,7 @@ public sealed partial class MainForm : Form
         _shuffleButton,
         _filterClearButton;
     private readonly ToolStripTextBox _searchText;
-    private readonly ToolStripLabel _titleLabel,
-        _pageLabel;
+    private readonly ToolStripLabel _titleLabel;
     private readonly WebView2 _browser;
     private readonly List<FilterRule> _filterRules = [];
     private bool _filterOr = false;
@@ -267,10 +266,6 @@ public sealed partial class MainForm : Form
                 };
                 _titleLabel.Font = titleFont;
             }
-
-            _toolStrip.Items.Add(ui.NewToolStripSeparator());
-
-            _toolStrip.Items.Add(_pageLabel = ui.NewToolStripLabel(""));
         }
 
         Controls.Add(
@@ -313,7 +308,7 @@ public sealed partial class MainForm : Form
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
-        BackColor = Color.FromArgb(45, 45, 45);
+        BackColor = MyColors.MainFormBackground;
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;
@@ -657,7 +652,7 @@ public sealed partial class MainForm : Form
         }
 
         // Update toolbar buttons.
-        _filterButton.BackColor = _filterRules.Count > 0 ? Color.Gray : DefaultBackColor;
+        _filterButton.BackColor = _filterRules.Count > 0 ? MyColors.ToolStripActive : DefaultBackColor;
         _filterClearButton.Visible = _filterRules.Count > 0;
     }
 
