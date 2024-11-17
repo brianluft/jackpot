@@ -42,6 +42,7 @@ public sealed class EditTagsEditTagForm : Form
                 _rightButtonFlow.Controls.Add(_saveButton = ui.NewButton("Save"));
                 {
                     _saveButton.Click += SaveButton_Click;
+                    _saveButton.Margin += ui.ButtonSpacing;
                 }
 
                 _rightButtonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));

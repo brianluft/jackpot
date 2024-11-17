@@ -2,6 +2,7 @@
 using System.Data;
 using System.Text.RegularExpressions;
 using J.Core.Data;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace J.App;
@@ -41,20 +42,40 @@ public sealed partial class EditMoviesForm : Form
 
         _contextMenuStrip = ui.NewContextMenuStrip();
         {
+            ToolStripMenuItem item;
+
             foreach (var tagType in tagTypes)
             {
-                _contextMenuStrip.Items.Add(
-                    $"Add {tagType.SingularName.ToLower()}...",
-                    null,
-                    (sender, e) => AddTag(tagType)
-                );
+                item = ui.NewToolStripMenuItem($"Add {tagType.SingularName.ToLower()}...");
+                item.Click += delegate
+                {
+                    AddTag(tagType);
+                };
+                _contextMenuStrip.Items.Add(item);
             }
-            _contextMenuStrip.Items.Add($"Remove tag...", null, (sender, e) => RemoveTag());
-            _contextMenuStrip.Items.Add(new ToolStripSeparator());
-            _contextMenuStrip.Items.Add("Export to MP4...", null, ExportMovie_Click);
-            _contextMenuStrip.Items.Add(new ToolStripSeparator());
-            _contextMenuStrip.Items.Add("Rename...", null, RenameMovie_Click);
-            _contextMenuStrip.Items.Add("Delete", null, DeleteMovie_Click);
+
+            item = ui.NewToolStripMenuItem("Remove tag...");
+            item.Click += delegate
+            {
+                RemoveTag();
+            };
+            _contextMenuStrip.Items.Add(item);
+
+            _contextMenuStrip.Items.Add(ui.NewToolStripSeparator());
+
+            item = ui.NewToolStripMenuItem("Export to MP4...");
+            item.Click += ExportMovie_Click;
+            _contextMenuStrip.Items.Add(item);
+
+            _contextMenuStrip.Items.Add(ui.NewToolStripSeparator());
+
+            item = ui.NewToolStripMenuItem("Rename...");
+            item.Click += RenameMovie_Click;
+            _contextMenuStrip.Items.Add(item);
+
+            item = ui.NewToolStripMenuItem("Delete");
+            item.Click += DeleteMovie_Click;
+            _contextMenuStrip.Items.Add(item);
         }
 
         Controls.Add(_table = ui.NewTable(1, 2));

@@ -23,7 +23,7 @@ public sealed class OptionsForm : Form
         VlcInstallationToUse.Bundled,
         VlcInstallationToUse.System,
     ];
-    private readonly string[] _vlcNames = ["Automatic (recommended)", "Bundled with Jackpot", "External install"];
+    private readonly string[] _vlcNames = ["Automatic", "Bundled with Jackpot", "External install"];
 
     // Window maximize behavior
     private readonly List<WindowMaximizeBehavior> _windowMaximizeBehaviorValues =
@@ -52,7 +52,7 @@ public sealed class OptionsForm : Form
                         _generalFlow.Padding = ui.DefaultPadding;
 
                         _generalFlow.Controls.Add(
-                            ui.NewLabeledPair("&VLC installation to use for playback:", _vlcCombo = ui.NewDropDown(200))
+                            ui.NewLabeledPair("&VLC installation:", _vlcCombo = ui.NewDropDown(200))
                         );
                         {
                             _vlcCombo.Margin += ui.BottomSpacing;
@@ -88,6 +88,7 @@ public sealed class OptionsForm : Form
                 _buttonFlow.Controls.Add(_okButton = ui.NewButton("OK"));
                 {
                     _okButton.Click += OkButton_Click;
+                    _okButton.Margin += ui.ButtonSpacing;
                 }
 
                 _buttonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));

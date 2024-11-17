@@ -13,21 +13,54 @@ public sealed partial class Ui
 
     private double Scale => _parent.DeviceDpi / 96d;
 
+    private readonly Lazy<Font> _boldFont;
     private readonly Lazy<Font> _bigFont;
+    private readonly Lazy<Font> _bigBoldFont;
+    private readonly Lazy<Font> _textboxFont;
 
     public Ui(Control parent)
     {
         _parent = parent;
 
-        parent.Font = Font = new("Segoe UI", 11f);
+        parent.Font = Font = new("Segoe UI", 10f);
         parent.Disposed += delegate
         {
             Font.Dispose();
         };
 
+        _boldFont = new(() =>
+        {
+            Font font = new("Segoe UI", 10f, FontStyle.Bold);
+            parent.Disposed += delegate
+            {
+                font.Dispose();
+            };
+            return font;
+        });
+
         _bigFont = new(() =>
         {
-            Font font = new("Segoe UI", 13f);
+            Font font = new("Segoe UI", 12f);
+            parent.Disposed += delegate
+            {
+                font.Dispose();
+            };
+            return font;
+        });
+
+        _bigBoldFont = new(() =>
+        {
+            Font font = new("Segoe UI", 12f, FontStyle.Bold);
+            parent.Disposed += delegate
+            {
+                font.Dispose();
+            };
+            return font;
+        });
+
+        _textboxFont = new(() =>
+        {
+            Font font = new("Consolas", 12f);
             parent.Disposed += delegate
             {
                 font.Dispose();
@@ -37,7 +70,10 @@ public sealed partial class Ui
     }
 
     public Font Font { get; }
+    public Font BoldFont => _boldFont.Value;
     public Font BigFont => _bigFont.Value;
+    public Font BigBoldFont => _bigBoldFont.Value;
+    public Font TextBoxFont => _textboxFont.Value;
 
     public int GetLength(int unscaledLength)
     {
@@ -98,9 +134,9 @@ public sealed partial class Ui
 
     public (Control Parent, TextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
-        Label label = new() { Text = text, AutoSize = true };
+        var label = NewLabel(text);
         label.Margin += GetPadding(0, 0, 0, 2);
-        TextBox textBox = NewTextBox(unscaledWidth);
+        var textBox = NewTextBox(unscaledWidth);
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
         flow.Controls.Add(textBox);
@@ -113,9 +149,9 @@ public sealed partial class Ui
         Action<OpenFileDialog> configure_dialog
     )
     {
-        Label label = new() { Text = text, AutoSize = true };
+        var label = NewLabel(text);
         label.Margin += GetPadding(0, 0, 0, 2);
-        TextBox textBox = NewTextBox(100);
+        var textBox = NewTextBox(100);
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
         flow.Controls.Add(label);
@@ -151,9 +187,9 @@ public sealed partial class Ui
         Action<FolderBrowserDialog> configure_dialog
     )
     {
-        Label label = new() { Text = text, AutoSize = true };
+        var label = NewLabel(text);
         label.Margin += GetPadding(0, 0, 0, 2);
-        TextBox textBox = NewTextBox(100);
+        var textBox = NewTextBox(100);
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
         flow.Controls.Add(label);
@@ -186,7 +222,7 @@ public sealed partial class Ui
     public Control NewLabeledPair<T>(string text, T child)
         where T : Control
     {
-        Label label = new() { Text = text, AutoSize = true };
+        var label = NewLabel(text);
         label.Margin += GetPadding(0, 0, 0, 2);
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
@@ -439,6 +475,7 @@ public sealed partial class Ui
             Renderer = new MyToolStripRenderer(this),
             BackColor = Color.FromArgb(50, 50, 50),
             ForeColor = Color.White,
+            Font = Font,
         };
     }
 
@@ -514,17 +551,22 @@ public sealed partial class Ui
 
     public ToolStripSeparator NewToolStripSeparator()
     {
-        return new MyToolStripSeparator(this) { Margin = GetPadding(5, 0, 5, 0) };
+        return new MyToolStripSeparator(this) { Margin = GetPadding(5, 5, 5, 5) };
     }
 
     public ContextMenuStrip NewContextMenuStrip()
     {
-        return new() { Renderer = new ToolStripSystemRenderer() };
+        return new() { Renderer = new MyToolStripRenderer(this) };
     }
 
     public Label NewLabel(string text)
     {
-        return new() { Text = text, AutoSize = true };
+        return new()
+        {
+            Text = text,
+            AutoSize = true,
+            Margin = GetPadding(0, 0),
+        };
     }
 
     public ListBox NewListBox()
@@ -542,9 +584,9 @@ public sealed partial class Ui
         return new() { Size = GetSize(unscaledWidth, 12), BackColor = Color.FromArgb(45, 45, 45) };
     }
 
-    public TabControl NewTabControl(int unscaledTabWidth)
+    public MyTabControl NewTabControl(int unscaledTabWidth)
     {
-        return new MyTabControl(BigFont)
+        return new(BigFont, BigBoldFont)
         {
             Dock = DockStyle.Fill,
             Padding = GetPoint(8, 12),
@@ -566,6 +608,7 @@ public sealed partial class Ui
         public DoubleBufferedDataGridView()
         {
             DoubleBuffered = true;
+            DefaultCellStyle.SelectionForeColor = Color.White;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -736,7 +779,7 @@ public sealed partial class Ui
         {
             AutoSize = true,
             Width = GetLength(unscaledWidth),
-            Font = BigFont,
+            Font = TextBoxFont,
         };
     }
 

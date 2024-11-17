@@ -8,7 +8,7 @@ public sealed class EditTagsForm : Form
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly IServiceProvider _serviceProvider;
-    private readonly TabControl _tabs;
+    private readonly MyTabControl _tabs;
     private readonly NewTagTypeTab _newTab;
     private readonly Dictionary<TagTypeId, TagsTab> _tagsTabs = [];
 
@@ -18,7 +18,7 @@ public sealed class EditTagsForm : Form
         _serviceProvider = serviceProvider;
         Ui ui = new(this);
 
-        Controls.Add(_tabs = ui.NewTabControl(100));
+        Controls.Add(_tabs = ui.NewTabControl(120));
         {
             _tabs.TabPages.Add(_newTab = new());
             {
@@ -30,8 +30,8 @@ public sealed class EditTagsForm : Form
 
         Text = "Edit Tags";
         StartPosition = FormStartPosition.CenterParent;
-        Size = ui.GetSize(550, 600);
-        MinimumSize = ui.GetSize(550, 200);
+        Size = ui.GetSize(600, 600);
+        MinimumSize = ui.GetSize(600, 200);
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -62,53 +62,56 @@ public sealed class EditTagsForm : Form
 
     private void UpdateTagTabs()
     {
-        // Remember the current selection.
-        var selectedTab = _tabs.SelectedTab;
-        var firstTime = selectedTab is null;
-        var isNewTabSelected = selectedTab is NewTagTypeTab;
-        var selectedTag = firstTime || isNewTabSelected ? null : ((TagsTab)selectedTab!).TagTypeId;
-
-        // Delete every tab except the New Tab.
-        for (int i = _tabs.TabPages.Count - 1; i >= 0; i--)
+        _tabs.ManipulateTabs(() =>
         {
-            if (!ReferenceEquals(_tabs.TabPages[i], _newTab))
-                _tabs.TabPages.RemoveAt(i);
-        }
+            // Remember the current selection.
+            var selectedTab = _tabs.SelectedTab;
+            var firstTime = selectedTab is null;
+            var isNewTabSelected = selectedTab is NewTagTypeTab;
+            var selectedTag = firstTime || isNewTabSelected ? null : ((TagsTab)selectedTab!).TagTypeId;
 
-        // Insert a tab for each tag type.
-        var tagTypes = _libraryProvider.GetTagTypes().OrderBy(x => x.SortIndex).ToList();
-        _tagsTabs.Clear();
-        for (var i = 0; i < tagTypes.Count; i++)
-        {
-            var tagType = tagTypes[i];
-            var isFirst = i == 0;
-            var isLast = i == tagTypes.Count - 1;
-            TagsTab tab = new(tagType, isFirst, isLast, _libraryProvider, _serviceProvider);
-            tab.TagTypeChanged += delegate
+            // Delete every tab except the New Tab.
+            for (int i = _tabs.TabPages.Count - 1; i >= 0; i--)
             {
-                UpdateTagTabs();
-            };
-            var index = _tabs.TabCount - 1;
-            _tabs.TabPages.Insert(index, tab);
-            _tagsTabs[tagType.Id] = tab;
-        }
+                if (!ReferenceEquals(_tabs.TabPages[i], _newTab))
+                    _tabs.TabPages.RemoveAt(i);
+            }
 
-        // Restore the previous selection if possible.
-        if (firstTime)
-        {
-            _tabs.SelectedIndex = 0;
-        }
-        else if (isNewTabSelected)
-        {
-            _tabs.SelectedTab = _newTab;
-        }
-        else
-        {
-            if (_tagsTabs.TryGetValue(selectedTag!, out var tagsTab))
-                _tabs.SelectedTab = tagsTab;
-            else
+            // Insert a tab for each tag type.
+            var tagTypes = _libraryProvider.GetTagTypes().OrderBy(x => x.SortIndex).ToList();
+            _tagsTabs.Clear();
+            for (var i = 0; i < tagTypes.Count; i++)
+            {
+                var tagType = tagTypes[i];
+                var isFirst = i == 0;
+                var isLast = i == tagTypes.Count - 1;
+                TagsTab tab = new(tagType, isFirst, isLast, _libraryProvider, _serviceProvider);
+                tab.TagTypeChanged += delegate
+                {
+                    UpdateTagTabs();
+                };
+                var index = _tabs.TabCount - 1;
+                _tabs.TabPages.Insert(index, tab);
+                _tagsTabs[tagType.Id] = tab;
+            }
+
+            // Restore the previous selection if possible.
+            if (firstTime)
+            {
                 _tabs.SelectedIndex = 0;
-        }
+            }
+            else if (isNewTabSelected)
+            {
+                _tabs.SelectedTab = _newTab;
+            }
+            else
+            {
+                if (_tagsTabs.TryGetValue(selectedTag!, out var tagsTab))
+                    _tabs.SelectedTab = tagsTab;
+                else
+                    _tabs.SelectedIndex = 0;
+            }
+        });
 
         // We recreated the listboxes so we have to populate them again.
         UpdateAllLists();
@@ -193,17 +196,20 @@ public sealed class EditTagsForm : Form
                     {
                         _groupMoveLeftButton.Enabled = !isFirst;
                         _groupMoveLeftButton.Click += GroupMoveLeftButton_Click;
+                        _groupMoveLeftButton.Margin += ui.ButtonSpacing;
                     }
 
                     _bottomButtonFlow.Controls.Add(_groupMoveRightButton = ui.NewButton("Move right →"));
                     {
                         _groupMoveRightButton.Enabled = !isLast;
                         _groupMoveRightButton.Click += GroupMoveRightButton_Click;
+                        _groupMoveRightButton.Margin += ui.ButtonSpacing;
                     }
 
                     _bottomButtonFlow.Controls.Add(_groupRenameButton = ui.NewButton("Rename..."));
                     {
                         _groupRenameButton.Click += GroupRenameButton_Click;
+                        _groupRenameButton.Margin += ui.ButtonSpacing;
                     }
 
                     _bottomButtonFlow.Controls.Add(_groupDeleteButton = ui.NewButton("Delete"));

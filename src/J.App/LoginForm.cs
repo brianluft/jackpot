@@ -19,11 +19,10 @@ public sealed class LoginForm : Form
         _m3u8HostnameText;
     private readonly Button _saveButton,
         _cancelButton,
-        _copySettingsButton,
-        _pasteSettingsButton;
+        _toolsButton;
     private readonly FlowLayoutPanel _saveCancelButtonsFlow,
+        _toolsButtonFlow,
         _m3u8Flow,
-        _copyPasteButtonsFlow,
         _bucketHelpFlow,
         _keyHelpFlow,
         _bucketFlow,
@@ -31,8 +30,7 @@ public sealed class LoginForm : Form
         _encryptionFlow;
     private readonly TabControl _tabControl;
     private readonly TabPage _b2Page,
-        _m3u8Page,
-        _importExportPage;
+        _m3u8Page;
     private readonly CheckBox _enableM3u8FolderCheck;
     private readonly LinkLabel _b2BucketLink,
         _b2KeyLink;
@@ -40,6 +38,9 @@ public sealed class LoginForm : Form
         _b2KeyIconPicture,
         _encryptionIconPicture;
     private readonly Label _encryptionLabel;
+    private readonly ContextMenuStrip _toolsMenu;
+    private readonly ToolStripMenuItem _copyJsonItem,
+        _pasteJsonItem;
 
     public LoginForm(AccountSettingsProvider accountSettingsProvider)
     {
@@ -106,14 +107,14 @@ public sealed class LoginForm : Form
                             }
 
                             _bucketFlow.Controls.Add(
-                                ui.NewLabeledPair("Bucket name:", _bucketText = ui.NewTextBox(350))
+                                ui.NewLabeledPair("Bucket name:", _bucketText = ui.NewTextBox(400))
                             );
                             {
                                 _bucketText.Margin += ui.BottomSpacing;
                             }
 
                             _bucketFlow.Controls.Add(
-                                ui.NewLabeledPair("Endpoint:", _endpointText = ui.NewTextBox(350))
+                                ui.NewLabeledPair("Endpoint:", _endpointText = ui.NewTextBox(400))
                             );
                             {
                                 _endpointText.Margin += ui.BottomSpacing;
@@ -157,13 +158,13 @@ public sealed class LoginForm : Form
                                 }
                             }
 
-                            _keyFlow.Controls.Add(ui.NewLabeledPair("keyID:", _accessKeyIdText = ui.NewTextBox(350)));
+                            _keyFlow.Controls.Add(ui.NewLabeledPair("keyID:", _accessKeyIdText = ui.NewTextBox(400)));
                             {
                                 _accessKeyIdText.Margin += ui.BottomSpacing;
                             }
 
                             _keyFlow.Controls.Add(
-                                ui.NewLabeledPair("applicationKey:", _secretAccessKeyText = ui.NewTextBox(350))
+                                ui.NewLabeledPair("applicationKey:", _secretAccessKeyText = ui.NewTextBox(400))
                             );
                             {
                                 _secretAccessKeyText.Margin += ui.BottomSpacing;
@@ -192,7 +193,7 @@ public sealed class LoginForm : Form
                             }
 
                             _encryptionFlow.Controls.Add(
-                                ui.NewLabeledPair("Password:", _passwordText = ui.NewTextBox(350))
+                                ui.NewLabeledPair("Password:", _passwordText = ui.NewTextBox(400))
                             );
                             {
                                 _passwordText.Margin += ui.BottomSpacing;
@@ -223,41 +224,24 @@ public sealed class LoginForm : Form
 
                         (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 500, _ => { });
                         {
-                            _m3u8FolderText.Font = ui.BigFont;
                             _m3u8Flow.Controls.Add(p);
                             p.Margin = ui.BottomSpacing;
                         }
 
                         (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 300);
                         {
-                            _m3u8HostnameText.Font = ui.BigFont;
                             _m3u8Flow.Controls.Add(p);
                         }
                     }
                 }
+            }
 
-                _tabControl.TabPages.Add(_importExportPage = ui.NewTabPage("Backup"));
+            _formTable.Controls.Add(_toolsButtonFlow = ui.NewFlowRow(), 0, 1);
+            {
+                _toolsButtonFlow.Margin = ui.TopSpacing;
+                _toolsButtonFlow.Controls.Add(_toolsButton = ui.NewButton("Tools 🞃"));
                 {
-                    _importExportPage.Controls.Add(_copyPasteButtonsFlow = ui.NewFlowColumn());
-                    {
-                        _copyPasteButtonsFlow.Padding = ui.DefaultPadding;
-
-                        _copyPasteButtonsFlow.Controls.Add(
-                            ui.NewLabel("Import or export a copy of your login information for safe keeping.")
-                        );
-
-                        _copyPasteButtonsFlow.Controls.Add(_copySettingsButton = ui.NewButton("Copy JSON"));
-                        {
-                            _copySettingsButton.Margin += ui.TopSpacingBig;
-                            _copySettingsButton.Click += CopySettingsButton_Click;
-                        }
-
-                        _copyPasteButtonsFlow.Controls.Add(_pasteSettingsButton = ui.NewButton("Paste JSON"));
-                        {
-                            _pasteSettingsButton.Margin += ui.TopSpacing + ui.GetPadding(0, 0, 0, 36);
-                            _pasteSettingsButton.Click += PasteSettingsButton_Click;
-                        }
-                    }
+                    _toolsButton.Click += ToolsButton_Click;
                 }
             }
 
@@ -279,9 +263,18 @@ public sealed class LoginForm : Form
             }
         }
 
-        Text = "Jackpot Login";
+        _toolsMenu = ui.NewContextMenuStrip();
+        {
+            _toolsMenu.Items.Add(_copyJsonItem = ui.NewToolStripMenuItem("Copy JSON"));
+            _copyJsonItem.Click += CopySettingsButton_Click;
+
+            _toolsMenu.Items.Add(_pasteJsonItem = ui.NewToolStripMenuItem("Paste JSON"));
+            _pasteJsonItem.Click += PasteSettingsButton_Click;
+        }
+
+        Text = "Jackpot Media Library";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(600, 700);
+        MinimumSize = Size = ui.GetSize(600, 650);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -290,7 +283,6 @@ public sealed class LoginForm : Form
         Icon = ui.GetIconResource("App.ico");
         ShowIcon = true;
         ShowInTaskbar = true;
-        Font = ui.Font;
 
         Load += delegate
         {
@@ -411,5 +403,10 @@ public sealed class LoginForm : Form
     {
         DialogResult = DialogResult.Cancel;
         Close();
+    }
+
+    private void ToolsButton_Click(object? sender, EventArgs e)
+    {
+        _toolsMenu.Show(_toolsButton, 0, _toolsButton.Height);
     }
 }

@@ -168,6 +168,7 @@ public sealed class ConvertMoviesForm : Form
                 _bottomFlow.Controls.Add(_okButton = ui.NewButton("Start"));
                 {
                     _okButton.Click += OkButton_Click;
+                    _okButton.Margin += ui.ButtonSpacing;
                 }
 
                 _bottomFlow.Controls.Add(_cancelButton = ui.NewButton("Close"));

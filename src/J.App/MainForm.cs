@@ -326,12 +326,12 @@ public sealed partial class MainForm : Form
             _browser.NavigationCompleted += Browser_NavigationCompleted;
         }
 
-        Text = "Jackpot";
+        Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
-        BackColor = Color.Black;
+        BackColor = Color.FromArgb(45, 45, 45);
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;

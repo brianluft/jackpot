@@ -48,6 +48,7 @@ public sealed class ImportForm : Form
             _buttonFlow.Controls.Add(_startButton = ui.NewButton("Start"));
             {
                 _startButton.Click += StartButton_Click;
+                _startButton.Margin += ui.ButtonSpacing;
             }
 
             _buttonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));

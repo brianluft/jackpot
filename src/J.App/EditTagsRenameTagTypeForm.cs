@@ -38,6 +38,7 @@ public sealed class EditTagsRenameTagTypeForm : Form
                 _buttonFlow.Controls.Add(_okButton = ui.NewButton("Rename"));
                 {
                     _okButton.Click += OkButton_Click;
+                    _okButton.Margin += ui.ButtonSpacing;
                 }
 
                 _buttonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel", DialogResult.Cancel));

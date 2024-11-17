@@ -1,8 +1,9 @@
 ﻿using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 
 namespace J.App;
 
-public sealed class MyTabControl : TabControl
+public sealed partial class MyTabControl : TabControl
 {
     private readonly Color _backgroundColor = Color.FromArgb(32, 32, 32);
     private readonly Color _selectedTabColor = Color.FromArgb(45, 45, 45);
@@ -10,15 +11,35 @@ public sealed class MyTabControl : TabControl
     private readonly Color _borderColor = Color.FromArgb(60, 60, 60);
     private readonly Color _textColor = Color.FromArgb(240, 240, 240);
     private readonly Color _inactiveTextColor = Color.FromArgb(180, 180, 180);
-    private readonly Font _font;
+    private readonly Font _font,
+        _boldFont;
 
-    public MyTabControl(Font font)
+    public MyTabControl(Font font, Font boldFont)
     {
         SetStyle(
             ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer,
             true
         );
         _font = font;
+        _boldFont = boldFont;
+        Multiline = true;
+    }
+
+    public void ManipulateTabs(Action action)
+    {
+        var form = FindForm()!;
+        form.SuspendLayout();
+        NativeMethods.SendMessageW(form.Handle, NativeMethods.WM_SETREDRAW, false, 0);
+        try
+        {
+            action();
+        }
+        finally
+        {
+            NativeMethods.SendMessageW(form.Handle, NativeMethods.WM_SETREDRAW, true, 0);
+            form.ResumeLayout();
+            form.Refresh();
+        }
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -27,8 +48,11 @@ public sealed class MyTabControl : TabControl
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(_backgroundColor);
 
-        // Draw tab headers
-        for (int i = 0; i < TabCount; i++)
+        // Draw tab headers, in reverse order so we are painting back to front.
+
+        var indices = from i in Enumerable.Range(0, TabCount) let rect = GetTabRect(i) orderby rect.Y, rect.X select i;
+
+        foreach (var i in indices)
         {
             DrawTab(g, i);
         }
@@ -59,6 +83,8 @@ public sealed class MyTabControl : TabControl
         {
             Alignment = StringAlignment.Center,
             LineAlignment = StringAlignment.Center,
+            Trimming = StringTrimming.EllipsisCharacter,
+            FormatFlags = StringFormatFlags.NoWrap,
         };
 
         // Adjust text rectangle with DPI-aware padding
@@ -67,7 +93,7 @@ public sealed class MyTabControl : TabControl
         textRect.Inflate(-padding / 2, 0);
 
         var tabText = TabPages[index].Text;
-        g.DrawString(tabText, _font, textBrush, textRect, textFormat);
+        g.DrawString(tabText, isSelected ? _boldFont : _font, textBrush, textRect, textFormat);
     }
 
     private GraphicsPath CreateTabPath(Rectangle rect, double dpiScale)
@@ -85,5 +111,18 @@ public sealed class MyTabControl : TabControl
         path.CloseFigure();
 
         return path;
+    }
+
+    private static partial class NativeMethods
+    {
+        [LibraryImport("user32.dll")]
+        public static partial int SendMessageW(
+            IntPtr hWnd,
+            int wMsg,
+            [MarshalAs(UnmanagedType.Bool)] bool wParam,
+            int lParam
+        );
+
+        public const int WM_SETREDRAW = 11;
     }
 }
