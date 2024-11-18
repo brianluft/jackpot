@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Web;
 using J.Core;
 using J.Core.Data;
@@ -51,8 +50,10 @@ public sealed partial class MainForm : Form
     private readonly ToolStripTextBox _searchText;
     private readonly ToolStripLabel _titleLabel;
     private readonly WebView2 _browser;
+    private readonly System.Windows.Forms.Timer _searchDebounceTimer;
     private bool _importInProgress;
     private FormWindowState _lastWindowState;
+    private bool _inhibitSearchTextChangedEvent;
 
     public MainForm(
         IServiceProvider serviceProvider,
@@ -120,11 +121,21 @@ public sealed partial class MainForm : Form
                 _rightmostSeparator.Alignment = ToolStripItemAlignment.Right;
             }
 
+            _toolStrip.Items.Add(_filterClearButton = ui.NewToolStripButton("Clear Filter", true));
+            {
+                _filterClearButton.Alignment = ToolStripItemAlignment.Right;
+                _filterClearButton.Image = ui.InvertColorsInPlace(
+                    ui.GetScaledBitmapResource("FilterClear.png", 16, 16)
+                );
+                _filterClearButton.Enabled = false;
+                _filterClearButton.Click += FilterClearButton_Click;
+            }
+
             _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(200));
             {
                 _searchText.Margin += ui.RightSpacing;
                 _searchText.Alignment = ToolStripItemAlignment.Right;
-                _searchText.KeyPress += SearchText_KeyPress;
+                _searchText.TextChanged += SearchText_TextChanged;
                 ui.SetCueText(_searchText.TextBox, "Search");
             }
 
@@ -132,16 +143,6 @@ public sealed partial class MainForm : Form
             {
                 _toolStrip.Items.Add(separator2);
                 separator2.Alignment = ToolStripItemAlignment.Right;
-            }
-
-            _toolStrip.Items.Add(_filterClearButton = ui.NewToolStripButton("Clear Filter", true));
-            {
-                _filterClearButton.Alignment = ToolStripItemAlignment.Right;
-                _filterClearButton.Image = ui.InvertColorsInPlace(
-                    ui.GetScaledBitmapResource("FilterClear.png", 16, 16)
-                );
-                _filterClearButton.Visible = false;
-                _filterClearButton.Click += FilterClearButton_Click;
             }
 
             _toolStrip.Items.Add(_filterButton = ui.NewToolStripDropDownButton("Filter"));
@@ -334,6 +335,15 @@ public sealed partial class MainForm : Form
             _browser.NavigationCompleted += Browser_NavigationCompleted;
         }
 
+        _searchDebounceTimer = new() { Interval = 500, Enabled = false };
+        {
+            _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
+            Disposed += delegate
+            {
+                _searchDebounceTimer.Dispose();
+            };
+        }
+
         Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
         MinimumSize = ui.GetSize(900, 400);
@@ -344,15 +354,6 @@ public sealed partial class MainForm : Form
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;
-    }
-
-    protected override void OnLoad(EventArgs e)
-    {
-        base.OnLoad(e);
-
-        var state = _preferences.GetJson<CompleteWindowState>(Preferences.Key.MainForm_CompleteWindowState);
-        state.Restore(this);
-        ApplyFullscreenPreference();
     }
 
     private void AboutButton_Click(object? sender, EventArgs e)
@@ -385,11 +386,21 @@ public sealed partial class MainForm : Form
         }
     }
 
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+
+        var state = _preferences.GetJson<CompleteWindowState>(Preferences.Key.MainForm_CompleteWindowState);
+        state.Restore(this);
+        ApplyFullscreenPreference();
+
+        UpdateTagTypes();
+    }
+
     protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        _browser.Visible = true;
-        UpdateTagTypes();
+
         await UpdateFilterSortFromPreferencesAsync(reload: false).ConfigureAwait(true);
         GoHome();
     }
@@ -650,10 +661,11 @@ public sealed partial class MainForm : Form
 
     private async Task UpdateFilterSortFromPreferencesAsync(bool reload = true)
     {
+        var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+        var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+
         // Sort
         {
-            var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
-
             _shuffleButton.Checked = sortOrder.Shuffle;
 
             // Show or hide every other item in the sort menu based on shuffle
@@ -672,9 +684,6 @@ public sealed partial class MainForm : Form
                 if (menuItem.Tag is TagTypeId tagTypeId)
                     menuItem.Checked = sortOrder.Field == tagTypeId.Value;
             }
-
-            // If this is a "non-default" sort then highlight the sort button.
-            UpdateFilterSortButtons(filter: null, sortOrder: sortOrder);
         }
 
         // Filter
@@ -693,9 +702,15 @@ public sealed partial class MainForm : Form
             for (var i = _filterButton.DropDownItems.Count - 1; i >= separatorIndex + 1; i--)
                 _filterButton.DropDownItems.RemoveAt(i);
 
-            var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
             _filterAndButton.Checked = !filter.Or;
             _filterOrButton.Checked = filter.Or;
+
+            if (!_searchText.Focused)
+            {
+                _inhibitSearchTextChangedEvent = true;
+                _searchText.Text = filter.Search;
+                _inhibitSearchTextChangedEvent = false;
+            }
 
             var tagTypes = _libraryProvider.GetTagTypes().ToDictionary(x => x.Id);
             var tagNames = _libraryProvider.GetTags().ToDictionary(x => x.Id, x => x.Name);
@@ -715,10 +730,10 @@ public sealed partial class MainForm : Form
                     await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
                 };
             }
-
-            // Update toolbar buttons.
-            UpdateFilterSortButtons(filter);
         }
+
+        // Update toolbar buttons.
+        UpdateFilterSortButtons(filter, sortOrder);
 
         // Update the web view
         await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
@@ -759,17 +774,13 @@ public sealed partial class MainForm : Form
         await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
     }
 
-    private void UpdateFilterSortButtons(Filter? filter = null, SortOrder? sortOrder = null)
+    private void UpdateFilterSortButtons(Filter filter, SortOrder sortOrder)
     {
-        filter ??= _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
-        sortOrder ??= _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+        _filterButton.BackColor = filter.Rules.Count > 0 ? MyColors.ToolStripActive : DefaultBackColor;
 
-        _filterButton.BackColor = filter.Value.Rules.Count > 0 ? MyColors.ToolStripActive : DefaultBackColor;
+        _sortButton.BackColor = sortOrder.IsDefault ? DefaultBackColor : MyColors.ToolStripActive;
 
-        var isDefaultSort = sortOrder.Value.Equals(SortOrder.Default);
-        _sortButton.BackColor = isDefaultSort ? DefaultBackColor : MyColors.ToolStripActive;
-
-        _filterClearButton.Visible = filter.Value.Rules.Count > 0 || !isDefaultSort;
+        _filterClearButton.Enabled = !filter.IsDefault || !sortOrder.IsDefault;
     }
 
     private async void FilterClearButton_Click(object? sender, EventArgs e)
@@ -939,33 +950,20 @@ public sealed partial class MainForm : Form
         }
     }
 
-    private async void SearchText_KeyPress(object? sender, KeyPressEventArgs e)
+    private void SearchText_TextChanged(object? sender, EventArgs e)
     {
-        // Did they press the enter key with no modifiers?
-        if (e.KeyChar == (char)Keys.Enter && ModifierKeys == Keys.None)
-        {
-            e.Handled = true;
+        if (_inhibitSearchTextChangedEvent)
+            return;
 
-            var phrase = _searchText.Text;
-            _searchText.Text = "";
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
 
-            await ChangeFilterAsync(x =>
-                {
-                    var words = WhitespaceRegex().Split(phrase);
-                    foreach (var word in words)
-                    {
-                        FilterField field = new(FilterFieldType.Filename, null);
-                        FilterRule rule = new(field, FilterOperator.ContainsString, null, word);
-                        x.Rules.Add(rule);
-                    }
+    private async void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+    {
+        _searchDebounceTimer.Stop();
 
-                    return x with
-                    {
-                        Or = false,
-                    };
-                })
-                .ConfigureAwait(true);
-        }
+        await ChangeFilterAsync(x => x with { Search = _searchText.Text }).ConfigureAwait(true);
     }
 
     private void ConvertMoviesButton_Click(object? sender, EventArgs e)
@@ -1046,7 +1044,4 @@ public sealed partial class MainForm : Form
         Icon = _ui.GetIconResource("App.ico");
         WindowState = FormWindowState.Normal;
     }
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespaceRegex();
 }

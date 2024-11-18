@@ -19,7 +19,7 @@ public readonly record struct CompleteWindowState(
                 (float)(form.RestoreBounds.Height / scale)
             ),
             UnscaledLocation: new PointF((float)(form.Location.X / scale), (float)(form.Location.Y / scale)),
-            UnscaledSize: new SizeF((float)(form.Size.Width / scale), (float)(form.Size.Height / scale))
+            UnscaledSize: new SizeF((float)(form.ClientSize.Width / scale), (float)(form.ClientSize.Height / scale))
         );
     }
 
@@ -66,13 +66,13 @@ public readonly record struct CompleteWindowState(
         if (WindowState == FormWindowState.Normal)
         {
             form.Location = scaledLocation;
-            form.Size = scaledSize;
+            form.ClientSize = scaledSize;
         }
         else
         {
             // For Maximized state, set the RestoreBounds first
             form.Location = scaledRestoreBounds.Location;
-            form.Size = scaledRestoreBounds.Size;
+            form.ClientSize = scaledRestoreBounds.Size;
         }
 
         // Set the window state last

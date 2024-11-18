@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using System.Web;
 using Amazon.S3;
 using J.Base;
@@ -84,11 +85,9 @@ void RefreshLibrary()
 static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter filter)
 {
     var movies = libraryProvider.GetMovies();
-    if (filter.Rules.Count == 0)
-        return movies;
-
     var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId);
     var tagTypes = libraryProvider.GetTags().ToDictionary(x => x.Id, x => x.TagTypeId);
+    var searchTerms = WhitespaceRegex().Split(filter.Search);
     return movies.Where(IsMovieIncludedInFilter).ToList();
 
     bool IsMovieIncludedInFilter(Movie movie)
@@ -104,6 +103,14 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
                 anyTrue = true;
             else
                 anyFalse = true;
+        }
+
+        foreach (var searchTerm in searchTerms)
+        {
+            if (searchTerm.Length == 0)
+                continue;
+
+            Add(movie.Filename.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase));
         }
 
         foreach (var rule in filter.Rules)
@@ -478,3 +485,9 @@ readonly record struct LibraryMetadata(
     ILookup<MovieId, TagId> MovieTags,
     Dictionary<TagId, Tag> Tags
 );
+
+public partial class Program
+{
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
+}
