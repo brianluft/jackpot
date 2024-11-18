@@ -454,14 +454,10 @@ public sealed partial class MainForm : Form
     {
         var f = _serviceProvider.GetRequiredService<ImportForm>();
         f.Show();
-        WindowState = FormWindowState.Minimized;
         f.FormClosed += delegate
         {
             if (f.DialogResult != DialogResult.OK)
-            {
-                WindowState = FormWindowState.Maximized;
                 return;
-            }
 
             var filePaths = f.SelectedFilePaths;
 
@@ -530,6 +526,7 @@ public sealed partial class MainForm : Form
                 if (failedFiles.IsEmpty)
                 {
                     MessageBox.Show(
+                        this,
                         $"Imported {numSuccesses} movie{s}.",
                         "Import",
                         MessageBoxButtons.OK,
@@ -540,6 +537,7 @@ public sealed partial class MainForm : Form
                 {
                     var failedFilenames = failedFiles.Select(Path.GetFileName).OrderBy(x => x).ToList();
                     MessageBox.Show(
+                        this,
                         $"Imported {numSuccesses} movie{s}.\n\nFailed to import {failedFiles.Count} movies:\n{string.Join("\n", failedFilenames)}",
                         "Import",
                         MessageBoxButtons.OK,
@@ -549,6 +547,7 @@ public sealed partial class MainForm : Form
                 else
                 {
                     MessageBox.Show(
+                        this,
                         $"Imported {numSuccesses} movie{s}. Failed to import {failedFiles.Count} movies.",
                         "Import",
                         MessageBoxButtons.OK,
@@ -973,7 +972,6 @@ public sealed partial class MainForm : Form
     {
         var f = _serviceProvider.GetRequiredService<ConvertMoviesForm>();
         f.Show();
-        WindowState = FormWindowState.Minimized;
     }
 
     private async void OptionsButton_Click(object? sender, EventArgs e)
