@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-
-namespace J.App;
+﻿namespace J.App;
 
 public readonly record struct CompleteWindowState(
     FormWindowState WindowState,
@@ -9,10 +7,6 @@ public readonly record struct CompleteWindowState(
     SizeF UnscaledSize
 )
 {
-    public static CompleteWindowState FromJson(string json) => JsonSerializer.Deserialize<CompleteWindowState>(json);
-
-    public string ToJson() => JsonSerializer.Serialize(this);
-
     public static CompleteWindowState Save(Form form)
     {
         var scale = form.DeviceDpi / 96d;

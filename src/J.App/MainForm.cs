@@ -350,9 +350,7 @@ public sealed partial class MainForm : Form
     {
         base.OnLoad(e);
 
-        WindowState = FormWindowState.Maximized;
-        var json = _preferences.GetText(Preferences.Key.MainForm_CompleteWindowState);
-        var state = CompleteWindowState.FromJson(json);
+        var state = _preferences.GetJson<CompleteWindowState>(Preferences.Key.MainForm_CompleteWindowState);
         state.Restore(this);
         ApplyFullscreenPreference();
     }
@@ -908,7 +906,7 @@ public sealed partial class MainForm : Form
         }
 
         var state = CompleteWindowState.Save(this);
-        _preferences.SetText(Preferences.Key.MainForm_CompleteWindowState, state.ToJson());
+        _preferences.SetJson(Preferences.Key.MainForm_CompleteWindowState, state);
 
         base.OnFormClosing(e);
     }
