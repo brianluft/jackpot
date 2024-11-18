@@ -140,14 +140,9 @@ public sealed partial class MainForm : Form
                 _searchText.SetCueText("Search (Ctrl+F)");
             }
 
-            var separator2 = ui.NewToolStripSeparator();
-            {
-                _toolStrip.Items.Add(separator2);
-                separator2.Alignment = ToolStripItemAlignment.Right;
-            }
-
             _toolStrip.Items.Add(_filterButton = ui.NewToolStripDropDownButton("Filter"));
             {
+                _filterButton.Margin += ui.RightSpacing;
                 _filterButton.Alignment = ToolStripItemAlignment.Right;
                 _filterButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Filter.png", 16, 16));
 
@@ -179,13 +174,13 @@ public sealed partial class MainForm : Form
 
                 _sortButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _sortButton.DropDownItems.Add(_sortAscendingButton = ui.NewToolStripMenuItem("Ascending (A to Z)"));
+                _sortButton.DropDownItems.Add(_sortAscendingButton = ui.NewToolStripMenuItem("Ascending (A→Z)"));
                 {
                     _sortAscendingButton.Checked = true;
                     _sortAscendingButton.Click += SortAscendingButton_Click;
                 }
 
-                _sortButton.DropDownItems.Add(_sortDescendingButton = ui.NewToolStripMenuItem("Descending (Z to A)"));
+                _sortButton.DropDownItems.Add(_sortDescendingButton = ui.NewToolStripMenuItem("Descending (Z→A)"));
                 {
                     _sortDescendingButton.Click += SortDescendingButton_Click;
                 }
@@ -734,6 +729,9 @@ public sealed partial class MainForm : Form
                     await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
                 };
             }
+
+            // Hide the last separator if there are no filter items.
+            _filterButton.DropDownItems[separatorIndex].Visible = filter.Rules.Count > 0;
         }
 
         // Update toolbar buttons.
