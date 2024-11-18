@@ -170,7 +170,7 @@ static Page GetTagListPage(
         if (!dict.TryGetValue(tag.Id, out var movieId))
             continue;
 
-        Page.Block block = new(movieId, tag.Id, tag.Name, []);
+        Page.Block block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, []);
         blocks.Add(block);
     }
     return NewPageFromBlocks(blocks, sortOrder, tagType.PluralName);
@@ -180,6 +180,8 @@ static string GetField(Page.Block block, string field)
 {
     if (field == "name")
         return block.Title;
+    if (field == "date")
+        return block.Date.UtcDateTime.ToString("u");
 
     TagTypeId tagTypeId = new(field);
     if (block.SortTags.TryGetValue(tagTypeId, out var value))
@@ -245,7 +247,10 @@ static Page NewPageFromMovies(
 )
 {
     return NewPageFromBlocks(
-        (from x in movies select new Page.Block(x.Id, null, x.Filename, GetSortTags(x, libraryMetadata))).ToList(),
+        (
+            from x in movies
+            select new Page.Block(x.Id, null, x.Filename, x.DateAdded, GetSortTags(x, libraryMetadata))
+        ).ToList(),
         sortOrder,
         title
     );

@@ -37,6 +37,7 @@ public sealed partial class MainForm : Form
         _optionsButton,
         _shuffleButton,
         _sortAscendingButton,
+        _sortByDateAddedButton,
         _sortByNameButton,
         _sortDescendingButton;
     private readonly ToolStripButton _browseBackButton,
@@ -191,6 +192,12 @@ public sealed partial class MainForm : Form
                 {
                     _sortByNameButton.Checked = true;
                     _sortByNameButton.Click += SortByNameButton_Click;
+                }
+
+                _sortButton.DropDownItems.Add(_sortByDateAddedButton = ui.NewToolStripMenuItem("By date added"));
+                {
+                    _sortByDateAddedButton.Checked = true;
+                    _sortByDateAddedButton.Click += SortByDateAddedButton_Click;
                 }
             }
 
@@ -651,6 +658,11 @@ public sealed partial class MainForm : Form
         await ChangeSortOrderAsync(x => x with { Field = "name" }).ConfigureAwait(true);
     }
 
+    private async void SortByDateAddedButton_Click(object? sender, EventArgs e)
+    {
+        await ChangeSortOrderAsync(x => x with { Field = "date" }).ConfigureAwait(true);
+    }
+
     private async void SortItem_Click(object? sender, EventArgs e)
     {
         var menuItem = (ToolStripMenuItem)sender!;
@@ -678,6 +690,7 @@ public sealed partial class MainForm : Form
             _sortDescendingButton.Checked = !sortOrder.Ascending;
 
             _sortByNameButton.Checked = sortOrder.Field == "name";
+            _sortByDateAddedButton.Checked = sortOrder.Field == "date";
             foreach (var menuItem in _sortButton.DropDownItems.OfType<ToolStripMenuItem>())
             {
                 if (menuItem.Tag is TagTypeId tagTypeId)
@@ -827,10 +840,10 @@ public sealed partial class MainForm : Form
         while (_filterButton.DropDownItems.Count > 0 && _filterButton.DropDownItems[0] is not ToolStripSeparator)
             _filterButton.DropDownItems.RemoveAt(0);
 
-        // Remove sort menu items after the "sort by name" item.
-        var sortByNameIndex = _sortButton.DropDownItems.IndexOf(_sortByNameButton);
-        while (_sortButton.DropDownItems.Count > sortByNameIndex + 1)
-            _sortButton.DropDownItems.RemoveAt(sortByNameIndex + 1);
+        // Remove sort menu items after the "sort by date added" item.
+        var lastIndex = _sortButton.DropDownItems.IndexOf(_sortByDateAddedButton);
+        while (_sortButton.DropDownItems.Count > lastIndex + 1)
+            _sortButton.DropDownItems.RemoveAt(lastIndex + 1);
 
         var tagTypes = _libraryProvider.GetTagTypes().ToDictionary(x => x.Id);
 
@@ -857,7 +870,7 @@ public sealed partial class MainForm : Form
             var sortItem = _ui.NewToolStripMenuItem($"By {tagType.SingularName.ToLower()}");
             sortItem.Tag = tagType.Id;
             sortItem.Click += SortItem_Click;
-            _sortButton.DropDownItems.Insert(sortByNameIndex + 1, sortItem);
+            _sortButton.DropDownItems.Insert(lastIndex + 1, sortItem);
         }
 
         // Add a filter field for the filename, which is special.

@@ -11,6 +11,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
         MovieId MovieId, // movie to get the clip from
         TagId? TagId, // if targeting a tag instead of a movie on click, this is the tag
         string Title,
+        DateTimeOffset Date,
         Dictionary<TagTypeId, string> SortTags
     );
 
