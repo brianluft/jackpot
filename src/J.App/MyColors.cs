@@ -20,4 +20,5 @@ public static class MyColors
     public static readonly Color ProgressBarBackground = Color.FromArgb(45, 45, 45);
     public static readonly Color DataGridSelectionForeground = Color.White;
     public static readonly Color DataGridLines = Color.LightGray;
+    public static readonly Color TextBoxCueText = Color.FromArgb(0x90, 0x90, 0x90);
 }

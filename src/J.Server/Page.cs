@@ -38,6 +38,10 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                 <meta charset="utf-8">
                 <title>{{WebUtility.HtmlEncode(Title)}}</title>
                 <style>
+                    * {
+                        user-select: none;
+                    }
+
                     body {
                         margin: 0;
                         padding: 0;
@@ -115,6 +119,14 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                 <script>
                     // Disable context menu page-wide
                     document.addEventListener('contextmenu', e => e.preventDefault());
+
+                    // Capture Ctrl+F and / to focus the search box
+                    document.addEventListener('keydown', function(e) {
+                        if ((e.ctrlKey && e.key === 'f') || (!e.ctrlKey && e.key === '/')) {
+                            e.preventDefault();
+                            window.chrome.webview.postMessage(JSON.stringify({ Type: 'search' }));
+                        }
+                    });
 
                     // Video data injected from C#
                     const VIDEOS = {{JsonSerializer.Serialize(blockJsons)}};

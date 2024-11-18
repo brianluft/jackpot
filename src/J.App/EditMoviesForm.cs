@@ -2,7 +2,6 @@
 using System.Data;
 using System.Text.RegularExpressions;
 using J.Core.Data;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace J.App;
@@ -18,7 +17,7 @@ public sealed partial class EditMoviesForm : Form
     private readonly TableLayoutPanel _table;
     private readonly FlowLayoutPanel _buttonFlow;
     private readonly Button _closeButton;
-    private readonly TextBox _searchText;
+    private readonly MyTextBox _searchText;
 
     public EditMoviesForm(
         LibraryProviderAdapter libraryProvider,
@@ -92,10 +91,9 @@ public sealed partial class EditMoviesForm : Form
 
                 _buttonFlow.Controls.Add(_searchText = ui.NewTextBox(200));
                 {
-                    _searchText.Font = ui.BigFont;
                     _searchText.Margin += ui.GetPadding(0, 4);
-                    ui.SetCueText(_searchText, "Search");
                     _searchText.KeyPress += SearchText_KeyPress;
+                    _searchText.SetCueText("Search");
                 }
             }
 

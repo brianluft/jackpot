@@ -47,7 +47,7 @@ public sealed partial class MainForm : Form
         _homeButton,
         _minimizeButton;
     private readonly ToolStripSeparator _rightmostSeparator;
-    private readonly ToolStripTextBox _searchText;
+    private readonly MyToolStripTextBox _searchText;
     private readonly ToolStripLabel _titleLabel;
     private readonly WebView2 _browser;
     private readonly System.Windows.Forms.Timer _searchDebounceTimer;
@@ -82,6 +82,7 @@ public sealed partial class MainForm : Form
             _toolStrip.MouseUp += ToolStrip_MouseUp;
             _toolStrip.AutoSize = false;
             _toolStrip.Height = ui.GetLength(32);
+            _toolStrip.Font = ui.Font;
 
             _toolStrip.Items.Add(_exitButton = ui.NewToolStripButton("Exit", true));
             {
@@ -136,7 +137,7 @@ public sealed partial class MainForm : Form
                 _searchText.Margin += ui.RightSpacing;
                 _searchText.Alignment = ToolStripItemAlignment.Right;
                 _searchText.TextChanged += SearchText_TextChanged;
-                ui.SetCueText(_searchText.TextBox, "Search");
+                _searchText.SetCueText("Search (Ctrl+F)");
             }
 
             var separator2 = ui.NewToolStripSeparator();
@@ -327,12 +328,13 @@ public sealed partial class MainForm : Form
                 settings.IsScriptEnabled = true;
                 settings.IsStatusBarEnabled = false;
                 settings.IsSwipeNavigationEnabled = false;
-                settings.IsWebMessageEnabled = false;
+                settings.IsWebMessageEnabled = true;
                 settings.IsZoomControlEnabled = false;
             };
             _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment);
             _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
+            _browser.WebMessageReceived += Browser_WebMessageReceived;
         }
 
         _searchDebounceTimer = new() { Interval = 500, Enabled = false };
@@ -793,6 +795,9 @@ public sealed partial class MainForm : Form
             _preferences.SetText(Preferences.Key.Shared_SortOrder, JsonSerializer.Serialize(SortOrder.Default));
         });
 
+        // Remove focus from the search box so we can replace the text.
+        _browser.Focus();
+
         await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
     }
 
@@ -943,12 +948,13 @@ public sealed partial class MainForm : Form
         if (pt.Y >= _toolStrip.Bottom)
             return;
 
-        var left = _searchText.TextBox.PointToScreen(Point.Empty).X;
-        var right = left + _searchText.TextBox.Width;
+        var textBox = _searchText.TextBox;
+        var left = textBox.PointToScreen(Point.Empty).X;
+        var right = left + textBox.Width;
         if (pt.X >= left && pt.Y <= right)
         {
-            _searchText.Focus();
-            _searchText.SelectAll();
+            textBox.Focus();
+            textBox.SelectAll();
         }
     }
 
@@ -1044,5 +1050,35 @@ public sealed partial class MainForm : Form
         ShowIcon = true;
         Icon = _ui.GetIconResource("App.ico");
         WindowState = FormWindowState.Normal;
+    }
+
+    private void Browser_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        var messageString = e.TryGetWebMessageAsString();
+        if (messageString is null)
+            return;
+
+        var message = JsonSerializer.Deserialize<PageToHostMessageJson>(messageString);
+
+        switch (message.Type)
+        {
+            case "search":
+                _searchText.TextBox.Focus();
+                _searchText.TextBox.SelectAll();
+                break;
+        }
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        // Ctrl+F or /
+        if ((e.Control && e.KeyCode == Keys.F) || e.KeyCode == Keys.OemQuestion)
+        {
+            e.SuppressKeyPress = true;
+            _searchText.TextBox.Focus();
+            _searchText.TextBox.SelectAll();
+        }
+
+        base.OnKeyDown(e);
     }
 }

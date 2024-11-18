@@ -1,6 +1,5 @@
 ﻿using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 
 namespace J.App;
 
@@ -511,9 +510,9 @@ public sealed partial class Ui
         };
     }
 
-    public ToolStripTextBox NewToolStripTextBox(int unscaledWidth)
+    public MyToolStripTextBox NewToolStripTextBox(int unscaledWidth)
     {
-        return new()
+        return new(this, Font)
         {
             AutoSize = false,
             Width = GetLength(unscaledWidth),
@@ -774,24 +773,20 @@ public sealed partial class Ui
         };
     }
 
-    public TextBox NewTextBox(int unscaledWidth)
+    public MyTextBox NewTextBox(int unscaledWidth)
     {
-        return new()
+        return new(this)
         {
             AutoSize = true,
             Width = GetLength(unscaledWidth),
             Font = TextBoxFont,
+            CueFont = BigFont,
         };
     }
 
     public CheckBox NewCheckBox(string text)
     {
         return new() { Text = text, AutoSize = true };
-    }
-
-    public void SetCueText(TextBox textBox, string cueText)
-    {
-        NativeMethods.SendMessageW(textBox.Handle, NativeMethods.EM_SETCUEBANNER, IntPtr.Zero, cueText);
     }
 
     public PictureBox NewPictureBox(Image image)
@@ -802,14 +797,6 @@ public sealed partial class Ui
     public NumericUpDown NewNumericUpDown(int unscaledWidth)
     {
         return new() { AutoSize = true, MinimumSize = GetSize(unscaledWidth, 0) };
-    }
-
-    private static partial class NativeMethods
-    {
-        [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
-        public static partial IntPtr SendMessageW(IntPtr hWnd, uint msg, IntPtr wParam, string lParam);
-
-        public const uint EM_SETCUEBANNER = 0x1501;
     }
 }
 
