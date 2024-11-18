@@ -377,7 +377,10 @@ public sealed partial class MainForm : Form
         {
             Process
                 .Start(
-                    new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Resources", "License.html"))
+                    new ProcessStartInfo(
+                        "msedge.exe",
+                        Path.Combine(AppContext.BaseDirectory, "Resources", "License.html")
+                    )
                     {
                         UseShellExecute = true,
                     }
