@@ -88,7 +88,7 @@
     <None Update="Resources\Reduce.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Resources\Shuffle.png">
+    <None Update="Resources\Sort.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

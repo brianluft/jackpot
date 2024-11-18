@@ -21,9 +21,7 @@ var app = builder.Build();
 app.UseHttpLogging();
 
 var configuredPort = GetPortNumber();
-var configuredSessionPassword =
-    Environment.GetEnvironmentVariable("JACKPOT_SESSION_PASSWORD")
-    ?? throw new Exception("Session password is required.");
+var configuredSessionPassword = Environment.GetEnvironmentVariable("JACKPOT_SESSION_PASSWORD") ?? "";
 var libraryProvider = app.Services.GetRequiredService<LibraryProvider>();
 libraryProvider.Connect();
 var accountSettingsProvider = app.Services.GetRequiredService<AccountSettingsProvider>();
@@ -32,44 +30,54 @@ var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
 var preferences = app.Services.GetRequiredService<Preferences>();
-object optionsLock = new();
-var optionShuffle = preferences.GetBoolean(Preferences.Key.Shared_UseShuffle);
-Filter optionFilter = new(true, []);
 Dictionary<ListPageKey, Lazy<Page>> listPages = [];
 Dictionary<TagId, Lazy<Page>> tagPages = [];
 
 void RefreshLibrary()
 {
-    lock (optionsLock)
+    var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+    var filter = preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+
+    LibraryMetadata libraryMetadata =
+        new(
+            libraryProvider.GetMovies().ToDictionary(x => x.Id),
+            libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId),
+            libraryProvider.GetTags().ToDictionary(x => x.Id)
+        );
+
+    var movies = GetFilteredMovies(libraryProvider, filter);
+
+    // List pages
     {
-        var movies = GetFilteredMovies(libraryProvider, optionFilter);
+        Dictionary<ListPageKey, Lazy<Page>> dict = [];
+        dict[new ListPageKey(ListPageType.Movies, null)] = new(
+            () => NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies")
+        );
 
-        // List pages
+        foreach (var tagType in libraryProvider.GetTagTypes())
         {
-            Dictionary<ListPageKey, Lazy<Page>> dict = [];
-            dict[new ListPageKey(ListPageType.Movies, null)] = new(
-                () => NewPageFromMovies(movies, optionShuffle, "Movies")
+            ListPageKey key = new(ListPageType.TagType, tagType.Id);
+            dict[key] = new(() => GetTagListPage(libraryProvider, tagType, sortOrder, libraryMetadata));
+        }
+
+        listPages = dict;
+    }
+
+    // Individual tag pages
+    {
+        Dictionary<TagId, Lazy<Page>> dict = [];
+        var movieIds = movies.Select(x => x.Id).ToHashSet();
+        foreach (var tag in libraryProvider.GetTags())
+            dict[tag.Id] = new(
+                () =>
+                    NewPageFromMovies(
+                        libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
+                        libraryMetadata,
+                        sortOrder,
+                        tag.Name
+                    )
             );
-
-            foreach (var tagType in libraryProvider.GetTagTypes())
-            {
-                ListPageKey key = new(ListPageType.TagType, tagType.Id);
-                dict[key] = new(() => GetTagListPage(libraryProvider, tagType, optionShuffle));
-            }
-
-            listPages = dict;
-        }
-
-        // Individual tag pages
-        {
-            Dictionary<TagId, Lazy<Page>> dict = [];
-            var movieIds = movies.Select(x => x.Id).ToHashSet();
-            foreach (var tag in libraryProvider.GetTags())
-                dict[tag.Id] = new(
-                    () => NewPageFromMovies(libraryProvider.GetMoviesWithTag(movieIds, tag.Id), optionShuffle, tag.Name)
-                );
-            tagPages = dict;
-        }
+        tagPages = dict;
     }
 }
 
@@ -103,21 +111,21 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
             switch (rule.Operator)
             {
                 case FilterOperator.IsTagged:
-                    Add(thisTagTypes.Contains(rule.Field.TagType!.Value.Id));
+                    Add(thisTagTypes.Contains(rule.Field.TagTypeId!));
                     break;
 
                 case FilterOperator.IsNotTagged:
-                    Add(!thisTagTypes.Contains(rule.Field.TagType!.Value.Id));
+                    Add(!thisTagTypes.Contains(rule.Field.TagTypeId!));
                     break;
 
                 case FilterOperator.IsTag:
-                    foreach (var tag in rule.TagValues!)
-                        Add(thisTagIds.Contains(tag.Id));
+                    foreach (var tagId in rule.TagValues!)
+                        Add(thisTagIds.Contains(tagId));
                     break;
 
                 case FilterOperator.IsNotTag:
-                    foreach (var tag in rule.TagValues!)
-                        Add(!thisTagIds.Contains(tag.Id));
+                    foreach (var tagId in rule.TagValues!)
+                        Add(!thisTagIds.Contains(tagId));
                     break;
 
                 case FilterOperator.ContainsString:
@@ -140,7 +148,12 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
     }
 }
 
-static Page GetTagListPage(LibraryProvider libraryProvider, TagType tagType, bool shuffle)
+static Page GetTagListPage(
+    LibraryProvider libraryProvider,
+    TagType tagType,
+    SortOrder sortOrder,
+    LibraryMetadata libraryMetadata
+)
 {
     var tags = libraryProvider.GetTags(tagType.Id);
     var dict = libraryProvider.GetRandomMoviePerTag(tagType);
@@ -150,25 +163,85 @@ static Page GetTagListPage(LibraryProvider libraryProvider, TagType tagType, boo
         if (!dict.TryGetValue(tag.Id, out var movieId))
             continue;
 
-        Page.Block block = new(movieId, tag.Id, tag.Name);
+        Page.Block block = new(movieId, tag.Id, tag.Name, []);
         blocks.Add(block);
     }
-    return NewPageFromBlocks(blocks, shuffle, tagType.PluralName);
+    return NewPageFromBlocks(blocks, sortOrder, tagType.PluralName);
 }
 
-static Page NewPageFromBlocks(List<Page.Block> blocks, bool shuffle, string title)
+static string GetField(Page.Block block, string field)
 {
-    if (shuffle)
+    if (field == "name")
+        return block.Title;
+
+    TagTypeId tagTypeId = new(field);
+    if (block.SortTags.TryGetValue(tagTypeId, out var value))
+        return value;
+
+    return "";
+}
+
+static Page NewPageFromBlocks(List<Page.Block> blocks, SortOrder sortOrder, string title)
+{
+    if (sortOrder.Shuffle)
+    {
         Shuffle(blocks);
+    }
     else
-        blocks.Sort((a, b) => string.Compare(a.Title, b.Title, StringComparison.Ordinal));
+    {
+        blocks.Sort(
+            (a, b) =>
+            {
+                var valueA = GetField(a, sortOrder.Field);
+                var valueB = GetField(b, sortOrder.Field);
+
+                // Sort empty string to the end
+                if (valueA == "" && valueB != "")
+                    return 1;
+                if (valueA != "" && valueB == "")
+                    return -1;
+
+                var x = string.Compare(valueA, valueB, StringComparison.CurrentCulture);
+                if (x != 0)
+                    return x;
+
+                x = string.Compare(a.Title, b.Title, StringComparison.CurrentCulture);
+                if (x != 0)
+                    return x;
+
+                return string.Compare(a.MovieId.Value, b.MovieId.Value, StringComparison.Ordinal);
+            }
+        );
+
+        if (!sortOrder.Ascending)
+            blocks.Reverse();
+    }
 
     return new(blocks, title);
 }
 
-static Page NewPageFromMovies(List<Movie> movies, bool shuffle, string title)
+static Dictionary<TagTypeId, string> GetSortTags(Movie movie, LibraryMetadata libraryMetadata)
 {
-    return NewPageFromBlocks((from x in movies select new Page.Block(x.Id, null, x.Filename)).ToList(), shuffle, title);
+    // Get the alphabetically first tag of each type
+    return libraryMetadata
+        .MovieTags[movie.Id]
+        .Select(x => libraryMetadata.Tags[x])
+        .GroupBy(x => x.TagTypeId)
+        .ToDictionary(x => x.Key, x => x.Min(x => x.Name)!);
+}
+
+static Page NewPageFromMovies(
+    IEnumerable<Movie> movies,
+    LibraryMetadata libraryMetadata,
+    SortOrder sortOrder,
+    string title
+)
+{
+    return NewPageFromBlocks(
+        (from x in movies select new Page.Block(x.Id, null, x.Filename, GetSortTags(x, libraryMetadata))).ToList(),
+        sortOrder,
+        title
+    );
 }
 
 static void Shuffle<T>(List<T> list)
@@ -390,32 +463,6 @@ app.MapPost(
     }
 );
 
-app.MapPost(
-    "/shuffle",
-    ([FromQuery, Required] bool on, [FromQuery, Required] string sessionPassword) =>
-    {
-        CheckSessionPassword(sessionPassword);
-        lock (optionsLock)
-        {
-            optionShuffle = on;
-            RefreshLibrary();
-        }
-    }
-);
-
-app.MapPost(
-    "/filter",
-    ([FromBody] Filter filter, [FromQuery, Required] string sessionPassword) =>
-    {
-        CheckSessionPassword(sessionPassword);
-        lock (optionsLock)
-        {
-            optionFilter = filter;
-            RefreshLibrary();
-        }
-    }
-);
-
 app.Run();
 
 enum ListPageType
@@ -425,3 +472,9 @@ enum ListPageType
 }
 
 readonly record struct ListPageKey(ListPageType ListPageType, TagTypeId? TagTypeId);
+
+readonly record struct LibraryMetadata(
+    Dictionary<MovieId, Movie> Movies,
+    ILookup<MovieId, TagId> MovieTags,
+    Dictionary<TagId, Tag> Tags
+);

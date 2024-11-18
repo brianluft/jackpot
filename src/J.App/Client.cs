@@ -84,25 +84,6 @@ public sealed class Client(IHttpClientFactory httpClientFactory, AccountSettings
             .ConfigureAwait(false);
     }
 
-    public async Task SetShuffleAsync(bool shuffle, CancellationToken cancel)
-    {
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = SessionPassword;
-        query["on"] = shuffle.ToString();
-        await _httpClient
-            .PostAsync($"http://localhost:{Port}/shuffle?{query}", new StringContent(""), cancel)
-            .ConfigureAwait(false);
-    }
-
-    public async Task SetFilterAsync(Filter filter, CancellationToken cancel)
-    {
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = SessionPassword;
-        await _httpClient
-            .PostAsJsonAsync($"http://localhost:{Port}/filter?{query}", filter, cancel)
-            .ConfigureAwait(false);
-    }
-
     private static int FindRandomUnusedPort()
     {
         // Create a TCP/IP socket and bind to a random port assigned by the OS

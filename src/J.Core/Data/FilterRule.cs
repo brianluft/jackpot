@@ -5,19 +5,22 @@ namespace J.Core.Data;
 public readonly record struct FilterRule(
     FilterField Field,
     FilterOperator Operator,
-    List<Tag>? TagValues,
+    List<TagId>? TagValues,
     string? StringValue
 )
 {
-    public override string ToString()
+    public string GetDisplayName(Dictionary<TagTypeId, TagType> tagTypes, Dictionary<TagId, string> tagNames)
     {
-        StringBuilder sb = new($"{Field.GetDisplayName()} {Operator.GetDisplayName(false)}");
+        TagType? filterFieldTagType = null;
+        if (Field.Type == FilterFieldType.TagType)
+            filterFieldTagType = tagTypes[Field.TagTypeId!];
+        StringBuilder sb = new($"{Field.GetDisplayName(filterFieldTagType)} {Operator.GetDisplayName(false)}");
 
         if (TagValues is not null)
         {
             sb.Append(' ');
             if (TagValues.Count == 1)
-                sb.Append(TagValues[0].Name);
+                sb.Append(tagNames[TagValues[0]]);
             else
                 sb.Append($"({TagValues.Count} values)");
         }

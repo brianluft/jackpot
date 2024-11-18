@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using J.Core;
@@ -7,6 +8,7 @@ using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using SortOrder = J.Core.Data.SortOrder;
 
 namespace J.App;
 
@@ -22,6 +24,7 @@ public sealed partial class MainForm : Form
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _menuButton,
+        _sortButton,
         _filterButton;
     private readonly ToolStripMenuItem _logOutButton,
         _aboutButton,
@@ -32,20 +35,22 @@ public sealed partial class MainForm : Form
         _moviesButton,
         _filterAndButton,
         _filterOrButton,
-        _optionsButton;
+        _optionsButton,
+        _shuffleButton,
+        _sortAscendingButton,
+        _sortDescendingButton,
+        _sortByNameButton;
     private readonly ToolStripButton _homeButton,
         _minimizeButton,
         _fullscreenButton,
         _exitButton,
         _browseBackButton,
         _browseForwardButton,
-        _shuffleButton,
         _filterClearButton;
+    private readonly ToolStripSeparator _rightmostSeparator;
     private readonly ToolStripTextBox _searchText;
     private readonly ToolStripLabel _titleLabel;
     private readonly WebView2 _browser;
-    private readonly List<FilterRule> _filterRules = [];
-    private bool _filterOr = false;
     private bool _importInProgress;
     private FormWindowState _lastWindowState;
 
@@ -110,14 +115,14 @@ public sealed partial class MainForm : Form
                 };
             }
 
-            var separator1 = ui.NewToolStripSeparator();
+            _toolStrip.Items.Add(_rightmostSeparator = ui.NewToolStripSeparator());
             {
-                _toolStrip.Items.Add(separator1);
-                separator1.Alignment = ToolStripItemAlignment.Right;
+                _rightmostSeparator.Alignment = ToolStripItemAlignment.Right;
             }
 
             _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(200));
             {
+                _searchText.Margin += ui.RightSpacing;
                 _searchText.Alignment = ToolStripItemAlignment.Right;
                 _searchText.KeyPress += SearchText_KeyPress;
                 ui.SetCueText(_searchText.TextBox, "Search");
@@ -160,12 +165,36 @@ public sealed partial class MainForm : Form
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
             }
 
-            _toolStrip.Items.Add(_shuffleButton = ui.NewToolStripButton("Shuffle"));
+            _toolStrip.Items.Add(_sortButton = ui.NewToolStripDropDownButton("Sort"));
             {
-                _shuffleButton.Alignment = ToolStripItemAlignment.Right;
-                _shuffleButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Shuffle.png", 16, 16));
-                _shuffleButton.Checked = preferences.GetBoolean(Preferences.Key.Shared_UseShuffle);
-                _shuffleButton.Click += ShuffleButton_Click;
+                _sortButton.Alignment = ToolStripItemAlignment.Right;
+                _sortButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Sort.png", 16, 16));
+
+                _sortButton.DropDownItems.Add(_shuffleButton = ui.NewToolStripMenuItem("Shuffle"));
+                {
+                    _shuffleButton.Click += ShuffleButton_Click;
+                }
+
+                _sortButton.DropDownItems.Add(ui.NewToolStripSeparator());
+
+                _sortButton.DropDownItems.Add(_sortAscendingButton = ui.NewToolStripMenuItem("Ascending (A to Z)"));
+                {
+                    _sortAscendingButton.Checked = true;
+                    _sortAscendingButton.Click += SortAscendingButton_Click;
+                }
+
+                _sortButton.DropDownItems.Add(_sortDescendingButton = ui.NewToolStripMenuItem("Descending (Z to A)"));
+                {
+                    _sortDescendingButton.Click += SortDescendingButton_Click;
+                }
+
+                _sortButton.DropDownItems.Add(ui.NewToolStripSeparator());
+
+                _sortButton.DropDownItems.Add(_sortByNameButton = ui.NewToolStripMenuItem("By name"));
+                {
+                    _sortByNameButton.Checked = true;
+                    _sortByNameButton.Click += SortByNameButton_Click;
+                }
             }
 
             _toolStrip.Items.Add(_menuButton = ui.NewToolStripDropDownButton("Menu"));
@@ -174,7 +203,7 @@ public sealed partial class MainForm : Form
                 _menuButton.Margin = _menuButton.Margin with { Left = 0 };
                 _menuButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Menu.png", 16, 16));
 
-                _menuButton.DropDownItems.Add(_moviesButton = ui.NewToolStripMenuItem("Movies"));
+                _menuButton.DropDownItems.Add(_moviesButton = ui.NewToolStripMenuItem("Browse movies"));
                 {
                     _moviesButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Movie.png", 16, 16));
                     _moviesButton.Click += MoviesButton_Click;
@@ -301,12 +330,13 @@ public sealed partial class MainForm : Form
                 settings.IsZoomControlEnabled = false;
             };
             _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment);
+            _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
         }
 
         Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
-        MinimumSize = ui.GetSize(1000, 400);
+        MinimumSize = ui.GetSize(900, 400);
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
@@ -357,11 +387,12 @@ public sealed partial class MainForm : Form
         }
     }
 
-    protected override void OnShown(EventArgs e)
+    protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
         _browser.Visible = true;
         UpdateTagTypes();
+        await UpdateFilterSortFromPreferencesAsync(reload: false).ConfigureAwait(true);
         GoHome();
     }
 
@@ -547,6 +578,11 @@ public sealed partial class MainForm : Form
             _browser.Source = uri;
     }
 
+    private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    {
+        _titleLabel.Text = "Loading...";
+    }
+
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
         var title = _browser.CoreWebView2.DocumentTitle;
@@ -575,30 +611,137 @@ public sealed partial class MainForm : Form
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = _client.SessionPassword;
         query["type"] = "Movies";
-        query["pageIndex"] = "0";
         Navigate($"/list.html?{query}");
+    }
+
+    private async Task ChangeSortOrderAsync(Func<SortOrder, SortOrder> func)
+    {
+        var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+        sortOrder = func(sortOrder);
+        _preferences.SetJson(Preferences.Key.Shared_SortOrder, sortOrder);
+        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
     }
 
     private async void ShuffleButton_Click(object? sender, EventArgs e)
     {
-        var check = !_shuffleButton.Checked;
-        _shuffleButton.Checked = check;
-        _preferences.SetBoolean(Preferences.Key.Shared_UseShuffle, check);
-        await _client.SetShuffleAsync(check, CancellationToken.None).ConfigureAwait(true);
-        _browser.Reload();
+        var shuffle = !_shuffleButton.Checked;
+        await ChangeSortOrderAsync(x => x with { Shuffle = shuffle }).ConfigureAwait(true);
+    }
+
+    private async void SortAscendingButton_Click(object? sender, EventArgs e)
+    {
+        await ChangeSortOrderAsync(x => x with { Ascending = true }).ConfigureAwait(true);
+    }
+
+    private async void SortDescendingButton_Click(object? sender, EventArgs e)
+    {
+        await ChangeSortOrderAsync(x => x with { Ascending = false }).ConfigureAwait(true);
+    }
+
+    private async void SortByNameButton_Click(object? sender, EventArgs e)
+    {
+        await ChangeSortOrderAsync(x => x with { Field = "name" }).ConfigureAwait(true);
+    }
+
+    private async void SortItem_Click(object? sender, EventArgs e)
+    {
+        var menuItem = (ToolStripMenuItem)sender!;
+        var tagTypeId = (TagTypeId)menuItem.Tag!;
+        await ChangeSortOrderAsync(x => x with { Field = tagTypeId.Value }).ConfigureAwait(true);
+    }
+
+    private async Task UpdateFilterSortFromPreferencesAsync(bool reload = true)
+    {
+        // Sort
+        {
+            var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+
+            _shuffleButton.Checked = sortOrder.Shuffle;
+
+            // Show or hide every other item in the sort menu based on shuffle
+            foreach (ToolStripItem item in _sortButton.DropDownItems)
+            {
+                if (!ReferenceEquals(item, _shuffleButton))
+                    item.Visible = !sortOrder.Shuffle;
+            }
+
+            _sortAscendingButton.Checked = sortOrder.Ascending;
+            _sortDescendingButton.Checked = !sortOrder.Ascending;
+
+            _sortByNameButton.Checked = sortOrder.Field == "name";
+            foreach (var menuItem in _sortButton.DropDownItems.OfType<ToolStripMenuItem>())
+            {
+                if (menuItem.Tag is TagTypeId tagTypeId)
+                    menuItem.Checked = sortOrder.Field == tagTypeId.Value;
+            }
+
+            // If this is a "non-default" sort then highlight the sort button.
+            UpdateFilterSortButtons(filter: null, sortOrder: sortOrder);
+        }
+
+        // Filter
+        {
+            // Start by removing anything after the last separator.
+            var separatorIndex = -1;
+            for (var i = _filterButton.DropDownItems.Count - 1; i >= 0; i--)
+            {
+                if (_filterButton.DropDownItems[i] is ToolStripSeparator)
+                {
+                    separatorIndex = i;
+                    break;
+                }
+            }
+
+            for (var i = _filterButton.DropDownItems.Count - 1; i >= separatorIndex + 1; i--)
+                _filterButton.DropDownItems.RemoveAt(i);
+
+            var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+            _filterAndButton.Checked = !filter.Or;
+            _filterOrButton.Checked = filter.Or;
+
+            var tagTypes = _libraryProvider.GetTagTypes().ToDictionary(x => x.Id);
+            var tagNames = _libraryProvider.GetTags().ToDictionary(x => x.Id, x => x.Name);
+
+            // Add an item for each filter.
+            for (var i = 0; i < filter.Rules.Count; i++)
+            {
+                var thisIndex = i;
+                var rule = filter.Rules[i];
+                var item = _ui.NewToolStripMenuItem(rule.GetDisplayName(tagTypes, tagNames));
+                _filterButton.DropDownItems.Add(item);
+                item.Image = _ui.InvertColorsInPlace(_ui.GetScaledBitmapResource("DeleteBullet.png", 16, 16));
+                item.Click += async delegate
+                {
+                    filter.Rules.RemoveAt(thisIndex);
+                    _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
+                    await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+                };
+            }
+
+            // Update toolbar buttons.
+            UpdateFilterSortButtons(filter);
+        }
+
+        // Update the web view
+        await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
+        if (reload)
+            _browser.Reload();
     }
 
     private async Task AddFilterMenuItem_Click(FilterField filterField, FilterOperator filterOperator)
     {
+        var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+
         if (filterOperator.RequiresTagInput())
         {
             using var f = _serviceProvider.GetRequiredService<FilterChooseTagForm>();
-            var tagType = filterField.TagType!.Value;
+            var tagTypeId = filterField.TagTypeId!;
+            var tagType = _libraryProvider.GetTagType(tagTypeId);
             f.Initialize(tagType, filterOperator);
             if (f.ShowDialog(this) != DialogResult.OK)
                 return;
 
-            _filterRules.Add(new(filterField, filterOperator, f.SelectedTags, null));
+            filter.Rules.Add(new(filterField, filterOperator, f.SelectedTags, null));
         }
         else if (filterOperator.RequiresStringInput())
         {
@@ -607,77 +750,57 @@ public sealed partial class MainForm : Form
             if (f.ShowDialog(this) != DialogResult.OK)
                 return;
 
-            _filterRules.Add(new(filterField, filterOperator, null, f.SelectedString));
+            filter.Rules.Add(new(filterField, filterOperator, null, f.SelectedString));
         }
         else
         {
-            _filterRules.Add(new(filterField, filterOperator, null, null));
+            filter.Rules.Add(new(filterField, filterOperator, null, null));
         }
 
-        await UpdateFiltersAsync().ConfigureAwait(true);
+        _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
+        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
     }
 
-    private async Task UpdateFiltersAsync()
+    private void UpdateFilterSortButtons(Filter? filter = null, SortOrder? sortOrder = null)
     {
-        await _client.SetFilterAsync(new(_filterOr, _filterRules), CancellationToken.None).ConfigureAwait(true);
+        filter ??= _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+        sortOrder ??= _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
 
-        // Update the filter menu. Start by removing anything after the last separator.
-        var separatorIndex = -1;
-        for (var i = _filterButton.DropDownItems.Count - 1; i >= 0; i--)
-        {
-            if (_filterButton.DropDownItems[i] is ToolStripSeparator)
-            {
-                separatorIndex = i;
-                break;
-            }
-        }
+        _filterButton.BackColor = filter.Value.Rules.Count > 0 ? MyColors.ToolStripActive : DefaultBackColor;
 
-        for (var i = _filterButton.DropDownItems.Count - 1; i >= separatorIndex + 1; i--)
-            _filterButton.DropDownItems.RemoveAt(i);
+        var isDefaultSort = sortOrder.Value.Equals(SortOrder.Default);
+        _sortButton.BackColor = isDefaultSort ? DefaultBackColor : MyColors.ToolStripActive;
 
-        if (_filterRules.Count > 0)
-        {
-            // Add an item for each filter.
-            for (var i = 0; i < _filterRules.Count; i++)
-            {
-                var thisIndex = i;
-                var rule = _filterRules[i];
-                var item = _ui.NewToolStripMenuItem(rule.ToString());
-                _filterButton.DropDownItems.Add(item);
-                item.Image = _ui.GetScaledBitmapResource("DeleteBullet.png", 16, 16);
-                item.Click += async delegate
-                {
-                    _filterRules.RemoveAt(thisIndex);
-                    await UpdateFiltersAsync().ConfigureAwait(true);
-                };
-            }
-        }
-
-        // Update toolbar buttons.
-        _filterButton.BackColor = _filterRules.Count > 0 ? MyColors.ToolStripActive : DefaultBackColor;
-        _filterClearButton.Visible = _filterRules.Count > 0;
+        _filterClearButton.Visible = filter.Value.Rules.Count > 0 || !isDefaultSort;
     }
 
     private async void FilterClearButton_Click(object? sender, EventArgs e)
     {
-        _filterRules.Clear();
-        await UpdateFiltersAsync().ConfigureAwait(true);
+        _preferences.WithTransaction(() =>
+        {
+            _preferences.SetText(Preferences.Key.Shared_Filter, JsonSerializer.Serialize(Filter.Default));
+            _preferences.SetText(Preferences.Key.Shared_SortOrder, JsonSerializer.Serialize(SortOrder.Default));
+        });
+
+        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+    }
+
+    private async Task ChangeFilterAsync(Func<Filter, Filter> func)
+    {
+        var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+        filter = func(filter);
+        _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
+        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
     }
 
     private async void FilterOrButton_Click(object? sender, EventArgs e)
     {
-        _filterOr = true;
-        _filterOrButton.Checked = true;
-        _filterAndButton.Checked = false;
-        await UpdateFiltersAsync().ConfigureAwait(true);
+        await ChangeFilterAsync(x => x with { Or = true }).ConfigureAwait(true);
     }
 
     private async void FilterAndButton_Click(object? sender, EventArgs e)
     {
-        _filterOr = false;
-        _filterOrButton.Checked = false;
-        _filterAndButton.Checked = true;
-        await UpdateFiltersAsync().ConfigureAwait(true);
+        await ChangeFilterAsync(x => x with { Or = false }).ConfigureAwait(true);
     }
 
     private void UpdateTagTypes()
@@ -690,11 +813,18 @@ public sealed partial class MainForm : Form
         while (_filterButton.DropDownItems.Count > 0 && _filterButton.DropDownItems[0] is not ToolStripSeparator)
             _filterButton.DropDownItems.RemoveAt(0);
 
+        // Remove sort menu items after the "sort by name" item.
+        var sortByNameIndex = _sortButton.DropDownItems.IndexOf(_sortByNameButton);
+        while (_sortButton.DropDownItems.Count > sortByNameIndex + 1)
+            _sortButton.DropDownItems.RemoveAt(sortByNameIndex + 1);
+
+        var tagTypes = _libraryProvider.GetTagTypes().ToDictionary(x => x.Id);
+
         List<FilterField> filterFields = [];
-        foreach (var tagType in _libraryProvider.GetTagTypes().OrderByDescending(x => x.SortIndex))
+        foreach (var tagType in tagTypes.Values.OrderByDescending(x => x.SortIndex))
         {
             // Add menu item to the main menu for viewing the list page.
-            var menuItem = _ui.NewToolStripMenuItem(tagType.PluralName);
+            var menuItem = _ui.NewToolStripMenuItem($"Browse {tagType.PluralName.ToLower()}");
             _menuButton.DropDownItems.Insert(1, menuItem);
             menuItem.Click += delegate
             {
@@ -702,13 +832,18 @@ public sealed partial class MainForm : Form
                 query["sessionPassword"] = _client.SessionPassword;
                 query["type"] = "TagType";
                 query["tagTypeId"] = tagType.Id.Value;
-                query["pageIndex"] = "0";
                 Navigate($"/list.html?{query}");
             };
 
             // Add filter menu item
-            FilterField filterField = new(FilterFieldType.TagType, tagType);
+            FilterField filterField = new(FilterFieldType.TagType, tagType.Id);
             filterFields.Add(filterField);
+
+            // Add sort menu item
+            var sortItem = _ui.NewToolStripMenuItem($"By {tagType.SingularName.ToLower()}");
+            sortItem.Tag = tagType.Id;
+            sortItem.Click += SortItem_Click;
+            _sortButton.DropDownItems.Insert(sortByNameIndex + 1, sortItem);
         }
 
         // Add a filter field for the filename, which is special.
@@ -718,7 +853,10 @@ public sealed partial class MainForm : Form
         var filterOperators = Enum.GetValues<FilterOperator>();
         foreach (var filterField in filterFields)
         {
-            var fieldItem = _ui.NewToolStripMenuItem(filterField.GetDisplayName());
+            TagType? filterFieldTagType = null;
+            if (filterField.TagTypeId is not null)
+                filterFieldTagType = tagTypes[filterField.TagTypeId];
+            var fieldItem = _ui.NewToolStripMenuItem(filterField.GetDisplayName(filterFieldTagType));
             _filterButton.DropDownItems.Insert(0, fieldItem);
 
             foreach (var filterOperator in filterOperators)
@@ -811,22 +949,24 @@ public sealed partial class MainForm : Form
             e.Handled = true;
 
             var phrase = _searchText.Text;
-
-            var words = WhitespaceRegex().Split(phrase);
-            foreach (var word in words)
-            {
-                FilterField field = new(FilterFieldType.Filename, null);
-                FilterRule rule = new(field, FilterOperator.ContainsString, null, word);
-                _filterRules.Add(rule);
-            }
-
-            _filterOr = false;
-            _filterOrButton.Checked = false;
-            _filterAndButton.Checked = true;
-
             _searchText.Text = "";
 
-            await UpdateFiltersAsync().ConfigureAwait(true);
+            await ChangeFilterAsync(x =>
+                {
+                    var words = WhitespaceRegex().Split(phrase);
+                    foreach (var word in words)
+                    {
+                        FilterField field = new(FilterFieldType.Filename, null);
+                        FilterRule rule = new(field, FilterOperator.ContainsString, null, word);
+                        x.Rules.Add(rule);
+                    }
+
+                    return x with
+                    {
+                        Or = false,
+                    };
+                })
+                .ConfigureAwait(true);
         }
     }
 
@@ -892,6 +1032,7 @@ public sealed partial class MainForm : Form
         _minimizeButton!.Visible = true;
         _exitButton.Visible = true;
         _fullscreenButton.Visible = true;
+        _rightmostSeparator.Visible = true;
         FormBorderStyle = FormBorderStyle.None;
         WindowState = FormWindowState.Maximized;
     }
@@ -901,6 +1042,7 @@ public sealed partial class MainForm : Form
         _minimizeButton!.Visible = false;
         _exitButton.Visible = false;
         _fullscreenButton.Visible = false;
+        _rightmostSeparator.Visible = false;
         FormBorderStyle = FormBorderStyle.Sizable;
         ShowIcon = true;
         Icon = _ui.GetIconResource("App.ico");

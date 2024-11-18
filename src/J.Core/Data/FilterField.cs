@@ -6,13 +6,13 @@ public enum FilterFieldType
     TagType,
 }
 
-public readonly record struct FilterField(FilterFieldType Type, TagType? TagType)
+public readonly record struct FilterField(FilterFieldType Type, TagTypeId? TagTypeId)
 {
-    public string GetDisplayName() =>
+    public string GetDisplayName(TagType? tagType) =>
         Type switch
         {
             FilterFieldType.Filename => "Filename",
-            FilterFieldType.TagType => TagType!.Value.SingularName,
+            FilterFieldType.TagType => tagType!.Value.SingularName,
             _ => throw new Exception($"Unexpected {nameof(Type)}."),
         };
 

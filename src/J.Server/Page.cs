@@ -10,7 +10,8 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
     public readonly record struct Block(
         MovieId MovieId, // movie to get the clip from
         TagId? TagId, // if targeting a tag instead of a movie on click, this is the tag
-        string Title
+        string Title,
+        Dictionary<TagTypeId, string> SortTags
     );
 
 #pragma warning disable IDE1006 // Naming Styles

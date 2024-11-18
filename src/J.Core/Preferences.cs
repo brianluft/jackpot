@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using System.Text.Json;
 using J.Core.Data;
 using Microsoft.Data.Sqlite;
 
@@ -6,13 +7,14 @@ namespace J.Core;
 
 public sealed class Preferences : IDisposable
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly FrozenDictionary<Key, object> _defaults;
     private SqliteConnection? _connection;
 
     public enum Key
     {
-        Shared_UseShuffle,
+        Shared_SortOrder,
+        Shared_Filter,
         Shared_VlcInstallationToUse,
         ConvertMoviesForm_VideoQuality,
         ConvertMoviesForm_CompressionLevel,
@@ -27,7 +29,8 @@ public sealed class Preferences : IDisposable
     {
         _defaults = new Dictionary<Key, object>
         {
-            [Key.Shared_UseShuffle] = 0L,
+            [Key.Shared_SortOrder] = JsonSerializer.Serialize(SortOrder.Default),
+            [Key.Shared_Filter] = JsonSerializer.Serialize(Filter.Default),
             [Key.Shared_VlcInstallationToUse] = VlcInstallationToUse.Automatic.ToString(),
             [Key.ConvertMoviesForm_VideoQuality] = "17 (recommended)",
             [Key.ConvertMoviesForm_CompressionLevel] = "slow (recommended)",
@@ -83,6 +86,12 @@ public sealed class Preferences : IDisposable
     public void SetEnum<T>(Key key, T value)
         where T : struct => Set(key, value.ToString()!);
 
+    public void SetJson<T>(Key key, T value)
+    {
+        var json = JsonSerializer.Serialize(value);
+        Set(key, json);
+    }
+
     private void Set(Key key, object value)
     {
         var expectedType = _defaults[key].GetType();
@@ -127,6 +136,19 @@ public sealed class Preferences : IDisposable
         if (Enum.TryParse<T>(Get<string>(key), out var parsed))
             return parsed;
         return Enum.Parse<T>((string)_defaults[key]);
+    }
+
+    public T GetJson<T>(Key key)
+    {
+        try
+        {
+            var json = Get<string>(key);
+            return JsonSerializer.Deserialize<T>(json)!;
+        }
+        catch
+        {
+            return JsonSerializer.Deserialize<T>((string)_defaults[key])!;
+        }
     }
 
     private T Get<T>(Key key)

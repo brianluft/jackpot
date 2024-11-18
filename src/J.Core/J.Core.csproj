@@ -17,14 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EditorConfigFiles Remove="C:\Projects\jackpot\src\J.Core\.editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="C:\Projects\jackpot\src\J.Core\.editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\J.Base\J.Base.csproj" />
   </ItemGroup>
 

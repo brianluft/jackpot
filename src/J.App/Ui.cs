@@ -517,7 +517,7 @@ public sealed partial class Ui
         {
             AutoSize = false,
             Width = GetLength(unscaledWidth),
-            Font = BigFont,
+            Font = TextBoxFont,
         };
     }
 

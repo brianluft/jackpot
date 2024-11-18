@@ -17,7 +17,7 @@ public sealed class FilterChooseTagForm : Form
     private List<Tag> _tags = [];
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public List<Tag> SelectedTags { get; private set; } = [];
+    public List<TagId> SelectedTags { get; private set; } = [];
 
     public FilterChooseTagForm(LibraryProviderAdapter libraryProvider)
     {
@@ -147,7 +147,10 @@ public sealed class FilterChooseTagForm : Form
     {
         Debug.Assert(_grid.SelectedCells.Count > 0);
 
-        SelectedTags = (from DataGridViewCell cell in _grid.SelectedCells select (Tag)cell.OwningRow!.DataBoundItem!)
+        SelectedTags = (
+            from DataGridViewCell cell in _grid.SelectedCells
+            select ((Tag)cell.OwningRow!.DataBoundItem!).Id
+        )
             .Distinct()
             .ToList();
 
