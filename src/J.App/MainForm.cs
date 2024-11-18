@@ -23,30 +23,30 @@ public sealed partial class MainForm : Form
     private readonly Preferences _preferences;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
-    private readonly ToolStripDropDownButton _menuButton,
-        _sortButton,
-        _filterButton;
-    private readonly ToolStripMenuItem _logOutButton,
-        _aboutButton,
+    private readonly ToolStripDropDownButton _filterButton,
+        _menuButton,
+        _sortButton;
+    private readonly ToolStripMenuItem _aboutButton,
         _addToLibraryButton,
-        _editTagsButton,
         _convertMoviesButton,
-        _manageMoviesButton,
-        _moviesButton,
+        _editTagsButton,
         _filterAndButton,
         _filterOrButton,
+        _logOutButton,
+        _manageMoviesButton,
+        _moviesButton,
         _optionsButton,
         _shuffleButton,
         _sortAscendingButton,
-        _sortDescendingButton,
-        _sortByNameButton;
-    private readonly ToolStripButton _homeButton,
-        _minimizeButton,
-        _fullscreenButton,
-        _exitButton,
-        _browseBackButton,
+        _sortByNameButton,
+        _sortDescendingButton;
+    private readonly ToolStripButton _browseBackButton,
         _browseForwardButton,
-        _filterClearButton;
+        _exitButton,
+        _filterClearButton,
+        _fullscreenButton,
+        _homeButton,
+        _minimizeButton;
     private readonly ToolStripSeparator _rightmostSeparator;
     private readonly ToolStripTextBox _searchText;
     private readonly ToolStripLabel _titleLabel;
