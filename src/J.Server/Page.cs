@@ -87,6 +87,7 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                         height: 100%;
                         object-fit: cover;
                         pointer-events: none;
+                        object-fit: contain;
                     }
 
                     .title-bar {
