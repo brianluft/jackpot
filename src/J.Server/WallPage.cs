@@ -5,7 +5,7 @@ using J.Core.Data;
 
 namespace J.Server;
 
-public readonly record struct Page(List<Page.Block> Blocks, string Title)
+public readonly record struct WallPage(List<WallPage.Block> Blocks, string Title)
 {
     public readonly record struct Block(
         MovieId MovieId, // movie to get the clip from

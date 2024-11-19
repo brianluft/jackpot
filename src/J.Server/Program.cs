@@ -31,8 +31,8 @@ var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
 var preferences = app.Services.GetRequiredService<Preferences>();
-Dictionary<ListPageKey, Lazy<Page>> listPages = [];
-Dictionary<TagId, Lazy<Page>> tagPages = [];
+Dictionary<ListPageKey, Lazy<WallPage>> listPages = [];
+Dictionary<TagId, Lazy<WallPage>> tagPages = [];
 
 void RefreshLibrary()
 {
@@ -50,7 +50,7 @@ void RefreshLibrary()
 
     // List pages
     {
-        Dictionary<ListPageKey, Lazy<Page>> dict = [];
+        Dictionary<ListPageKey, Lazy<WallPage>> dict = [];
         dict[new ListPageKey(ListPageType.Movies, null)] = new(
             () => NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies")
         );
@@ -66,7 +66,7 @@ void RefreshLibrary()
 
     // Individual tag pages
     {
-        Dictionary<TagId, Lazy<Page>> dict = [];
+        Dictionary<TagId, Lazy<WallPage>> dict = [];
         var movieIds = movies.Select(x => x.Id).ToHashSet();
         foreach (var tag in libraryProvider.GetTags())
             dict[tag.Id] = new(
@@ -155,7 +155,7 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
     }
 }
 
-static Page GetTagListPage(
+static WallPage GetTagListPage(
     LibraryProvider libraryProvider,
     TagType tagType,
     SortOrder sortOrder,
@@ -164,19 +164,19 @@ static Page GetTagListPage(
 {
     var tags = libraryProvider.GetTags(tagType.Id);
     var dict = libraryProvider.GetRandomMoviePerTag(tagType);
-    List<Page.Block> blocks = [];
+    List<WallPage.Block> blocks = [];
     foreach (var tag in tags)
     {
         if (!dict.TryGetValue(tag.Id, out var movieId))
             continue;
 
-        Page.Block block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, []);
+        WallPage.Block block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, []);
         blocks.Add(block);
     }
     return NewPageFromBlocks(blocks, sortOrder, tagType.PluralName);
 }
 
-static string GetField(Page.Block block, string field)
+static string GetField(WallPage.Block block, string field)
 {
     if (field == "name")
         return block.Title;
@@ -190,7 +190,7 @@ static string GetField(Page.Block block, string field)
     return "";
 }
 
-static Page NewPageFromBlocks(List<Page.Block> blocks, SortOrder sortOrder, string title)
+static WallPage NewPageFromBlocks(List<WallPage.Block> blocks, SortOrder sortOrder, string title)
 {
     if (sortOrder.Shuffle)
     {
@@ -239,7 +239,7 @@ static Dictionary<TagTypeId, string> GetSortTags(Movie movie, LibraryMetadata li
         .ToDictionary(x => x.Key, x => x.Min(x => x.Name)!);
 }
 
-static Page NewPageFromMovies(
+static WallPage NewPageFromMovies(
     IEnumerable<Movie> movies,
     LibraryMetadata libraryMetadata,
     SortOrder sortOrder,
@@ -249,7 +249,7 @@ static Page NewPageFromMovies(
     return NewPageFromBlocks(
         (
             from x in movies
-            select new Page.Block(x.Id, null, x.Filename, x.DateAdded, GetSortTags(x, libraryMetadata))
+            select new WallPage.Block(x.Id, null, x.Filename, x.DateAdded, GetSortTags(x, libraryMetadata))
         ).ToList(),
         sortOrder,
         title
