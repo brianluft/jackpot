@@ -333,7 +333,16 @@ public sealed partial class MainForm : Form
                 settings.IsWebMessageEnabled = true;
                 settings.IsZoomControlEnabled = false;
             };
-            _ = _browser.EnsureCoreWebView2Async(_coreWebView2Environment);
+            _ = _browser
+                .EnsureCoreWebView2Async(_coreWebView2Environment)
+                .ContinueWith(_ =>
+                {
+                    BeginInvoke(() =>
+                    {
+                        _browser.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+                        _browser.CoreWebView2.WebResourceRequested += Browser_WebResourceRequested;
+                    });
+                });
             _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
             _browser.WebMessageReceived += Browser_WebMessageReceived;
@@ -1094,5 +1103,15 @@ public sealed partial class MainForm : Form
         }
 
         base.OnKeyDown(e);
+    }
+
+    private void Browser_WebResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        // Never cache anything. Consider when you navigate away from the movies page, then toggle Shuffle, then go
+        // back. We need to reload that movies page when you go back because the Shuffle state has changed. We don't
+        // need a cache anyway since the server is another process on the same machine.
+        e.Request.Headers.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        e.Request.Headers.SetHeader("Pragma", "no-cache");
+        e.Request.Headers.SetHeader("Expires", "0");
     }
 }
