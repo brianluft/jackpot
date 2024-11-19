@@ -53,7 +53,7 @@ public static class Program
         services.AddTransient<EditMoviesForm>();
         services.AddTransient<EditMoviesRemoveTagForm>();
         services.AddTransient<EditTagsEditTagForm>();
-        services.AddTransient<EditTagsForm>();
+        services.AddTransient<EditTagsControl>();
         services.AddTransient<EditTagsRenameTagTypeForm>();
         services.AddTransient<FilterChooseTagForm>();
         services.AddTransient<FilterEnterStringForm>();

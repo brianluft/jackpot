@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace J.App;
 
-public sealed class EditTagsForm : Form
+public sealed class EditTagsControl : UserControl
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly IServiceProvider _serviceProvider;
@@ -12,7 +12,10 @@ public sealed class EditTagsForm : Form
     private readonly NewTagTypeTab _newTab;
     private readonly Dictionary<TagTypeId, TagsTab> _tagsTabs = [];
 
-    public EditTagsForm(LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
+    public event EventHandler? TagTypeChanged;
+    public event EventHandler? TagChanged;
+
+    public EditTagsControl(LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
     {
         _libraryProvider = libraryProvider;
         _serviceProvider = serviceProvider;
@@ -26,19 +29,15 @@ public sealed class EditTagsForm : Form
             }
         }
 
-        UpdateTagTabs();
-
         Text = "Edit Tags";
-        StartPosition = FormStartPosition.CenterParent;
-        Size = ui.GetSize(600, 600);
-        MinimumSize = ui.GetSize(600, 200);
-        FormBorderStyle = FormBorderStyle.Sizable;
-        MinimizeBox = false;
-        MaximizeBox = false;
-        ShowIcon = false;
-        ShowInTaskbar = false;
         Padding = ui.DefaultPadding;
-        DoubleBuffered = true;
+        BackColor = MyColors.TabBackground;
+    }
+
+    public void PrepareToShow()
+    {
+        UpdateTagTabs();
+        UpdateAllLists();
     }
 
     private void NewTab_Create(object? sender, NewTagTypeTab.CreateEventArgs e)
@@ -58,6 +57,7 @@ public sealed class EditTagsForm : Form
 
         UpdateTagTabs();
         _tabs.SelectedIndex = _tagsTabs[tagType.Id].TabIndex;
+        TagTypeChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void UpdateTagTabs()
@@ -89,6 +89,11 @@ public sealed class EditTagsForm : Form
                 tab.TagTypeChanged += delegate
                 {
                     UpdateTagTabs();
+                    TagTypeChanged?.Invoke(this, EventArgs.Empty);
+                };
+                tab.TagChanged += delegate
+                {
+                    TagChanged?.Invoke(this, EventArgs.Empty);
                 };
                 var index = _tabs.TabCount - 1;
                 _tabs.TabPages.Insert(index, tab);
@@ -117,12 +122,6 @@ public sealed class EditTagsForm : Form
         UpdateAllLists();
     }
 
-    protected override void OnShown(EventArgs e)
-    {
-        base.OnShown(e);
-        UpdateAllLists();
-    }
-
     private void UpdateAllLists()
     {
         foreach (var tagsTab in _tagsTabs.Values)
@@ -148,6 +147,7 @@ public sealed class EditTagsForm : Form
         public TagTypeId TagTypeId => _type.Id;
 
         public event EventHandler? TagTypeChanged;
+        public event EventHandler? TagChanged;
 
         public TagsTab(
             TagType type,
@@ -342,7 +342,10 @@ public sealed class EditTagsForm : Form
             using var f = _serviceProvider.GetRequiredService<EditTagsEditTagForm>();
             f.Initialize(_type, id);
             if (f.ShowDialog(FindForm()) == DialogResult.OK)
+            {
                 UpdateList();
+                TagChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public void UpdateList()

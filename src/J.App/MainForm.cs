@@ -20,6 +20,7 @@ public sealed partial class MainForm : Form
     private readonly CoreWebView2Environment _coreWebView2Environment;
     private readonly SingleInstanceManager _singleInstanceManager;
     private readonly Preferences _preferences;
+    private readonly EditTagsControl _editTagsControl;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
@@ -63,7 +64,8 @@ public sealed partial class MainForm : Form
         ImportProgressFormFactory importProgressFormFactory,
         CoreWebView2Environment coreWebView2Environment,
         SingleInstanceManager singleInstanceManager,
-        Preferences preferences
+        Preferences preferences,
+        EditTagsControl editTagsControl
     )
     {
         _serviceProvider = serviceProvider;
@@ -73,6 +75,7 @@ public sealed partial class MainForm : Form
         _coreWebView2Environment = coreWebView2Environment;
         _singleInstanceManager = singleInstanceManager;
         _preferences = preferences;
+        _editTagsControl = editTagsControl;
         Ui ui = new(this);
         _ui = ui;
 
@@ -262,10 +265,7 @@ public sealed partial class MainForm : Form
             {
                 _browseBackButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _browseBackButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("BrowseBack.png", 16, 16));
-                _browseBackButton.Click += delegate
-                {
-                    _browser!.GoBack();
-                };
+                _browseBackButton.Click += BrowseBackButton_Click;
             }
 
             _toolStrip.Items.Add(_browseForwardButton = ui.NewToolStripButton("Forward"));
@@ -346,6 +346,15 @@ public sealed partial class MainForm : Form
             _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
             _browser.WebMessageReceived += Browser_WebMessageReceived;
+        }
+
+        Controls.Add(_editTagsControl);
+        {
+            _editTagsControl.BringToFront();
+            _editTagsControl.Dock = DockStyle.Fill;
+            _editTagsControl.Visible = false;
+            _editTagsControl.TagTypeChanged += EditTagsControl_TagTypeChanged;
+            _editTagsControl.TagChanged += EditTagsControl_TagChanged;
         }
 
         _searchDebounceTimer = new() { Interval = 500, Enabled = false };
@@ -450,10 +459,30 @@ public sealed partial class MainForm : Form
 
     private void EditTagsButton_Click(object? sender, EventArgs e)
     {
-        using var f = _serviceProvider.GetRequiredService<EditTagsForm>();
-        f.ShowDialog(this);
+        _browser.Stop();
+        using var f = _serviceProvider.GetRequiredService<EditTagsControl>();
+        _browser.Visible = false;
+        _editTagsControl.PrepareToShow();
+        _editTagsControl.Visible = true;
+        _titleLabel.Text = "Edit Tags";
+        _browseBackButton.Enabled = true;
+        _browseForwardButton.Enabled = false;
+        _sortButton.Visible = false;
+        _filterButton.Visible = false;
+        _searchText.Visible = false;
+        _filterClearButton.Visible = false;
+    }
+
+    private void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
+    {
         UpdateTagTypes();
         _browser.Reload();
+        //TODO: see if our filter/sort is still valid
+    }
+
+    private void EditTagsControl_TagChanged(object? sender, EventArgs e)
+    {
+        //TODO: see if our filter is still valid
     }
 
     private void EditMoviesButton_Click(object? sender, EventArgs e)
@@ -594,12 +623,33 @@ public sealed partial class MainForm : Form
 
     private void Navigate(string path)
     {
+        _editTagsControl.Visible = false;
+        _browser.Visible = true;
         var url = $"http://localhost:{_client.Port}{path}";
         Uri uri = new(url);
         if (_browser.Source?.Equals(uri) ?? false)
             _browser.Reload();
         else
             _browser.Source = uri;
+        _sortButton.Visible = true;
+        _filterButton.Visible = true;
+        _searchText.Visible = true;
+        _filterClearButton.Visible = true;
+    }
+
+    private void BrowseBackButton_Click(object? sender, EventArgs e)
+    {
+        if (_editTagsControl.Visible)
+        {
+            // Go "back" to the browser.
+            _editTagsControl.Visible = false;
+            _browser.Visible = true;
+            _browser.Reload();
+        }
+        else
+        {
+            _browser.GoBack();
+        }
     }
 
     private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
