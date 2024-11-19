@@ -1004,6 +1004,9 @@ public sealed partial class MainForm : Form
 
     private void ApplyFullscreenPreference()
     {
+        if (WindowState == FormWindowState.Minimized)
+            return;
+
         var isMaximized = WindowState == FormWindowState.Maximized;
         var isFullscreen = FormBorderStyle == FormBorderStyle.None;
         var behavior = _preferences.GetEnum<WindowMaximizeBehavior>(Preferences.Key.MainForm_WindowMaximizeBehavior);
