@@ -39,6 +39,24 @@ public readonly record struct Page(List<Page.Block> Blocks, string Title)
                 <meta charset="utf-8">
                 <title>{{WebUtility.HtmlEncode(Title)}}</title>
                 <style>
+                    ::-webkit-scrollbar {
+                        width: 14px;
+                    }
+
+                    ::-webkit-scrollbar-track {
+                        background: #1a1a1a;
+                    }
+
+                    ::-webkit-scrollbar-thumb {
+                        background: #444;
+                        border: 3px solid #1a1a1a;
+                        border-radius: 7px;
+                    }
+
+                    ::-webkit-scrollbar-thumb:hover {
+                        background: #555;
+                    }
+
                     * {
                         user-select: none;
                     }
