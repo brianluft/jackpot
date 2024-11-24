@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using J.Core;
 
 namespace J.App;
 

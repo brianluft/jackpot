@@ -153,6 +153,28 @@ public sealed class LibraryProviderAdapter(
         await MutateAsync(() => libraryProvider.UpdateMovie(movie), updateProgress, cancel).ConfigureAwait(false);
     }
 
+    public async Task UpdateMovieAsync(
+        Movie movie,
+        List<TagId> tagIds,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
+    {
+        m3U8FolderSync.Invalidate(movies: [movie.Id]);
+        await MutateAsync(
+                () =>
+                {
+                    libraryProvider.UpdateMovie(movie);
+                    libraryProvider.DeleteAllMovieTags(movie.Id);
+                    foreach (var tagId in tagIds)
+                        libraryProvider.AddMovieTag(movie.Id, tagId);
+                },
+                updateProgress,
+                cancel
+            )
+            .ConfigureAwait(false);
+    }
+
     private async Task WithTransactionAsync(Action action, Action<double> updateProgress, CancellationToken cancel) =>
         await MutateAsync(() => libraryProvider.WithTransaction(action), updateProgress, cancel).ConfigureAwait(false);
 

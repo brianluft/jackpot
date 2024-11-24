@@ -2,7 +2,9 @@
 
 public sealed class MovieId : IdBase<MovieId>, IEquatable<MovieId>
 {
-    protected override string Prefix => "movie-";
+    private const string PREFIX = "movie-";
+
+    protected override string Prefix => PREFIX;
 
     public MovieId()
         : base() { }
@@ -11,4 +13,6 @@ public sealed class MovieId : IdBase<MovieId>, IEquatable<MovieId>
         : base(value) { }
 
     protected override MovieId Create(string value) => new(value);
+
+    public static bool HasPrefix(string value) => value.StartsWith(PREFIX);
 }

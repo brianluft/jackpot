@@ -1,4 +1,6 @@
-﻿namespace J.App;
+﻿using System.Drawing;
+
+namespace J.Core;
 
 public static class MyColors
 {
@@ -18,7 +20,11 @@ public static class MyColors
     public static readonly Color ToolStripActive = Color.FromArgb(0xD2, 0x78, 0x00);
     public static readonly Color MenuItemText = Color.White;
     public static readonly Color ProgressBarBackground = Color.FromArgb(45, 45, 45);
+    public static readonly Color DataGridBackground = Color.Black;
+    public static readonly Color DataGridRowBackground = Color.Black;
+    public static readonly Color DataGridAlternateRowBackground = Color.FromArgb(45, 45, 45);
     public static readonly Color DataGridSelectionForeground = Color.White;
     public static readonly Color DataGridLines = Color.LightGray;
     public static readonly Color TextBoxCueText = Color.FromArgb(0x90, 0x90, 0x90);
+    public static readonly Color WebListSelection = Color.FromArgb(0x00, 0x7A, 0xD7);
 }

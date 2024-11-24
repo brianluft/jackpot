@@ -7,6 +7,8 @@ namespace J.App;
 
 public static class Program
 {
+    public static CoreWebView2Environment? SharedCoreWebView2Environment { get; private set; }
+
     [STAThread]
     public static void Main()
     {
@@ -36,10 +38,11 @@ public static class Program
             Directory.CreateDirectory(userDataDir);
 
             CoreWebView2EnvironmentOptions options = new();
-            return CoreWebView2Environment
+            SharedCoreWebView2Environment = CoreWebView2Environment
                 .CreateAsync(browserExecutableFolder: null, userDataFolder: userDataDir, options: options)
                 .GetAwaiter()
                 .GetResult();
+            return SharedCoreWebView2Environment;
         });
 
         services.AddSingleton<Client>();
@@ -48,12 +51,13 @@ public static class Program
         services.AddSingleton<M3u8FolderSync>();
         services.AddSingleton<MyApplicationContext>();
 
+        services.AddTransient<AddTagToMoviesForm>();
         services.AddTransient<ConvertMoviesForm>();
         services.AddTransient<EditMoviesChooseTagForm>();
         services.AddTransient<EditMoviesForm>();
         services.AddTransient<EditMoviesRemoveTagForm>();
         services.AddTransient<EditTagsEditTagForm>();
-        services.AddTransient<EditTagsControl>();
+        services.AddTransient<EditTagsForm>();
         services.AddTransient<EditTagsRenameTagTypeForm>();
         services.AddTransient<FilterChooseTagForm>();
         services.AddTransient<FilterEnterStringForm>();
@@ -65,6 +69,7 @@ public static class Program
         services.AddTransient<MainForm>();
         services.AddTransient<MovieEncoder>();
         services.AddTransient<MovieExporter>();
+        services.AddTransient<MoviePropertiesForm>();
         services.AddTransient<OptionsForm>();
 
         using var serviceProvider = services.BuildServiceProvider();
@@ -75,6 +80,9 @@ public static class Program
             singleInstanceManager.ActivateFirstInstance();
             return;
         }
+
+        // Set SharedCoreWebView2Environment right away.
+        _ = serviceProvider.GetRequiredService<CoreWebView2Environment>();
 
         ApplicationConfiguration.Initialize();
         Application.Run(serviceProvider.GetRequiredService<MyApplicationContext>());
@@ -107,7 +115,7 @@ public static class Program
                 {
                     Application.ThreadException += (sender, e) =>
                     {
-                        MessageBox.Show(e.Exception.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        ShowError(e.Exception.Message);
                         ExitThread();
                     };
 
@@ -128,9 +136,19 @@ public static class Program
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ShowError(ex.Message);
                 exitAction();
             }
+        }
+
+        private static void ShowError(string message)
+        {
+            MessageBox.Show(
+                $"Jackpot experienced an internal error and must close.\n\nError message:\n\"{message}\"",
+                "Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
         }
 
         private void ShowLoginForm()

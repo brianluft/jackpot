@@ -523,7 +523,10 @@ INSERT INTO file_version VALUES (@n);
 
     public void AddMovieTag(MovieId movieId, TagId tagId) =>
         Execute(
-            "INSERT INTO movie_tags (movie_id, tag_id) VALUES (@movie_id, @tag_id)",
+            """
+            DELETE FROM movie_tags WHERE movie_id = @movie_id AND tag_id = @tag_id;
+            INSERT INTO movie_tags (movie_id, tag_id) VALUES (@movie_id, @tag_id);
+            """,
             p =>
             {
                 p.AddWithValue("@movie_id", movieId.Value);
@@ -538,6 +541,15 @@ INSERT INTO file_version VALUES (@n);
             {
                 p.AddWithValue("@movie_id", movieId.Value);
                 p.AddWithValue("@tag_id", tagId.Value);
+            }
+        );
+
+    public void DeleteAllMovieTags(MovieId movieId) =>
+        Execute(
+            "DELETE FROM movie_tags WHERE movie_id = @movie_id",
+            p =>
+            {
+                p.AddWithValue("@movie_id", movieId.Value);
             }
         );
 

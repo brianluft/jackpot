@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Net;
-using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Web;
 using J.Base;
@@ -14,7 +13,7 @@ public sealed class Client(IHttpClientFactory httpClientFactory, AccountSettings
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private Process? _process;
 
     public int Port { get; private set; } = -1;

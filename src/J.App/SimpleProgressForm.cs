@@ -38,10 +38,10 @@ public sealed class SimpleProgressForm : Form
                 }
             );
         var result = f.ShowDialog(owner);
-        if (result == DialogResult.Abort)
-            f.Exception!.Throw();
-        else if (result == DialogResult.Cancel)
+        if (result == DialogResult.Cancel)
             throw new OperationCanceledException();
+        else if (result == DialogResult.Abort)
+            f.Exception!.Throw();
     }
 
     public SimpleProgressForm(WorkDelegate action)
@@ -98,8 +98,15 @@ public sealed class SimpleProgressForm : Form
             }
             catch (Exception ex)
             {
-                Exception = ExceptionDispatchInfo.Capture(ex);
-                DialogResult = DialogResult.Abort;
+                if (_cts.IsCancellationRequested)
+                {
+                    DialogResult = DialogResult.Cancel;
+                }
+                else
+                {
+                    Exception = ExceptionDispatchInfo.Capture(ex);
+                    DialogResult = DialogResult.Abort;
+                }
             }
             finally
             {

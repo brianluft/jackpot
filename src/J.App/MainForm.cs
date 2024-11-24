@@ -1,12 +1,15 @@
 ﻿using System.Collections.Concurrent;
+using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Web;
+using J.Base;
 using J.Core;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+using Microsoft.Win32;
 using SortOrder = J.Core.Data.SortOrder;
 
 namespace J.App;
@@ -17,15 +20,15 @@ public sealed partial class MainForm : Form
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly Client _client;
     private readonly ImportProgressFormFactory _importProgressFormFactory;
-    private readonly CoreWebView2Environment _coreWebView2Environment;
     private readonly SingleInstanceManager _singleInstanceManager;
     private readonly Preferences _preferences;
-    private readonly EditTagsControl _editTagsControl;
+    private readonly MovieExporter _movieExporter;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
         _menuButton,
-        _sortButton;
+        _sortButton,
+        _viewButton;
     private readonly ToolStripMenuItem _aboutButton,
         _addToLibraryButton,
         _convertMoviesButton,
@@ -40,7 +43,14 @@ public sealed partial class MainForm : Form
         _sortAscendingButton,
         _sortByDateAddedButton,
         _sortByNameButton,
-        _sortDescendingButton;
+        _sortDescendingButton,
+        _movieContextOpenButton,
+        _movieContextAddTagButton,
+        _movieContextDeleteButton,
+        _movieContextExportButton,
+        _movieContextPropertiesButton,
+        _viewGridButton,
+        _viewListButton;
     private readonly ToolStripButton _browseBackButton,
         _browseForwardButton,
         _exitButton,
@@ -53,6 +63,8 @@ public sealed partial class MainForm : Form
     private readonly ToolStripLabel _titleLabel;
     private readonly WebView2 _browser;
     private readonly System.Windows.Forms.Timer _searchDebounceTimer;
+    private readonly ContextMenuStrip _movieContextMenu;
+    private readonly List<MovieId> _movieContextMenuIds = [];
     private bool _importInProgress;
     private FormWindowState _lastWindowState;
     private bool _inhibitSearchTextChangedEvent;
@@ -62,20 +74,18 @@ public sealed partial class MainForm : Form
         LibraryProviderAdapter libraryProvider,
         Client client,
         ImportProgressFormFactory importProgressFormFactory,
-        CoreWebView2Environment coreWebView2Environment,
         SingleInstanceManager singleInstanceManager,
         Preferences preferences,
-        EditTagsControl editTagsControl
+        MovieExporter movieExporter
     )
     {
         _serviceProvider = serviceProvider;
         _libraryProvider = libraryProvider;
         _client = client;
         _importProgressFormFactory = importProgressFormFactory;
-        _coreWebView2Environment = coreWebView2Environment;
         _singleInstanceManager = singleInstanceManager;
         _preferences = preferences;
-        _editTagsControl = editTagsControl;
+        _movieExporter = movieExporter;
         Ui ui = new(this);
         _ui = ui;
 
@@ -148,7 +158,9 @@ public sealed partial class MainForm : Form
             {
                 _filterButton.Margin += ui.RightSpacing;
                 _filterButton.Alignment = ToolStripItemAlignment.Right;
-                _filterButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Filter.png", 16, 16));
+                _filterButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("DisclosureDown.png", 16, 16));
+                _filterButton.TextImageRelation = TextImageRelation.TextBeforeImage;
+                _filterButton.ImageAlign = ContentAlignment.MiddleLeft;
 
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
@@ -169,7 +181,9 @@ public sealed partial class MainForm : Form
             _toolStrip.Items.Add(_sortButton = ui.NewToolStripDropDownButton("Sort"));
             {
                 _sortButton.Alignment = ToolStripItemAlignment.Right;
-                _sortButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Sort.png", 16, 16));
+                _sortButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("DisclosureDown.png", 16, 16));
+                _sortButton.TextImageRelation = TextImageRelation.TextBeforeImage;
+                _sortButton.ImageAlign = ContentAlignment.MiddleLeft;
 
                 _sortButton.DropDownItems.Add(_shuffleButton = ui.NewToolStripMenuItem("Shuffle"));
                 {
@@ -204,6 +218,24 @@ public sealed partial class MainForm : Form
                 }
             }
 
+            _toolStrip.Items.Add(_viewButton = ui.NewToolStripDropDownButton("View"));
+            {
+                _viewButton.Alignment = ToolStripItemAlignment.Right;
+                _viewButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("DisclosureDown.png", 16, 16));
+                _viewButton.TextImageRelation = TextImageRelation.TextBeforeImage;
+                _viewButton.ImageAlign = ContentAlignment.MiddleLeft;
+
+                _viewButton.DropDownItems.Add(_viewGridButton = ui.NewToolStripMenuItem("Grid"));
+                {
+                    _viewGridButton.Click += ViewGridButton_Click;
+                }
+
+                _viewButton.DropDownItems.Add(_viewListButton = ui.NewToolStripMenuItem("List"));
+                {
+                    _viewListButton.Click += ViewListButton_Click;
+                }
+            }
+
             _toolStrip.Items.Add(_menuButton = ui.NewToolStripDropDownButton("Menu"));
             {
                 _menuButton.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
@@ -224,7 +256,7 @@ public sealed partial class MainForm : Form
                     _addToLibraryButton.Click += AddToLibraryButton_Click;
                 }
 
-                _menuButton.DropDownItems.Add(_manageMoviesButton = ui.NewToolStripMenuItem("Edit movies..."));
+                _menuButton.DropDownItems.Add(_manageMoviesButton = ui.NewToolStripMenuItem("Bulk edit movies..."));
                 {
                     _manageMoviesButton.Click += EditMoviesButton_Click;
                 }
@@ -259,6 +291,17 @@ public sealed partial class MainForm : Form
                 {
                     _aboutButton.Click += AboutButton_Click;
                 }
+
+#if DEBUG
+                ToolStripMenuItem devToolsItem;
+                _menuButton.DropDownItems.Add(devToolsItem = ui.NewToolStripMenuItem("Dev Tools"));
+                {
+                    devToolsItem.Click += delegate
+                    {
+                        _browser!.CoreWebView2.OpenDevToolsWindow();
+                    };
+                }
+#endif
             }
 
             _toolStrip.Items.Add(_browseBackButton = ui.NewToolStripButton("Back"));
@@ -303,58 +346,12 @@ public sealed partial class MainForm : Form
             }
         }
 
-        Controls.Add(
-            _browser = new()
-            {
-                Dock = DockStyle.Fill,
-                Padding = Padding.Empty,
-                Margin = Padding.Empty,
-            }
-        );
+        Controls.Add(_browser = ui.NewWebView2());
         {
             _browser.BringToFront();
-            _browser.CoreWebView2InitializationCompleted += delegate
-            {
-                var settings = _browser.CoreWebView2.Settings;
-                settings.AreBrowserAcceleratorKeysEnabled = false;
-                settings.AreDefaultContextMenusEnabled = false;
-                settings.AreDefaultScriptDialogsEnabled = false;
-                settings.AreDevToolsEnabled = false;
-                settings.AreHostObjectsAllowed = false;
-                settings.IsBuiltInErrorPageEnabled = false;
-                settings.IsGeneralAutofillEnabled = false;
-                settings.IsNonClientRegionSupportEnabled = false;
-                settings.IsPasswordAutosaveEnabled = false;
-                settings.IsPinchZoomEnabled = false;
-                settings.IsReputationCheckingRequired = false;
-                settings.IsScriptEnabled = true;
-                settings.IsStatusBarEnabled = false;
-                settings.IsSwipeNavigationEnabled = false;
-                settings.IsWebMessageEnabled = true;
-                settings.IsZoomControlEnabled = false;
-            };
-            _ = _browser
-                .EnsureCoreWebView2Async(_coreWebView2Environment)
-                .ContinueWith(_ =>
-                {
-                    BeginInvoke(() =>
-                    {
-                        _browser.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-                        _browser.CoreWebView2.WebResourceRequested += Browser_WebResourceRequested;
-                    });
-                });
             _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
             _browser.WebMessageReceived += Browser_WebMessageReceived;
-        }
-
-        Controls.Add(_editTagsControl);
-        {
-            _editTagsControl.BringToFront();
-            _editTagsControl.Dock = DockStyle.Fill;
-            _editTagsControl.Visible = false;
-            _editTagsControl.TagTypeChanged += EditTagsControl_TagTypeChanged;
-            _editTagsControl.TagChanged += EditTagsControl_TagChanged;
         }
 
         _searchDebounceTimer = new() { Interval = 500, Enabled = false };
@@ -364,6 +361,44 @@ public sealed partial class MainForm : Form
             {
                 _searchDebounceTimer.Dispose();
             };
+        }
+
+        _movieContextMenu = ui.NewContextMenuStrip();
+        {
+            Disposed += delegate
+            {
+                _movieContextMenu.Dispose();
+            };
+
+            _movieContextMenu.Items.Add(_movieContextOpenButton = ui.NewToolStripMenuItem("Play"));
+            {
+                _movieContextOpenButton.Font = ui.BoldFont;
+                _movieContextOpenButton.Click += MovieContextOpenButton_Click;
+            }
+
+            _movieContextMenu.Items.Add(ui.NewToolStripSeparator());
+
+            _movieContextMenu.Items.Add(_movieContextAddTagButton = ui.NewToolStripMenuItem("Add tag..."));
+            {
+                _movieContextAddTagButton.Click += MovieContextAddTagButton_Click;
+            }
+
+            _movieContextMenu.Items.Add(_movieContextExportButton = ui.NewToolStripMenuItem("Export to MP4..."));
+            {
+                _movieContextExportButton.Click += MovieContextExportButton_Click;
+            }
+
+            _movieContextMenu.Items.Add(_movieContextDeleteButton = ui.NewToolStripMenuItem("Delete"));
+            {
+                _movieContextDeleteButton.Click += MovieContextDeleteButton_Click;
+            }
+
+            _movieContextMenu.Items.Add(ui.NewToolStripSeparator());
+
+            _movieContextMenu.Items.Add(_movieContextPropertiesButton = ui.NewToolStripMenuItem("Properties"));
+            {
+                _movieContextPropertiesButton.Click += MovieContextPropertiesButton_Click;
+            }
         }
 
         Text = "Jackpot Media Library";
@@ -426,6 +461,7 @@ public sealed partial class MainForm : Form
     {
         base.OnShown(e);
 
+        await UpdateViewFromPreferencesAsync(reload: false).ConfigureAwait(true);
         await UpdateFilterSortFromPreferencesAsync(reload: false).ConfigureAwait(true);
         GoHome();
     }
@@ -459,24 +495,13 @@ public sealed partial class MainForm : Form
 
     private void EditTagsButton_Click(object? sender, EventArgs e)
     {
-        _browser.Stop();
-        using var f = _serviceProvider.GetRequiredService<EditTagsControl>();
-        _browser.Visible = false;
-        _editTagsControl.PrepareToShow();
-        _editTagsControl.Visible = true;
-        _titleLabel.Text = "Edit Tags";
-        _browseBackButton.Enabled = true;
-        _browseForwardButton.Enabled = false;
-        _sortButton.Visible = false;
-        _filterButton.Visible = false;
-        _searchText.Visible = false;
-        _filterClearButton.Visible = false;
+        using var f = _serviceProvider.GetRequiredService<EditTagsForm>();
+        f.ShowDialog(this);
     }
 
     private void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
     {
         UpdateTagTypes();
-        _browser.Reload();
         //TODO: see if our filter/sort is still valid
     }
 
@@ -623,8 +648,6 @@ public sealed partial class MainForm : Form
 
     private void Navigate(string path)
     {
-        _editTagsControl.Visible = false;
-        _browser.Visible = true;
         var url = $"http://localhost:{_client.Port}{path}";
         Uri uri = new(url);
         if (_browser.Source?.Equals(uri) ?? false)
@@ -639,26 +662,22 @@ public sealed partial class MainForm : Form
 
     private void BrowseBackButton_Click(object? sender, EventArgs e)
     {
-        if (_editTagsControl.Visible)
-        {
-            // Go "back" to the browser.
-            _editTagsControl.Visible = false;
-            _browser.Visible = true;
-            _browser.Reload();
-        }
-        else
-        {
-            _browser.GoBack();
-        }
+        _browser.GoBack();
     }
 
     private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
+        if (!_browser.Visible)
+            return;
+
         _titleLabel.Text = "Loading...";
     }
 
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
+        if (!_browser.Visible)
+            return;
+
         var title = _browser.CoreWebView2.DocumentTitle;
         if (title.Length > 100)
             title = title[..100] + "...";
@@ -1139,6 +1158,30 @@ public sealed partial class MainForm : Form
                 _searchText.TextBox.Focus();
                 _searchText.TextBox.SelectAll();
                 break;
+
+            case "context-menu":
+                if (message.Ids is null || message.Ids.Count == 0)
+                    return;
+                if (MovieId.HasPrefix(message.Ids[0]))
+                {
+                    ShowMovieContextMenu(message.Ids.Select(x => new MovieId(x)));
+                }
+                else if (TagId.HasPrefix(message.Ids[0]))
+                {
+                    ShowTagContextMenu(message.Ids.Select(x => new TagId(x)));
+                }
+                break;
+
+            case "close-context-menu":
+                _filterButton.DropDown.Close();
+                _sortButton.DropDown.Close();
+                _menuButton.DropDown.Close();
+                _movieContextMenu.Close();
+                break;
+
+            case "play":
+                OpenMovie(new MovieId(message.Ids!.First()));
+                break;
         }
     }
 
@@ -1163,5 +1206,305 @@ public sealed partial class MainForm : Form
         e.Request.Headers.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         e.Request.Headers.SetHeader("Pragma", "no-cache");
         e.Request.Headers.SetHeader("Expires", "0");
+    }
+
+    private void ShowMovieContextMenu(IEnumerable<MovieId> movieIds)
+    {
+        _movieContextMenuIds.Clear();
+        _movieContextMenuIds.AddRange(movieIds);
+        var one = _movieContextMenuIds.Count == 1;
+        _movieContextOpenButton.Enabled = one;
+        _movieContextPropertiesButton.Enabled = one;
+        _movieContextMenu.Show(Cursor.Position);
+    }
+
+    private void MovieContextOpenButton_Click(object? sender, EventArgs e)
+    {
+        if (_movieContextMenuIds.Count != 1)
+            return;
+
+        OpenMovie(_movieContextMenuIds.Single());
+    }
+
+    private void MovieContextDeleteButton_Click(object? sender, EventArgs e)
+    {
+        DeleteMovies(_movieContextMenuIds);
+    }
+
+    private void MovieContextAddTagButton_Click(object? sender, EventArgs e)
+    {
+        AddTagToMovies(_movieContextMenuIds);
+    }
+
+    private void MovieContextPropertiesButton_Click(object? sender, EventArgs e)
+    {
+        if (_movieContextMenuIds.Count != 1)
+            return;
+
+        using var f = _serviceProvider.GetRequiredService<MoviePropertiesForm>();
+        f.Initialize(_movieContextMenuIds.Single());
+        if (f.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        _browser.Reload();
+    }
+
+    private void ShowTagContextMenu(IEnumerable<TagId> tagIds)
+    {
+        //TODO
+        throw new NotImplementedException();
+    }
+
+    private void OpenMovie(MovieId movieId)
+    {
+        var movie = _libraryProvider.GetMovie(movieId);
+        var query = HttpUtility.ParseQueryString("");
+        query["movieId"] = movie.Id.Value;
+        query["sessionPassword"] = _client.SessionPassword;
+        var url = $"http://localhost:{_client.Port}/movie.m3u8?{query}";
+
+        var which = _preferences.GetEnum<VlcInstallationToUse>(Preferences.Key.Shared_VlcInstallationToUse);
+        if (which == VlcInstallationToUse.Automatic)
+            which = IsVlcInstalled() ? VlcInstallationToUse.System : VlcInstallationToUse.Bundled;
+
+        var extraArgs = "";
+        if (which == VlcInstallationToUse.Bundled)
+        {
+            var configPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Jackpot",
+                "vlcrc"
+            );
+
+            if (!File.Exists(configPath))
+            {
+                File.WriteAllText(
+                    configPath,
+                    """
+                    metadata-network-access=0
+                    qt-updates-notif=0
+                    qt-privacy-ask=0
+                    """
+                );
+            }
+
+            extraArgs = $"--config \"{configPath}\"";
+        }
+
+        ProcessStartInfo psi =
+            new()
+            {
+                FileName =
+                    which == VlcInstallationToUse.System
+                        ? "vlc.exe"
+                        : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
+                Arguments = $"--fullscreen --loop --high-priority --no-video-title-show {extraArgs} -- \"{url}\"",
+                UseShellExecute = which == VlcInstallationToUse.System,
+            };
+
+#if DEBUG
+        // When debugging, it can be annoying for VLC to actually appear every time.
+        if (
+            MessageBox.Show(
+                "Proceed?\n\n" + psi.FileName + " " + psi.Arguments,
+                "DEBUG - Open Movie",
+                MessageBoxButtons.OKCancel
+            ) != DialogResult.OK
+        )
+            return;
+#endif
+
+        using var p = Process.Start(psi)!;
+        ApplicationSubProcesses.Add(p);
+
+        static bool IsVlcInstalled()
+        {
+            try
+            {
+                using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
+                return key is not null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    private void DeleteMovies(List<MovieId> movieIds)
+    {
+        if (movieIds.Count == 0)
+            return;
+
+        string message;
+        if (movieIds.Count == 1)
+        {
+            var movie = _libraryProvider.GetMovie(movieIds[0]);
+            message = $"Are you sure you want to delete this movie?\n\n ● {movie.Filename}";
+        }
+        else
+        {
+            List<string> names = [];
+            foreach (var id in movieIds.Take(5))
+            {
+                var movie = _libraryProvider.GetMovie(id);
+                names.Add(" ● " + movie.Filename);
+            }
+            if (movieIds.Count > 5)
+                names.Add($"(and {movieIds.Count - 5:#,##0} more)");
+            message =
+                $"Are you sure you want to delete these {movieIds.Count:#,##0} movies?\n\n{string.Join("\n\n", names)}";
+        }
+
+        if (
+            MessageBox.Show(
+                message,
+                "Delete Movie",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2
+            ) != DialogResult.OK
+        )
+        {
+            return;
+        }
+
+        try
+        {
+            using SimpleProgressForm f =
+                new(
+                    (updateProgress, updateMessage, cancel) =>
+                    {
+                        updateMessage("Deleting...");
+
+                        var count = movieIds.Count;
+                        var i = 0;
+                        foreach (var id in movieIds)
+                        {
+                            _libraryProvider.DeleteMovieAsync(id, updateProgress, cancel).GetAwaiter().GetResult();
+
+                            i++;
+                            updateProgress((double)i / count);
+                        }
+                    }
+                );
+
+            var result = f.ShowDialog(this);
+            if (result == DialogResult.Abort)
+            {
+                MessageBox.Show(
+                    this,
+                    f.Exception!.SourceException.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+
+            _browser.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void AddTagToMovies(List<MovieId> movieContextMenuIds)
+    {
+        using var f = _serviceProvider.GetRequiredService<AddTagToMoviesForm>();
+        f.Initialize(movieContextMenuIds);
+        f.Text = "Add Tag";
+        if (f.ShowDialog(this) == DialogResult.OK)
+            _browser.Reload();
+    }
+
+    private async void ViewListButton_Click(object? sender, EventArgs e)
+    {
+        await ChangeViewAsync(LibraryViewStyle.List).ConfigureAwait(true);
+    }
+
+    private async void ViewGridButton_Click(object? sender, EventArgs e)
+    {
+        await ChangeViewAsync(LibraryViewStyle.Grid).ConfigureAwait(true);
+    }
+
+    private async Task ChangeViewAsync(LibraryViewStyle style)
+    {
+        _preferences.SetEnum(Preferences.Key.Shared_LibraryViewStyle, style);
+        await UpdateViewFromPreferencesAsync().ConfigureAwait(true);
+    }
+
+    private async Task UpdateViewFromPreferencesAsync(bool reload = true, CancellationToken cancel = default)
+    {
+        var style = _preferences.GetEnum<LibraryViewStyle>(Preferences.Key.Shared_LibraryViewStyle);
+        _viewListButton.Checked = style == LibraryViewStyle.List;
+        _viewGridButton.Checked = style == LibraryViewStyle.Grid;
+        await _client.RefreshLibraryAsync(cancel).ConfigureAwait(true);
+        if (reload)
+            _browser.Reload();
+    }
+
+    private void MovieContextExportButton_Click(object? sender, EventArgs e)
+    {
+        var movieIds = _movieContextMenuIds;
+
+        // Prompt for output directory.
+        using FolderBrowserDialog b =
+            new()
+            {
+                AutoUpgradeEnabled = true,
+                Description = "Select Output Directory",
+                ShowNewFolderButton = true,
+                RootFolder = Environment.SpecialFolder.Desktop,
+                UseDescriptionForTitle = true,
+            };
+        if (b.ShowDialog(this) != DialogResult.OK)
+            return;
+        var outDir = b.SelectedPath;
+
+        var movies = _libraryProvider.GetMovies().ToDictionary(x => x.Id);
+
+        using SimpleProgressForm f =
+            new(
+                (updateProgress, updateMessage, cancel) =>
+                {
+                    var count = movieIds.Count;
+                    var i = 0;
+                    var fileInterval = 1d / count;
+                    foreach (var movieId in movieIds)
+                    {
+                        var movie = movies[movieId];
+                        var outFilePath = Path.Combine(outDir, movie.Filename + ".mp4");
+
+                        var name = movie.Filename;
+                        if (name.Length > 40)
+                            name = name[..40] + "...";
+
+                        updateMessage($"File {i + 1:#,##0} of {count:#,##0}\n{name}");
+
+                        if (!File.Exists(outFilePath))
+                            _movieExporter.Export(
+                                movie,
+                                outFilePath,
+                                x => updateProgress((x + i) * fileInterval),
+                                cancel
+                            );
+
+                        i++;
+                        updateProgress((double)i / count);
+                    }
+                }
+            );
+
+        if (f.ShowDialog(this) == DialogResult.Abort)
+        {
+            MessageBox.Show(
+                this,
+                f.Exception!.SourceException.Message,
+                "Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
     }
 }

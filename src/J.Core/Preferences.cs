@@ -22,6 +22,7 @@ public sealed class Preferences : IDisposable
         ConvertMoviesForm_OutputDirectory,
         MainForm_WindowMaximizeBehavior,
         MainForm_CompleteWindowState,
+        Shared_LibraryViewStyle,
         Shared_ColumnCount,
     }
 
@@ -45,6 +46,7 @@ public sealed class Preferences : IDisposable
                     "UnscaledSize": {}
                 }
                 """,
+            [Key.Shared_LibraryViewStyle] = LibraryViewStyle.Grid.ToString(),
             [Key.Shared_ColumnCount] = 5L,
         }.ToFrozenDictionary();
 

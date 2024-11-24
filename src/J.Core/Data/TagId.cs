@@ -2,7 +2,9 @@
 
 public sealed class TagId : IdBase<TagId>, IEquatable<TagId>
 {
-    protected override string Prefix => "tag-";
+    private const string PREFIX = "tag-";
+
+    protected override string Prefix => PREFIX;
 
     public TagId()
         : base() { }
@@ -11,4 +13,6 @@ public sealed class TagId : IdBase<TagId>, IEquatable<TagId>
         : base(value) { }
 
     protected override TagId Create(string value) => new(value);
+
+    public static bool HasPrefix(string value) => value.StartsWith(PREFIX);
 }

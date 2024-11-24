@@ -1,5 +1,8 @@
 ﻿using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using J.Core;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 
 namespace J.App;
 
@@ -73,6 +76,13 @@ public sealed partial class Ui
     public Font BigFont => _bigFont.Value;
     public Font BigBoldFont => _bigBoldFont.Value;
     public Font TextBoxFont => _textboxFont.Value;
+
+    /// <summary>
+    /// The Button control leaves a one-pixel border around the button. This doesn't scale with DPI!
+    /// This property makes it clear what's going on any time we need to use this DPI-independent pixel value.
+    /// This "padding" doesn't count in terms of the Padding property, it's purely visual in the paint routine.
+    /// </summary>
+    public int BuiltInVisualButtonPadding = 1;
 
     public int Unscale(int scaledLength)
     {
@@ -556,7 +566,7 @@ public sealed partial class Ui
 
     public ContextMenuStrip NewContextMenuStrip()
     {
-        return new() { Renderer = new MyToolStripRenderer(this) };
+        return new() { Renderer = new MyToolStripRenderer(this), Font = Font };
     }
 
     public Label NewLabel(string text)
@@ -589,9 +599,8 @@ public sealed partial class Ui
         return new(BigFont, BigBoldFont)
         {
             Dock = DockStyle.Fill,
-            Padding = GetPoint(8, 12),
             SizeMode = TabSizeMode.Fixed,
-            ItemSize = GetSize(unscaledTabWidth, 40),
+            ItemSize = GetSize(unscaledTabWidth, 30),
         };
     }
 
@@ -663,10 +672,15 @@ public sealed partial class Ui
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = true,
                 ReadOnly = true,
-                BorderStyle = BorderStyle.None,
+                BorderStyle = BorderStyle.Fixed3D,
+                CellBorderStyle = DataGridViewCellBorderStyle.None,
                 GridColor = MyColors.DataGridLines,
+                BackgroundColor = MyColors.DataGridBackground,
+                AlternatingRowsDefaultCellStyle = new() { BackColor = Color.Gray },
                 Font = BigFont,
             };
+        grid.AlternatingRowsDefaultCellStyle.BackColor = MyColors.DataGridAlternateRowBackground;
+        grid.DefaultCellStyle.BackColor = MyColors.DataGridRowBackground;
         grid.RowTemplate.Height = GetLength(26);
         FixRightClickSelection(grid);
         return grid;
@@ -753,11 +767,22 @@ public sealed partial class Ui
 
     public Panel NewPanel() => new() { };
 
-    public ComboBox NewDropDown(int unscaledWidth)
+    public ComboBox NewDropDownList(int unscaledWidth)
     {
         return new()
         {
             DropDownStyle = ComboBoxStyle.DropDownList,
+            AutoSize = true,
+            Width = GetLength(unscaledWidth),
+        };
+    }
+
+    public ComboBox NewAutoCompleteDropDown(int unscaledWidth)
+    {
+        return new()
+        {
+            AutoCompleteMode = AutoCompleteMode.Suggest,
+            AutoCompleteSource = AutoCompleteSource.ListItems,
             AutoSize = true,
             Width = GetLength(unscaledWidth),
         };
@@ -784,6 +809,54 @@ public sealed partial class Ui
         };
     }
 
+    public MyTextBox NewWordWrapTextbox(int unscaledWidth, int unscaledHeight)
+    {
+        MyTextBox textBox =
+            new(this)
+            {
+                Size = GetSize(unscaledWidth, unscaledHeight),
+                Font = TextBoxFont,
+                Multiline = true,
+                WordWrap = true,
+                CueFont = BigFont,
+            };
+
+        textBox.KeyDown += static (sender, e) =>
+        {
+            // Prevent Enter key from creating new lines
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+        };
+
+        textBox.KeyPress += static (sender, e) =>
+        {
+            // Prevent manual insertion of newline characters
+            if (e.KeyChar == (char)Keys.Return)
+            {
+                e.Handled = true;
+                return;
+            }
+        };
+
+        textBox.TextChanged += static (sender, e) =>
+        {
+            var textBox = (TextBox)sender!;
+
+            // Remove any newline characters that might have been pasted
+            if (textBox.Text.Contains(Environment.NewLine))
+            {
+                textBox.Text = textBox.Text.Replace(Environment.NewLine, " ");
+                textBox.SelectionStart = textBox.Text.Length; // Move cursor to end
+            }
+        };
+
+        return textBox;
+    }
+
     public CheckBox NewCheckBox(string text)
     {
         return new() { Text = text, AutoSize = true };
@@ -797,6 +870,60 @@ public sealed partial class Ui
     public NumericUpDown NewNumericUpDown(int unscaledWidth)
     {
         return new() { AutoSize = true, MinimumSize = GetSize(unscaledWidth, 0) };
+    }
+
+    public WebView2 NewWebView2()
+    {
+        WebView2 browser =
+            new()
+            {
+                Dock = DockStyle.Fill,
+                Padding = Padding.Empty,
+                Margin = Padding.Empty,
+                BackColor = MyColors.MainFormBackground,
+            };
+
+        browser.CoreWebView2InitializationCompleted += delegate
+        {
+            var settings = browser.CoreWebView2.Settings;
+            settings.AreBrowserAcceleratorKeysEnabled = false;
+            settings.AreDefaultContextMenusEnabled = false;
+            settings.AreDefaultScriptDialogsEnabled = false;
+            settings.AreHostObjectsAllowed = false;
+            settings.IsBuiltInErrorPageEnabled = false;
+            settings.IsGeneralAutofillEnabled = false;
+            settings.IsNonClientRegionSupportEnabled = false;
+            settings.IsPasswordAutosaveEnabled = false;
+            settings.IsPinchZoomEnabled = false;
+            settings.IsReputationCheckingRequired = false;
+            settings.IsScriptEnabled = true;
+            settings.IsStatusBarEnabled = false;
+            settings.IsSwipeNavigationEnabled = false;
+            settings.IsWebMessageEnabled = true;
+            settings.IsZoomControlEnabled = false;
+
+#if DEBUG
+            settings.AreDevToolsEnabled = true;
+#else
+            settings.AreDevToolsEnabled = false;
+#endif
+
+            browser.BeginInvoke(() =>
+            {
+                browser.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+                browser.CoreWebView2.WebResourceRequested += (sender, e) =>
+                {
+                    // Never cache anything.
+                    e.Request.Headers.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+                    e.Request.Headers.SetHeader("Pragma", "no-cache");
+                    e.Request.Headers.SetHeader("Expires", "0");
+                };
+            });
+        };
+
+        _ = browser.EnsureCoreWebView2Async(Program.SharedCoreWebView2Environment);
+
+        return browser;
     }
 }
 

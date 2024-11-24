@@ -1,14 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
-using System.Web;
 using Amazon.S3;
-using J.Base;
 using J.Core;
 using J.Core.Data;
 using J.Server;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Win32;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCore();
@@ -31,8 +27,12 @@ var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
 var preferences = app.Services.GetRequiredService<Preferences>();
-Dictionary<ListPageKey, Lazy<WallPage>> listPages = [];
-Dictionary<TagId, Lazy<WallPage>> tagPages = [];
+Dictionary<ListPageKey, Lazy<Html>> listPages = [];
+Dictionary<TagId, Lazy<Html>> tagPages = [];
+
+var staticFiles = Directory
+    .GetFiles(Path.Combine(AppContext.BaseDirectory, "static"))
+    .ToDictionary(x => Path.GetFileName(x), x => File.ReadAllBytes(x));
 
 void RefreshLibrary()
 {
@@ -43,14 +43,15 @@ void RefreshLibrary()
         new(
             libraryProvider.GetMovies().ToDictionary(x => x.Id),
             libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId),
-            libraryProvider.GetTags().ToDictionary(x => x.Id)
+            libraryProvider.GetTags().ToDictionary(x => x.Id),
+            libraryProvider.GetTagTypes().ToDictionary(x => x.Id)
         );
 
     var movies = GetFilteredMovies(libraryProvider, filter);
 
     // List pages
     {
-        Dictionary<ListPageKey, Lazy<WallPage>> dict = [];
+        Dictionary<ListPageKey, Lazy<Html>> dict = [];
         dict[new ListPageKey(ListPageType.Movies, null)] = new(
             () => NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies")
         );
@@ -66,7 +67,7 @@ void RefreshLibrary()
 
     // Individual tag pages
     {
-        Dictionary<TagId, Lazy<WallPage>> dict = [];
+        Dictionary<TagId, Lazy<Html>> dict = [];
         var movieIds = movies.Select(x => x.Id).ToHashSet();
         foreach (var tag in libraryProvider.GetTags())
             dict[tag.Id] = new(
@@ -155,7 +156,7 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
     }
 }
 
-static WallPage GetTagListPage(
+Html GetTagListPage(
     LibraryProvider libraryProvider,
     TagType tagType,
     SortOrder sortOrder,
@@ -164,19 +165,19 @@ static WallPage GetTagListPage(
 {
     var tags = libraryProvider.GetTags(tagType.Id);
     var dict = libraryProvider.GetRandomMoviePerTag(tagType);
-    List<WallPage.Block> blocks = [];
+    List<PageBlock> blocks = [];
     foreach (var tag in tags)
     {
         if (!dict.TryGetValue(tag.Id, out var movieId))
             continue;
 
-        WallPage.Block block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, []);
+        PageBlock block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, [], []);
         blocks.Add(block);
     }
-    return NewPageFromBlocks(blocks, sortOrder, tagType.PluralName);
+    return NewPageFromBlocks(blocks, [], sortOrder, tagType.PluralName);
 }
 
-static string GetField(WallPage.Block block, string field)
+static string GetField(PageBlock block, string field)
 {
     if (field == "name")
         return block.Title;
@@ -190,7 +191,7 @@ static string GetField(WallPage.Block block, string field)
     return "";
 }
 
-static WallPage NewPageFromBlocks(List<WallPage.Block> blocks, SortOrder sortOrder, string title)
+Html NewPageFromBlocks(List<PageBlock> blocks, List<string> metadataKeys, SortOrder sortOrder, string title)
 {
     if (sortOrder.Shuffle)
     {
@@ -226,7 +227,19 @@ static WallPage NewPageFromBlocks(List<WallPage.Block> blocks, SortOrder sortOrd
             blocks.Reverse();
     }
 
-    return new(blocks, title);
+    var style = preferences.GetEnum<LibraryViewStyle>(Preferences.Key.Shared_LibraryViewStyle);
+    var columnCount = (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount);
+    return style switch
+    {
+        LibraryViewStyle.List => ListPage.GenerateHtml(
+            blocks,
+            metadataKeys,
+            title,
+            configuredSessionPassword /*, columnCount*/
+        ),
+        LibraryViewStyle.Grid => WallPage.GenerateHtml(blocks, title, configuredSessionPassword, columnCount),
+        _ => throw new Exception($"Unexpected LibraryViewStyle: {style}"),
+    };
 }
 
 static Dictionary<TagTypeId, string> GetSortTags(Movie movie, LibraryMetadata libraryMetadata)
@@ -239,18 +252,29 @@ static Dictionary<TagTypeId, string> GetSortTags(Movie movie, LibraryMetadata li
         .ToDictionary(x => x.Key, x => x.Min(x => x.Name)!);
 }
 
-static WallPage NewPageFromMovies(
-    IEnumerable<Movie> movies,
-    LibraryMetadata libraryMetadata,
-    SortOrder sortOrder,
-    string title
-)
+Html NewPageFromMovies(IEnumerable<Movie> movies, LibraryMetadata libraryMetadata, SortOrder sortOrder, string title)
 {
+    var metadataKeys = libraryMetadata
+        .TagTypes.Values.OrderBy(x => x.SortIndex)
+        .ThenBy(x => x.SingularName)
+        .Select(x => x.SingularName)
+        .ToList();
+    metadataKeys.Remove("Date Added");
+    metadataKeys.Add("Date Added");
+
     return NewPageFromBlocks(
         (
             from x in movies
-            select new WallPage.Block(x.Id, null, x.Filename, x.DateAdded, GetSortTags(x, libraryMetadata))
+            select new PageBlock(
+                x.Id,
+                null,
+                x.Filename,
+                x.DateAdded,
+                GetSortTags(x, libraryMetadata),
+                libraryMetadata.GetMovieMetadata(x.Id)
+            )
         ).ToList(),
+        metadataKeys,
         sortOrder,
         title
     );
@@ -298,22 +322,32 @@ void CheckSessionPassword(string sessionPassword)
         throw new Exception("Unrecognized caller.");
 }
 
-static bool IsVlcInstalled()
-{
-    try
-    {
-        using var key = Registry.ClassesRoot.OpenSubKey(@"Applications\vlc.exe");
-        return key is not null;
-    }
-    catch
-    {
-        return false;
-    }
-}
-
 RefreshLibrary();
 
 // ---
+
+app.MapGet(
+    "/static/{filename}",
+    async ([FromRoute] string filename, HttpResponse response, CancellationToken cancel) =>
+    {
+        if (!staticFiles.TryGetValue(filename, out var bytes))
+        {
+            response.StatusCode = 404;
+            return;
+        }
+
+        var ext = Path.GetExtension(filename);
+        response.ContentType = ext switch
+        {
+            ".css" => "text/css",
+            ".js" => "text/javascript",
+            _ => "application/octet-stream",
+        };
+
+        await response.StartAsync(cancel);
+        await response.Body.WriteAsync(bytes, cancel);
+    }
+);
 
 app.MapGet(
     "/movie.m3u8",
@@ -400,12 +434,11 @@ app.MapGet(
     {
         CheckSessionPassword(sessionPassword);
 
-        var listPageType = (ListPageType)Enum.Parse(typeof(ListPageType), type);
+        var listPageType = Enum.Parse<ListPageType>(type);
         ListPageKey key = new(listPageType, tagTypeId is null ? null : new(tagTypeId));
 
         response.ContentType = "text/html";
-        var columnCount = (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount);
-        return listPages[key].Value.ToHtml(configuredSessionPassword, columnCount);
+        return listPages[key].Value.Content;
     }
 );
 
@@ -416,62 +449,18 @@ app.MapGet(
         CheckSessionPassword(sessionPassword);
 
         response.ContentType = "text/html";
-        var columnCount = (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount);
-        return tagPages[new(tagId)].Value.ToHtml(configuredSessionPassword, columnCount);
+        return tagPages[new(tagId)].Value.Content;
     }
 );
 
-app.MapPost(
-    "/open-movie",
+app.MapGet(
+    "/movie-preview.html",
     ([FromQuery, Required] string movieId, [FromQuery, Required] string sessionPassword, HttpResponse response) =>
     {
         CheckSessionPassword(sessionPassword);
-        var movie = libraryProvider.GetMovie(new(movieId));
-        var query = HttpUtility.ParseQueryString("");
-        query["movieId"] = movie.Id.Value;
-        query["sessionPassword"] = configuredSessionPassword;
-        var url = $"http://localhost:{configuredPort}/movie.m3u8?{query}";
 
-        var which = preferences.GetEnum<VlcInstallationToUse>(Preferences.Key.Shared_VlcInstallationToUse);
-        if (which == VlcInstallationToUse.Automatic)
-            which = IsVlcInstalled() ? VlcInstallationToUse.System : VlcInstallationToUse.Bundled;
-
-        var extraArgs = "";
-        if (which == VlcInstallationToUse.Bundled)
-        {
-            var configPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Jackpot",
-                "vlcrc"
-            );
-
-            if (!File.Exists(configPath))
-            {
-                File.WriteAllText(
-                    configPath,
-                    """
-                    metadata-network-access=0
-                    qt-updates-notif=0
-                    qt-privacy-ask=0
-                    """
-                );
-            }
-
-            extraArgs = $"--config \"{configPath}\"";
-        }
-
-        ProcessStartInfo psi =
-            new()
-            {
-                FileName =
-                    which == VlcInstallationToUse.System
-                        ? "vlc.exe"
-                        : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
-                Arguments = $"--fullscreen --loop --high-priority --no-video-title-show {extraArgs} -- \"{url}\"",
-                UseShellExecute = which == VlcInstallationToUse.System,
-            };
-        using var p = Process.Start(psi)!;
-        ApplicationSubProcesses.Add(p);
+        response.ContentType = "text/html";
+        return MoviePreviewPage.GenerateHtml(new(movieId), sessionPassword).Content;
     }
 );
 
@@ -485,11 +474,27 @@ enum ListPageType
 
 readonly record struct ListPageKey(ListPageType ListPageType, TagTypeId? TagTypeId);
 
-readonly record struct LibraryMetadata(
+record class LibraryMetadata(
     Dictionary<MovieId, Movie> Movies,
     ILookup<MovieId, TagId> MovieTags,
-    Dictionary<TagId, Tag> Tags
-);
+    Dictionary<TagId, Tag> Tags,
+    Dictionary<TagTypeId, TagType> TagTypes
+)
+{
+    public Dictionary<string, string> GetMovieMetadata(MovieId movieId)
+    {
+        var dict = MovieTags[movieId]
+            .Select(tagId => Tags[tagId])
+            .GroupBy(tag => TagTypes[tag.TagTypeId].SingularName)
+            .ToDictionary(
+                group => group.Key,
+                group => string.Join(" &nbsp;&bull;&nbsp; ", group.Select(tag => tag.Name).OrderBy(name => name))
+            );
+
+        dict["Date Added"] = Movies[movieId].DateAdded.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+        return dict;
+    }
+}
 
 public partial class Program
 {

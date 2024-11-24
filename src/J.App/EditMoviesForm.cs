@@ -102,19 +102,19 @@ public sealed partial class EditMoviesForm : Form
                 _grid.RowContextMenuStripNeeded += Grid_RowContextMenuStripNeeded;
                 _grid.DataSource = _data;
 
-                var col_name = _grid.Columns[_grid.Columns.Add("name", "Name")];
+                var colName = _grid.Columns[_grid.Columns.Add("name", "Name")];
                 {
-                    col_name.Width = ui.GetLength(550);
-                    col_name.DataPropertyName = "name";
-                    col_name.Frozen = true;
+                    colName.Width = ui.GetLength(550);
+                    colName.DataPropertyName = "name";
+                    colName.Frozen = true;
                 }
 
-                var col_date_added = _grid.Columns[_grid.Columns.Add("date_added", "Date Added")];
+                var colDateAdded = _grid.Columns[_grid.Columns.Add("date_added", "Date Added")];
                 {
-                    col_date_added.Width = ui.GetLength(225);
-                    col_date_added.DataPropertyName = "date_added";
-                    col_date_added.DividerWidth = ui.GetLength(3);
-                    col_date_added.Frozen = true;
+                    colDateAdded.Width = ui.GetLength(225);
+                    colDateAdded.DataPropertyName = "date_added";
+                    colDateAdded.DividerWidth = ui.GetLength(3);
+                    colDateAdded.Frozen = true;
                 }
 
                 foreach (var tagType in tagTypes)
@@ -277,7 +277,7 @@ public sealed partial class EditMoviesForm : Form
         var id = (MovieId)row["id"];
         var oldName = (string)row["name"];
 
-        using EditMoviesRenameMovieForm f = new(oldName);
+        using RenameMovieForm f = new(oldName);
         if (f.ShowDialog(this) != DialogResult.OK)
             return;
 

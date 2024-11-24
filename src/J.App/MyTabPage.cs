@@ -1,4 +1,6 @@
-﻿namespace J.App;
+﻿using J.Core;
+
+namespace J.App;
 
 public class MyTabPage : TabPage
 {

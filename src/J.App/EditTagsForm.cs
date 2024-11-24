@@ -4,40 +4,79 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace J.App;
 
-public sealed class EditTagsControl : UserControl
+public sealed class EditTagsForm : Form
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly IServiceProvider _serviceProvider;
     private readonly MyTabControl _tabs;
     private readonly NewTagTypeTab _newTab;
     private readonly Dictionary<TagTypeId, TagsTab> _tagsTabs = [];
+    private readonly TableLayoutPanel _table;
+    private readonly FlowLayoutPanel _buttonFlow;
+    private readonly Button _closeButton;
 
     public event EventHandler? TagTypeChanged;
     public event EventHandler? TagChanged;
 
-    public EditTagsControl(LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
+    public EditTagsForm(LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
     {
         _libraryProvider = libraryProvider;
         _serviceProvider = serviceProvider;
         Ui ui = new(this);
 
-        Controls.Add(_tabs = ui.NewTabControl(120));
+        Controls.Add(_table = ui.NewTable(1, 2));
         {
-            _tabs.TabPages.Add(_newTab = new());
+            _table.RowStyles[0].SizeType = SizeType.Percent;
+            _table.RowStyles[0].Height = 100;
+
+            _table.Controls.Add(_tabs = ui.NewTabControl(120), 0, 0);
             {
-                _newTab.Create += NewTab_Create;
+                _tabs.Margin += ui.BottomSpacing;
+
+                _tabs.TabPages.Add(_newTab = new());
+                {
+                    _newTab.Create += NewTab_Create;
+                }
+            }
+
+            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 1);
+            {
+                _buttonFlow.Dock = DockStyle.Right;
+
+                _buttonFlow.Controls.Add(_closeButton = ui.NewButton("Close"));
+                {
+                    _closeButton.Click += delegate
+                    {
+                        Close();
+                    };
+                }
             }
         }
 
-        Text = "Edit Tags";
         Padding = ui.DefaultPadding;
-        BackColor = MyColors.TabBackground;
+        Text = "Edit Tags";
+        StartPosition = FormStartPosition.CenterScreen;
+        MinimumSize = Size = ui.GetSize(700, 700);
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MinimizeBox = false;
+        MaximizeBox = true;
+        ShowIcon = false;
+        ShowInTaskbar = false;
+        AcceptButton = CancelButton = _closeButton;
     }
 
-    public void PrepareToShow()
+    protected override void OnLoad(EventArgs e)
     {
+        base.OnLoad(e);
         UpdateTagTabs();
+        _tabs.SelectedIndex = 0;
         UpdateAllLists();
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _closeButton.Focus();
     }
 
     private void NewTab_Create(object? sender, NewTagTypeTab.CreateEventArgs e)

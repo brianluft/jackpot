@@ -53,7 +53,7 @@ public sealed class OptionsForm : Form
                         _generalFlow.Padding = ui.DefaultPadding;
 
                         _generalFlow.Controls.Add(
-                            ui.NewLabeledPair("Thumbnail columns:", _columnCountCombo = ui.NewDropDown(200))
+                            ui.NewLabeledPair("Thumbnail columns:", _columnCountCombo = ui.NewDropDownList(200))
                         );
                         {
                             _columnCountCombo.Margin += ui.BottomSpacing;
@@ -65,7 +65,7 @@ public sealed class OptionsForm : Form
                         }
 
                         _generalFlow.Controls.Add(
-                            ui.NewLabeledPair("&VLC installation:", _vlcCombo = ui.NewDropDown(200))
+                            ui.NewLabeledPair("&VLC installation:", _vlcCombo = ui.NewDropDownList(200))
                         );
                         {
                             _vlcCombo.Margin += ui.BottomSpacing;
@@ -79,7 +79,7 @@ public sealed class OptionsForm : Form
                         _generalFlow.Controls.Add(
                             ui.NewLabeledPair(
                                 "Window &maximize behavior:",
-                                _windowMaximizeBehaviorCombo = ui.NewDropDown(200)
+                                _windowMaximizeBehaviorCombo = ui.NewDropDownList(200)
                             )
                         );
                         {

@@ -2,7 +2,7 @@
 
 namespace J.App;
 
-public sealed class EditMoviesRenameMovieForm : Form
+public sealed class RenameMovieForm : Form
 {
     private readonly TableLayoutPanel _table;
     private readonly TextBox _oldText,
@@ -14,7 +14,7 @@ public sealed class EditMoviesRenameMovieForm : Form
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public string NewName { get; private set; } = "";
 
-    public EditMoviesRenameMovieForm(string name)
+    public RenameMovieForm(string name)
     {
         Ui ui = new(this);
 

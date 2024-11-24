@@ -72,7 +72,7 @@ public sealed class ConvertMoviesForm : Form
                 _table.SetColumnSpan(_topFlow1, 2);
                 _topFlow1.Padding += ui.BottomSpacing;
 
-                _topFlow1.Controls.Add(ui.NewLabeledPair("Video quality:", _qualityCombo = ui.NewDropDown(200)));
+                _topFlow1.Controls.Add(ui.NewLabeledPair("Video quality:", _qualityCombo = ui.NewDropDownList(200)));
                 {
                     _qualityCombo.Margin += ui.RightSpacing;
 
@@ -93,7 +93,7 @@ public sealed class ConvertMoviesForm : Form
                         _qualityCombo.SelectedIndex = index;
                 }
 
-                _topFlow1.Controls.Add(ui.NewLabeledPair("Compression level:", _speedCombo = ui.NewDropDown(200)));
+                _topFlow1.Controls.Add(ui.NewLabeledPair("Compression level:", _speedCombo = ui.NewDropDownList(200)));
                 {
                     List<string> speeds =
                     [
@@ -121,7 +121,7 @@ public sealed class ConvertMoviesForm : Form
                 _table.SetColumnSpan(_topFlow2, 2);
                 _topFlow2.Padding += ui.BottomSpacing;
 
-                _topFlow2.Controls.Add(ui.NewLabeledPair("Audio bitrate:", _audioCombo = ui.NewDropDown(200)));
+                _topFlow2.Controls.Add(ui.NewLabeledPair("Audio bitrate:", _audioCombo = ui.NewDropDownList(200)));
                 {
                     List<string> speeds =
                     [

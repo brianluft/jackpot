@@ -22,5 +22,14 @@
   <ItemGroup>
     <ProjectReference Include="..\J.Core\J.Core.csproj" />
   </ItemGroup>
+    
+  <ItemGroup>
+    <None Update="static\tabulator.min.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="static\tabulator.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

@@ -1,69 +1,24 @@
 ﻿using System.Net;
 using System.Text.Json;
-using System.Web;
-using J.Core.Data;
 
 namespace J.Server;
 
-public readonly record struct WallPage(List<WallPage.Block> Blocks, string Title)
+public static class WallPage
 {
-    public readonly record struct Block(
-        MovieId MovieId, // movie to get the clip from
-        TagId? TagId, // if targeting a tag instead of a movie on click, this is the tag
-        string Title,
-        DateTimeOffset Date,
-        Dictionary<TagTypeId, string> SortTags
-    );
-
-#pragma warning disable IDE1006 // Naming Styles
-    private readonly record struct BlockJson(string id, string url, string title);
-#pragma warning restore IDE1006 // Naming Styles
-
-    public string ToHtml(string sessionPassword, int columnCount)
+    public static Html GenerateHtml(List<PageBlock> pageBlocks, string title, string sessionPassword, int columnCount)
     {
-        List<BlockJson> blockJsons = new(Blocks.Count);
-
-        foreach (var block in Blocks)
-        {
-            var query = HttpUtility.ParseQueryString("");
-            query["sessionPassword"] = sessionPassword;
-            query["movieId"] = block.MovieId.Value;
-
-            blockJsons.Add(new(block.TagId?.Value ?? block.MovieId.Value, $"/clip.mp4?{query}", block.Title));
-        }
+        var blockJsons = pageBlocks.Select(x => new PageBlockJson(x, sessionPassword)).ToList();
 
         var html = $$"""
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="utf-8">
-                <title>{{WebUtility.HtmlEncode(Title)}}</title>
+                <title>{{WebUtility.HtmlEncode(title)}}</title>
                 <style>
-                    ::-webkit-scrollbar {
-                        width: 14px;
-                    }
-
-                    ::-webkit-scrollbar-track {
-                        background: #1a1a1a;
-                    }
-
-                    ::-webkit-scrollbar-thumb {
-                        background: #444;
-                        border: 3px solid #1a1a1a;
-                        border-radius: 7px;
-                    }
-
-                    ::-webkit-scrollbar-thumb:hover {
-                        background: #555;
-                    }
-
-                    * {
-                        user-select: none;
-                    }
+                    {{PageShared.SharedCss}}
 
                     body {
-                        margin: 0;
-                        padding: 0;
                         overflow: hidden;
                     }
 
@@ -116,7 +71,7 @@ public readonly record struct WallPage(List<WallPage.Block> Blocks, string Title
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                        font-family: system-ui, -apple-system, sans-serif;
+                        font-family: system-ui;
                         font-weight: bold;
                         transform: translateY(-1px);  /* Account for the extra bottom: -1px */
                     }
@@ -137,18 +92,8 @@ public readonly record struct WallPage(List<WallPage.Block> Blocks, string Title
                 </div>
 
                 <script>
-                    // Disable context menu page-wide
-                    document.addEventListener('contextmenu', e => e.preventDefault());
+                    {{PageShared.GetSharedJs(sessionPassword)}}
 
-                    // Capture Ctrl+F and / to focus the search box
-                    document.addEventListener('keydown', function(e) {
-                        if ((e.ctrlKey && e.key === 'f') || (!e.ctrlKey && e.key === '/')) {
-                            e.preventDefault();
-                            window.chrome.webview.postMessage(JSON.stringify({ Type: 'search' }));
-                        }
-                    });
-
-                    // Video data injected from C#
                     const VIDEOS = {{JsonSerializer.Serialize(blockJsons)}};
 
                     // Horizontal grid size only
@@ -163,37 +108,6 @@ public readonly record struct WallPage(List<WallPage.Block> Blocks, string Title
                     const gridContainer = document.getElementById('gridContainer');
                     const virtualHeight = document.getElementById('virtualHeight');
                     const activeVideos = new Map();
-
-                    function openMovie(movieId) {
-                        // Escape the movieId to safely use it in the URL
-                        const escapedMovieId = encodeURIComponent(movieId);
-
-                        // Create the full URL with the escaped movieId
-                        const url = `/open-movie?sessionPassword={{sessionPassword}}&movieId=${escapedMovieId}`;
-
-                        // Send a POST request
-                        fetch(url, { method: 'POST' })
-                            .then(() => {
-                                // cool
-                            })
-                            .catch(error => {
-                                alert('Could not open movie: ' + error.message);
-                            });
-                    }
-
-                    function openTag(id) {
-                        location.href = '/tag.html?sessionPassword={{sessionPassword}}&tagId=' + encodeURIComponent(id) + '&pageIndex=0';
-                    }
-
-                    function open(id) {
-                        if (id.startsWith("movie-")) {
-                            openMovie(id);
-                        } else if (id.startsWith("tag-")) {
-                            openTag(id);
-                        } else {
-                            alert('Invalid ID: ' + id);
-                        }
-                    }
 
                     function calculateDimensions() {
                         const containerWidth = gridContainer.clientWidth - (2 * GAP); // subtract container padding
@@ -356,6 +270,6 @@ public readonly record struct WallPage(List<WallPage.Block> Blocks, string Title
             </html>
             """;
 
-        return html;
+        return new(html);
     }
 }
