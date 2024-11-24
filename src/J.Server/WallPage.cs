@@ -157,7 +157,6 @@ public static class WallPage
                         const video = document.createElement('video');
                         video.loop = true;
                         video.muted = true;
-                        video.style.display = 'none';
 
                         const source = document.createElement('source');
                         source.src = videoData.url;
@@ -181,6 +180,11 @@ public static class WallPage
 
                         cell.appendChild(video);
                         cell.appendChild(titleBar);
+
+                        cell.addEventListener('contextmenu', (event) => {
+                            event.preventDefault();
+                            menu([videoData.id]);
+                        });
 
                         return cell;
                     }
@@ -210,7 +214,6 @@ public static class WallPage
                                 const video = element.querySelector('video');
                                 if (video) {
                                     video.pause();
-                                    video.style.display = 'none';
                                 }
                                 element.remove();
                                 activeVideos.delete(key);
@@ -226,7 +229,6 @@ public static class WallPage
                                     activeVideos.set(i.toString(), cell);
                                     const video = cell.querySelector('video');
                                     if (video) {
-                                        video.style.display = 'block';
                                         video.play().catch(() => {});
                                     }
                                 }
