@@ -6,7 +6,8 @@ namespace J.App;
 public sealed partial class M3u8FolderSync(
     AccountSettingsProvider accountSettingsProvider,
     LibraryProvider libraryProvider,
-    Client client
+    Client client,
+    Preferences preferences
 )
 {
     private readonly string _filesystemInvalidChars =
@@ -18,7 +19,8 @@ public sealed partial class M3u8FolderSync(
     private readonly HashSet<MovieId> _invalidatedMovies = [];
     private bool _invalidatedAll = true;
 
-    public bool Enabled => accountSettingsProvider.Current.EnableLocalM3u8Folder;
+    public bool Enabled =>
+        preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).EnableLocalM3u8Folder;
 
     public void Invalidate(
         IEnumerable<TagTypeId>? tagTypes = null,
@@ -47,8 +49,7 @@ public sealed partial class M3u8FolderSync(
 
     public void InvalidateAll()
     {
-        if (!Enabled)
-            return;
+        // Still invalidate even if sync is disabled, so that the next time it's enabled, it will sync everything.
 
         lock (_lock)
         {
@@ -65,7 +66,9 @@ public sealed partial class M3u8FolderSync(
         {
             var portNumber = client.Port;
             var sessionPassword = client.SessionPassword;
-            var dir = accountSettingsProvider.Current.LocalM3u8FolderPath;
+            var dir = preferences
+                .GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings)
+                .LocalM3u8FolderPath;
 
             var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.TagId, x => x.MovieId);
             var movies = libraryProvider.GetMovies().ToDictionary(x => x.Id);
@@ -240,7 +243,8 @@ public sealed partial class M3u8FolderSync(
 
         if (writeFile)
         {
-            var bytes = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword);
+            var hostname = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).M3u8Hostname;
+            var bytes = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword, hostname);
             File.WriteAllBytes(m3u8FilePath, bytes);
         }
     }

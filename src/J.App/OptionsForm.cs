@@ -8,14 +8,19 @@ public sealed class OptionsForm : Form
     private readonly Preferences _preferences;
     private readonly TableLayoutPanel _table;
     private readonly FlowLayoutPanel _buttonFlow,
-        _generalFlow;
+        _generalFlow,
+        _m3u8Flow;
     private readonly TabControl _tabControl;
-    private readonly TabPage _generalTab;
+    private readonly TabPage _generalTab,
+        _m3u8Page;
     private readonly ComboBox _vlcCombo,
         _windowMaximizeBehaviorCombo,
         _columnCountCombo;
     private readonly Button _okButton,
         _cancelButton;
+    private readonly CheckBox _enableM3u8FolderCheck;
+    private readonly TextBox _m3u8FolderText,
+        _m3u8HostnameText;
 
     // VLC installation to use for playback
     private readonly List<VlcInstallationToUse> _vlcValues =
@@ -44,7 +49,7 @@ public sealed class OptionsForm : Form
             _table.RowStyles[0].SizeType = SizeType.Percent;
             _table.RowStyles[0].Height = 100;
 
-            _table.Controls.Add(_tabControl = ui.NewTabControl(100), 0, 0);
+            _table.Controls.Add(_tabControl = ui.NewTabControl(200), 0, 0);
             {
                 _tabControl.TabPages.Add(_generalTab = ui.NewTabPage("General"));
                 {
@@ -92,6 +97,44 @@ public sealed class OptionsForm : Form
                         }
                     }
                 }
+
+                _tabControl.TabPages.Add(_m3u8Page = ui.NewTabPage("Network Sharing"));
+                {
+                    var m3u8Settings = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
+
+                    _m3u8Page.Controls.Add(_m3u8Flow = ui.NewFlowColumn());
+                    {
+                        _m3u8Flow.Padding = ui.DefaultPadding;
+
+                        _m3u8Flow.Controls.Add(
+                            ui.NewLabel(
+                                "Jackpot can maintain a folder of M3U8 files for non-Windows\ndevices to play via Windows file sharing."
+                            )
+                        );
+
+                        _m3u8Flow.Controls.Add(
+                            _enableM3u8FolderCheck = ui.NewCheckBox("Store M3U8 files in a local folder")
+                        );
+                        {
+                            _enableM3u8FolderCheck.Margin += ui.TopSpacingBig + ui.BottomSpacing;
+                            _enableM3u8FolderCheck.Checked = m3u8Settings.EnableLocalM3u8Folder;
+                        }
+
+                        Control p;
+                        (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
+                        {
+                            _m3u8Flow.Controls.Add(p);
+                            p.Margin = ui.BottomSpacing;
+                            _m3u8FolderText.Text = m3u8Settings.LocalM3u8FolderPath;
+                        }
+
+                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 300);
+                        {
+                            _m3u8Flow.Controls.Add(p);
+                            _m3u8HostnameText.Text = m3u8Settings.M3u8Hostname;
+                        }
+                    }
+                }
             }
 
             _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 1);
@@ -111,7 +154,7 @@ public sealed class OptionsForm : Form
 
         Text = "Options";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(400, 400);
+        MinimumSize = Size = ui.GetSize(500, 400);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -124,16 +167,34 @@ public sealed class OptionsForm : Form
 
     private void OkButton_Click(object? sender, EventArgs e)
     {
-        _preferences.WithTransaction(() =>
+        try
         {
-            _preferences.SetEnum(Preferences.Key.Shared_VlcInstallationToUse, _vlcValues[_vlcCombo.SelectedIndex]);
-            _preferences.SetEnum(
-                Preferences.Key.MainForm_WindowMaximizeBehavior,
-                _windowMaximizeBehaviorValues[_windowMaximizeBehaviorCombo.SelectedIndex]
-            );
-            _preferences.SetInteger(Preferences.Key.Shared_ColumnCount, _columnCountCombo.SelectedIndex + 1);
-        });
-        DialogResult = DialogResult.OK;
-        Close();
+            if (_enableM3u8FolderCheck.Checked)
+            {
+                if (string.IsNullOrWhiteSpace(_m3u8FolderText.Text))
+                    throw new Exception("Please enter a folder for .M3U8 files.");
+            }
+
+            M3u8SyncSettings m3u8SyncSettings =
+                new(_enableM3u8FolderCheck.Checked, _m3u8FolderText.Text, _m3u8HostnameText.Text);
+
+            _preferences.WithTransaction(() =>
+            {
+                _preferences.SetEnum(Preferences.Key.Shared_VlcInstallationToUse, _vlcValues[_vlcCombo.SelectedIndex]);
+                _preferences.SetEnum(
+                    Preferences.Key.MainForm_WindowMaximizeBehavior,
+                    _windowMaximizeBehaviorValues[_windowMaximizeBehaviorCombo.SelectedIndex]
+                );
+                _preferences.SetInteger(Preferences.Key.Shared_ColumnCount, _columnCountCombo.SelectedIndex + 1);
+                _preferences.SetJson(Preferences.Key.M3u8FolderSync_Settings, m3u8SyncSettings);
+            });
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 }

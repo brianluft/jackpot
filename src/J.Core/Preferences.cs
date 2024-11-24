@@ -24,6 +24,7 @@ public sealed class Preferences : IDisposable
         MainForm_CompleteWindowState,
         Shared_LibraryViewStyle,
         Shared_ColumnCount,
+        M3u8FolderSync_Settings,
     }
 
     public Preferences()
@@ -48,6 +49,7 @@ public sealed class Preferences : IDisposable
                 """,
             [Key.Shared_LibraryViewStyle] = LibraryViewStyle.Grid.ToString(),
             [Key.Shared_ColumnCount] = 5L,
+            [Key.M3u8FolderSync_Settings] = JsonSerializer.Serialize(M3u8SyncSettings.Default),
         }.ToFrozenDictionary();
 
         // Make sure every default is one of the four supported types.

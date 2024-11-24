@@ -5,10 +5,7 @@ public readonly record struct AccountSettings(
     string AccessKeyId,
     string SecretAccessKey,
     string Bucket,
-    string PasswordText,
-    bool EnableLocalM3u8Folder,
-    string LocalM3u8FolderPath,
-    string M3u8Hostname
+    string PasswordText
 )
 {
     public Password Password => new(PasswordText);
@@ -20,7 +17,7 @@ public readonly record struct AccountSettings(
         && !string.IsNullOrWhiteSpace(Bucket)
         && !string.IsNullOrWhiteSpace(PasswordText);
 
-    public static AccountSettings Empty => new("", "", "", "", "", false, "", "");
+    public static AccountSettings Empty => new("", "", "", "", "");
 
     public AccountSettings Upgrade()
     {

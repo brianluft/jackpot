@@ -27,6 +27,7 @@ var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
 var preferences = app.Services.GetRequiredService<Preferences>();
+var m3u8Hostname = "localhost";
 Dictionary<ListPageKey, Lazy<Html>> listPages = [];
 Dictionary<TagId, Lazy<Html>> tagPages = [];
 
@@ -38,6 +39,9 @@ void RefreshLibrary()
 {
     var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
     var filter = preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+    m3u8Hostname = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).M3u8Hostname;
+    if (string.IsNullOrWhiteSpace(m3u8Hostname))
+        m3u8Hostname = "localhost";
 
     LibraryMetadata libraryMetadata =
         new(
@@ -360,7 +364,7 @@ app.MapGet(
     ) =>
     {
         CheckSessionPassword(sessionPassword);
-        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword);
+        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword, m3u8Hostname);
         response.ContentType = "application/vnd.apple.mpegurl";
         await response.StartAsync(cancel);
         await response.Body.WriteAsync(m3u8, cancel);

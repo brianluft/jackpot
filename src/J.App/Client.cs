@@ -8,8 +8,11 @@ using J.Core.Data;
 
 namespace J.App;
 
-public sealed class Client(IHttpClientFactory httpClientFactory, AccountSettingsProvider accountSettingsProvider)
-    : IDisposable
+public sealed class Client(
+    IHttpClientFactory httpClientFactory,
+    AccountSettingsProvider accountSettingsProvider,
+    Preferences preferences
+) : IDisposable
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
 
@@ -39,7 +42,10 @@ public sealed class Client(IHttpClientFactory httpClientFactory, AccountSettings
                 };
 
             Port = FindRandomUnusedPort();
-            var bindHost = accountSettingsProvider.Current.EnableLocalM3u8Folder ? "*" : "localhost";
+
+            var m3u8Settings = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
+
+            var bindHost = m3u8Settings.EnableLocalM3u8Folder ? "*" : "localhost";
             psi.Environment["ASPNETCORE_URLS"] = $"http://{bindHost}:{Port}";
             psi.Environment["JACKPOT_SESSION_PASSWORD"] = SessionPassword;
 
@@ -63,6 +69,15 @@ public sealed class Client(IHttpClientFactory httpClientFactory, AccountSettings
                 _process.Dispose();
                 _process = null;
             }
+        }
+    }
+
+    public void Restart()
+    {
+        lock (_lock)
+        {
+            Stop();
+            Start();
         }
     }
 

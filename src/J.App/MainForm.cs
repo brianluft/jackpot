@@ -6,6 +6,7 @@ using System.Web;
 using J.Base;
 using J.Core;
 using J.Core.Data;
+using Microsoft.AspNetCore.Routing.Matching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -23,6 +24,7 @@ public sealed partial class MainForm : Form
     private readonly SingleInstanceManager _singleInstanceManager;
     private readonly Preferences _preferences;
     private readonly MovieExporter _movieExporter;
+    private readonly M3u8FolderSync _m3U8FolderSync;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
@@ -75,7 +77,8 @@ public sealed partial class MainForm : Form
         ImportProgressFormFactory importProgressFormFactory,
         SingleInstanceManager singleInstanceManager,
         Preferences preferences,
-        MovieExporter movieExporter
+        MovieExporter movieExporter,
+        M3u8FolderSync m3U8FolderSync
     )
     {
         _serviceProvider = serviceProvider;
@@ -85,6 +88,7 @@ public sealed partial class MainForm : Form
         _singleInstanceManager = singleInstanceManager;
         _preferences = preferences;
         _movieExporter = movieExporter;
+        _m3U8FolderSync = m3U8FolderSync;
         Ui ui = new(this);
         _ui = ui;
 
@@ -654,17 +658,11 @@ public sealed partial class MainForm : Form
 
     private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
-        if (!_browser.Visible)
-            return;
-
         _titleLabel.Text = "Loading...";
     }
 
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (!_browser.Visible)
-            return;
-
         var title = _browser.CoreWebView2.DocumentTitle;
         if (title.Length > 100)
             title = title[..100] + "...";
@@ -1058,13 +1056,38 @@ public sealed partial class MainForm : Form
 
     private async void OptionsButton_Click(object? sender, EventArgs e)
     {
+        var oldM3u8Settings = _preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
+
         using var f = _serviceProvider.GetRequiredService<OptionsForm>();
         if (f.ShowDialog(this) != DialogResult.OK)
             return;
 
-        ApplyFullscreenPreference();
-        await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
-        _browser.Reload();
+        try
+        {
+            var newM3u8Settings = _preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
+
+            if (!oldM3u8Settings.Equals(newM3u8Settings))
+            {
+                _client.Restart();
+                _m3U8FolderSync.InvalidateAll();
+                SimpleProgressForm.Do(
+                    this,
+                    "Synchronizing M3U8 folder...",
+                    (updateProgress, cancel) =>
+                    {
+                        _m3U8FolderSync.Sync(updateProgress);
+                    }
+                );
+            }
+
+            ApplyFullscreenPreference();
+            await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
+            _browser.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private void ApplyFullscreenPreference()

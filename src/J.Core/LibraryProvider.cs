@@ -353,9 +353,8 @@ INSERT INTO file_version VALUES (@n);
 
     public byte[] GetMovieClip(MovieId movieId) => GetMovieFileData(movieId, "clip.mp4");
 
-    public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword)
+    public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword, string hostname)
     {
-        var hostname = _accountSettingsProvider.Current.M3u8Hostname;
         if (string.IsNullOrWhiteSpace(hostname))
             hostname = "localhost";
 

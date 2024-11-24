@@ -46,9 +46,6 @@ public sealed class LibraryProviderAdapter(
 
     public byte[] GetMovieClip(MovieId movieId) => libraryProvider.GetMovieClip(movieId);
 
-    public byte[] GetM3u8(MovieId movieId, int portNumber, string sessionPassword) =>
-        libraryProvider.GetM3u8(movieId, portNumber, sessionPassword);
-
     public async Task NewTagTypeAsync(TagType tagType, Action<double> updateProgress, CancellationToken cancel)
     {
         m3U8FolderSync.Invalidate(tagTypes: [tagType.Id]);
