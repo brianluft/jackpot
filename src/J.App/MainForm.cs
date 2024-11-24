@@ -36,7 +36,6 @@ public sealed partial class MainForm : Form
         _filterAndButton,
         _filterOrButton,
         _logOutButton,
-        _manageMoviesButton,
         _moviesButton,
         _optionsButton,
         _shuffleButton,
@@ -254,11 +253,6 @@ public sealed partial class MainForm : Form
                 {
                     _addToLibraryButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Add.png", 16, 16));
                     _addToLibraryButton.Click += AddToLibraryButton_Click;
-                }
-
-                _menuButton.DropDownItems.Add(_manageMoviesButton = ui.NewToolStripMenuItem("Bulk edit movies..."));
-                {
-                    _manageMoviesButton.Click += EditMoviesButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(_editTagsButton = ui.NewToolStripMenuItem("Edit tags..."));
@@ -508,13 +502,6 @@ public sealed partial class MainForm : Form
     private void EditTagsControl_TagChanged(object? sender, EventArgs e)
     {
         //TODO: see if our filter is still valid
-    }
-
-    private void EditMoviesButton_Click(object? sender, EventArgs e)
-    {
-        using var f = _serviceProvider.GetRequiredService<EditMoviesForm>();
-        f.ShowDialog(this);
-        _browser.Reload();
     }
 
     private void AddToLibraryButton_Click(object? sender, EventArgs e)

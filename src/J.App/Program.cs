@@ -53,9 +53,6 @@ public static class Program
 
         services.AddTransient<AddTagToMoviesForm>();
         services.AddTransient<ConvertMoviesForm>();
-        services.AddTransient<EditMoviesChooseTagForm>();
-        services.AddTransient<EditMoviesForm>();
-        services.AddTransient<EditMoviesRemoveTagForm>();
         services.AddTransient<EditTagsEditTagForm>();
         services.AddTransient<EditTagsForm>();
         services.AddTransient<EditTagsRenameTagTypeForm>();
