@@ -41,7 +41,6 @@ public sealed class LoginForm : Form
 
         Ui ui = new(this);
         Label label;
-        Control p;
 
         Controls.Add(_formTable = ui.NewTable(2, 2));
         {

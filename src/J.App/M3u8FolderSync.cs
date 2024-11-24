@@ -3,12 +3,7 @@ using J.Core.Data;
 
 namespace J.App;
 
-public sealed partial class M3u8FolderSync(
-    AccountSettingsProvider accountSettingsProvider,
-    LibraryProvider libraryProvider,
-    Client client,
-    Preferences preferences
-)
+public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Client client, Preferences preferences)
 {
     private readonly string _filesystemInvalidChars =
         new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());

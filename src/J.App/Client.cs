@@ -8,11 +8,7 @@ using J.Core.Data;
 
 namespace J.App;
 
-public sealed class Client(
-    IHttpClientFactory httpClientFactory,
-    AccountSettingsProvider accountSettingsProvider,
-    Preferences preferences
-) : IDisposable
+public sealed class Client(IHttpClientFactory httpClientFactory, Preferences preferences) : IDisposable
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
 
