@@ -12,8 +12,9 @@ public static class ListPage
     public static Html GenerateHtml(
         List<PageBlock> pageBlocks,
         List<string> metadataKeys,
-        string Title,
-        string sessionPassword
+        string title,
+        string sessionPassword,
+        string cookieName
     )
     {
         var blockJsons = pageBlocks.Select(x => new PageBlockJson(x, sessionPassword)).ToList();
@@ -22,10 +23,8 @@ public static class ListPage
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="utf-8">
-                <title>{{WebUtility.HtmlEncode(Title)}}</title>
-                <link href="/static/tabulator.min.css" rel="stylesheet">
-                <script src="/static/tabulator.min.js"></script>
+                {{PageShared.SharedHead}}
+                <title>{{WebUtility.HtmlEncode(title)}}</title>
                 <style>
                     {{PageShared.SharedCss}}
 
@@ -127,7 +126,7 @@ public static class ListPage
                 <div id="table"></div>
 
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword)}}
+                    {{PageShared.GetSharedJs(sessionPassword, cookieName)}}
 
                     const items = {{JsonSerializer.Serialize(blockJsons)}};
                     const metadataKeys = {{JsonSerializer.Serialize(metadataKeys)}};
@@ -186,6 +185,8 @@ public static class ListPage
                         const data = row.getData();
                         open(data.id);
                     });
+
+                    saveAndRestoreScrollPosition(table);
                 </script>
             </body>
             </html>

@@ -57,7 +57,7 @@ void RefreshLibrary()
     {
         Dictionary<ListPageKey, Lazy<Html>> dict = [];
         dict[new ListPageKey(ListPageType.Movies, null)] = new(
-            () => NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies")
+            () => NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies", "movies")
         );
 
         foreach (var tagType in libraryProvider.GetTagTypes())
@@ -80,7 +80,8 @@ void RefreshLibrary()
                         libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
                         libraryMetadata,
                         sortOrder,
-                        tag.Name
+                        tag.Name,
+                        $"tag_{tag.Id.Value}"
                     )
             );
         tagPages = dict;
@@ -178,7 +179,7 @@ Html GetTagListPage(
         PageBlock block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, [], []);
         blocks.Add(block);
     }
-    return NewPageFromBlocks(blocks, [], sortOrder, tagType.PluralName);
+    return NewPageFromBlocks(blocks, [], sortOrder, tagType.PluralName, $"TagListPage_{tagType.Id.Value}");
 }
 
 static string GetField(PageBlock block, string field)
@@ -195,7 +196,13 @@ static string GetField(PageBlock block, string field)
     return "";
 }
 
-Html NewPageFromBlocks(List<PageBlock> blocks, List<string> metadataKeys, SortOrder sortOrder, string title)
+Html NewPageFromBlocks(
+    List<PageBlock> blocks,
+    List<string> metadataKeys,
+    SortOrder sortOrder,
+    string title,
+    string cookieName
+)
 {
     if (sortOrder.Shuffle)
     {
@@ -239,9 +246,16 @@ Html NewPageFromBlocks(List<PageBlock> blocks, List<string> metadataKeys, SortOr
             blocks,
             metadataKeys,
             title,
-            configuredSessionPassword /*, columnCount*/
+            configuredSessionPassword,
+            cookieName
         ),
-        LibraryViewStyle.Grid => WallPage.GenerateHtml(blocks, title, configuredSessionPassword, columnCount),
+        LibraryViewStyle.Grid => WallPage.GenerateHtml(
+            blocks,
+            title,
+            configuredSessionPassword,
+            columnCount,
+            cookieName
+        ),
         _ => throw new Exception($"Unexpected LibraryViewStyle: {style}"),
     };
 }
@@ -256,7 +270,13 @@ static Dictionary<TagTypeId, string> GetSortTags(Movie movie, LibraryMetadata li
         .ToDictionary(x => x.Key, x => x.Min(x => x.Name)!);
 }
 
-Html NewPageFromMovies(IEnumerable<Movie> movies, LibraryMetadata libraryMetadata, SortOrder sortOrder, string title)
+Html NewPageFromMovies(
+    IEnumerable<Movie> movies,
+    LibraryMetadata libraryMetadata,
+    SortOrder sortOrder,
+    string title,
+    string cookieName
+)
 {
     var metadataKeys = libraryMetadata
         .TagTypes.Values.OrderBy(x => x.SortIndex)
@@ -280,7 +300,8 @@ Html NewPageFromMovies(IEnumerable<Movie> movies, LibraryMetadata libraryMetadat
         ).ToList(),
         metadataKeys,
         sortOrder,
-        title
+        title,
+        cookieName
     );
 }
 

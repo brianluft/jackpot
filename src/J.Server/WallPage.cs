@@ -5,7 +5,13 @@ namespace J.Server;
 
 public static class WallPage
 {
-    public static Html GenerateHtml(List<PageBlock> pageBlocks, string title, string sessionPassword, int columnCount)
+    public static Html GenerateHtml(
+        List<PageBlock> pageBlocks,
+        string title,
+        string sessionPassword,
+        int columnCount,
+        string cookieName
+    )
     {
         var blockJsons = pageBlocks.Select(x => new PageBlockJson(x, sessionPassword)).ToList();
 
@@ -13,7 +19,7 @@ public static class WallPage
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="utf-8">
+                {{PageShared.SharedHead}}
                 <title>{{WebUtility.HtmlEncode(title)}}</title>
                 <style>
                     {{PageShared.SharedCss}}
@@ -92,7 +98,7 @@ public static class WallPage
                 </div>
 
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword)}}
+                    {{PageShared.GetSharedJs(sessionPassword, cookieName)}}
 
                     const VIDEOS = {{JsonSerializer.Serialize(blockJsons)}};
 
@@ -267,6 +273,8 @@ public static class WallPage
                     // Initial setup
                     setVirtualHeight();
                     updateVisibleVideos();
+
+                    saveAndRestoreScrollPosition(document.querySelector('.grid-container'));
                 </script>
             </body>
             </html>

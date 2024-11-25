@@ -15,7 +15,7 @@ public static class MoviePreviewPage
             <!DOCTYPE html>
             <html>
             <head>
-                <meta charset="UTF-8">
+                {{PageShared.SharedHead}}
                 <style>
                     {{PageShared.SharedCss}}
 
@@ -55,7 +55,7 @@ public static class MoviePreviewPage
                     </video>
                 </div>
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword)}}
+                    {{PageShared.GetSharedJs(sessionPassword, nameof(MoviePreviewPage))}}
                 </script>
             </body>
             </html>
