@@ -954,7 +954,7 @@ public sealed partial class MainForm : Form
             {
                 _client.Restart();
                 _m3U8FolderSync.InvalidateAll();
-                SimpleProgressForm.Do(
+                ProgressForm.Do(
                     this,
                     "Synchronizing network sharing folder...",
                     (updateProgress, cancel) =>
@@ -1146,7 +1146,6 @@ public sealed partial class MainForm : Form
     private void ShowTagContextMenu(IEnumerable<TagId> tagIds)
     {
         //TODO
-        throw new NotImplementedException();
     }
 
     private void OpenMovie(MovieId movieId)
@@ -1208,8 +1207,8 @@ public sealed partial class MainForm : Form
             return;
 #endif
 
-        using var p = Process.Start(psi)!;
-        ApplicationSubProcesses.Add(p);
+        using VlcLaunchProgressForm f = new(psi);
+        f.ShowDialog(this);
 
         static bool IsVlcInstalled()
         {
@@ -1265,7 +1264,7 @@ public sealed partial class MainForm : Form
 
         try
         {
-            using SimpleProgressForm f =
+            using ProgressForm f =
                 new(
                     (updateProgress, updateMessage, cancel) =>
                     {
@@ -1349,7 +1348,7 @@ public sealed partial class MainForm : Form
 
         var movies = _libraryProvider.GetMovies().ToDictionary(x => x.Id);
 
-        using SimpleProgressForm f =
+        using ProgressForm f =
             new(
                 (updateProgress, updateMessage, cancel) =>
                 {

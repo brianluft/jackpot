@@ -58,7 +58,7 @@ public sealed class TagForm : Form
             if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
                 throw new Exception("Please enter a name.");
 
-            SimpleProgressForm.Do(
+            ProgressForm.Do(
                 this,
                 "Saving tag...",
                 async (updateProgress, cancel) =>

@@ -97,7 +97,7 @@ public sealed class TagTypeForm : Form
             {
                 var tagType = new TagType(new(), 0, singular, plural);
 
-                SimpleProgressForm.Do(
+                ProgressForm.Do(
                     this,
                     "Creating tag group...",
                     async (updateProgress, cancel) =>
@@ -110,7 +110,7 @@ public sealed class TagTypeForm : Form
             {
                 var newTagType = _tagType.Value with { SingularName = singular, PluralName = plural };
 
-                SimpleProgressForm.Do(
+                ProgressForm.Do(
                     this,
                     "Renaming tag group...",
                     async (updateProgress, cancel) =>

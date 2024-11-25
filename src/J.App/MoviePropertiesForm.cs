@@ -285,7 +285,7 @@ public sealed class MoviePropertiesForm : Form
             foreach (DataRow row in _tagsTable.Rows)
                 tagIds.Add((TagId)row["tag_id"]);
 
-            SimpleProgressForm.Do(
+            ProgressForm.Do(
                 this,
                 "Saving changes...",
                 async (updateProgress, cancel) =>

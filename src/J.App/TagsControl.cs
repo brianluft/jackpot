@@ -381,7 +381,7 @@ public sealed class TagsControl : UserControl
             tagTypes[i] = tagTypes[i] with { SortIndex = i };
         }
 
-        SimpleProgressForm.Do(
+        ProgressForm.Do(
             FindForm()!,
             "Moving tag group...",
             async (updateProgress, cancel) =>
@@ -408,7 +408,7 @@ public sealed class TagsControl : UserControl
         if (response != DialogResult.OK)
             return;
 
-        SimpleProgressForm.Do(
+        ProgressForm.Do(
             FindForm()!,
             "Deleting tag group...",
             async (updateProgress, cancel) =>
@@ -472,7 +472,7 @@ public sealed class TagsControl : UserControl
 
         try
         {
-            SimpleProgressForm.Do(
+            ProgressForm.Do(
                 FindForm()!,
                 "Deleting...",
                 async (updateProgress, cancel) =>

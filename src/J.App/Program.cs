@@ -171,7 +171,7 @@ public static class Program
             Try(
                 () =>
                 {
-                    SimpleProgressForm f =
+                    ProgressForm f =
                         new(
                             (updateProgress, updateMessage, cancel) =>
                             {

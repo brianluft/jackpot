@@ -3,7 +3,7 @@ using System.Runtime.ExceptionServices;
 
 namespace J.App;
 
-public sealed class SimpleProgressForm : Form
+public sealed class ProgressForm : Form
 {
     private readonly CancellationTokenSource _cts = new();
     private readonly TableLayoutPanel _table;
@@ -29,7 +29,7 @@ public sealed class SimpleProgressForm : Form
 
     public static void Do(IWin32Window owner, string text, Action<Action<double>, CancellationToken> action)
     {
-        using SimpleProgressForm f =
+        using ProgressForm f =
             new(
                 (updateProgress, updateMessage, cancel) =>
                 {
@@ -44,7 +44,7 @@ public sealed class SimpleProgressForm : Form
             f.Exception!.Throw();
     }
 
-    public SimpleProgressForm(WorkDelegate action)
+    public ProgressForm(WorkDelegate action)
     {
         Ui ui = new(this);
 

@@ -102,7 +102,7 @@ public sealed class AddTagToMoviesForm : Form
 
         try
         {
-            SimpleProgressForm.Do(
+            ProgressForm.Do(
                 this,
                 "Adding tags...",
                 async (updateProgress, cancel) =>
