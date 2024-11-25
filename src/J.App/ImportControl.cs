@@ -87,6 +87,9 @@ public sealed class ImportControl : UserControl
                         _convertCombo.SelectedIndex = 0;
                         _convertCombo.Margin += ui.RightSpacing;
                         _convertCombo.SelectedValueChanged += ConvertCombo_SelectedValueChanged;
+
+                        var autoconvert = preferences.GetBoolean(Preferences.Key.ImportControl_AutoConvert);
+                        _convertCombo.SelectedIndex = autoconvert ? 0 : 1;
                     }
 
                     _convertFlow.Controls.Add(
@@ -250,6 +253,13 @@ public sealed class ImportControl : UserControl
             var message = (string)row["error"];
             MessageBox.Show(message, "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
+    }
+
+    private void ConvertCombo_SelectedValueChanged(object? sender, EventArgs e)
+    {
+        var autoconvert = ((ConvertOption)_convertCombo.SelectedItem!).Convert;
+        _preferences.SetBoolean(Preferences.Key.ImportControl_AutoConvert, autoconvert);
+        EnableDisableButtons();
     }
 
     private void QualityCombo_SelectedIndexChanged(object? sender, EventArgs e)
@@ -416,11 +426,6 @@ public sealed class ImportControl : UserControl
     private void ClearButton_Click(object? sender, EventArgs e)
     {
         _queue.Clear();
-        EnableDisableButtons();
-    }
-
-    private void ConvertCombo_SelectedValueChanged(object? sender, EventArgs e)
-    {
         EnableDisableButtons();
     }
 

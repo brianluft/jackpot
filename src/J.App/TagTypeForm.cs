@@ -2,7 +2,7 @@
 
 namespace J.App;
 
-public sealed class EditTagsRenameTagTypeForm : Form
+public sealed class TagTypeForm : Form
 {
     private readonly FlowLayoutPanel _verticalFlow,
         _buttonFlow;
@@ -11,9 +11,9 @@ public sealed class EditTagsRenameTagTypeForm : Form
     private readonly Button _okButton,
         _cancelButton;
     private readonly LibraryProviderAdapter _libraryProvider;
-    private TagType _tagType;
+    private TagType? _tagType;
 
-    public EditTagsRenameTagTypeForm(LibraryProviderAdapter libraryProvider)
+    public TagTypeForm(LibraryProviderAdapter libraryProvider)
     {
         _libraryProvider = libraryProvider;
         Ui ui = new(this);
@@ -22,10 +22,10 @@ public sealed class EditTagsRenameTagTypeForm : Form
         {
             Control p;
 
-            (p, _singularNameText) = ui.NewLabeledTextBox("&Singular name:", 125);
+            (p, _singularNameText) = ui.NewLabeledTextBox("&Singular name:", 250);
             _verticalFlow.Controls.Add(p);
 
-            (p, _pluralNameText) = ui.NewLabeledTextBox("&Plural name:", 125);
+            (p, _pluralNameText) = ui.NewLabeledTextBox("&Plural name:", 250);
             _verticalFlow.Controls.Add(p);
             {
                 p.Margin = ui.TopSpacing;
@@ -33,6 +33,7 @@ public sealed class EditTagsRenameTagTypeForm : Form
 
             _verticalFlow.Controls.Add(_buttonFlow = ui.NewFlowRow());
             {
+                _buttonFlow.Dock = DockStyle.Right;
                 _buttonFlow.Margin = ui.TopSpacingBig;
 
                 _buttonFlow.Controls.Add(_okButton = ui.NewButton("Rename"));
@@ -45,7 +46,7 @@ public sealed class EditTagsRenameTagTypeForm : Form
             }
         }
 
-        Text = "Edit Tags";
+        Text = "Tag Group";
         StartPosition = FormStartPosition.CenterParent;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
@@ -59,6 +60,16 @@ public sealed class EditTagsRenameTagTypeForm : Form
         CancelButton = _cancelButton;
     }
 
+    public void InitializeNew()
+    {
+        _tagType = null;
+        _singularNameText.Text = "";
+        _pluralNameText.Text = "";
+        _singularNameText.Focus();
+        _singularNameText.SelectAll();
+        _okButton.Text = "Create";
+    }
+
     public void Initialize(TagType tagType)
     {
         _tagType = tagType;
@@ -66,6 +77,7 @@ public sealed class EditTagsRenameTagTypeForm : Form
         _pluralNameText.Text = tagType.PluralName;
         _singularNameText.Focus();
         _singularNameText.SelectAll();
+        _okButton.Text = "Rename";
     }
 
     private void OkButton_Click(object? sender, EventArgs e)
@@ -81,18 +93,34 @@ public sealed class EditTagsRenameTagTypeForm : Form
             if (string.IsNullOrWhiteSpace(plural))
                 throw new Exception("Please enter a plural name.");
 
-            var newTagType = _tagType with { SingularName = singular, PluralName = plural };
+            if (_tagType is null)
+            {
+                var tagType = new TagType(new(), 0, singular, plural);
 
-            SimpleProgressForm.Do(
-                this,
-                "Renaming tag group...",
-                async (updateProgress, cancel) =>
-                {
-                    await _libraryProvider
-                        .UpdateTagTypesAsync([newTagType], updateProgress, cancel)
-                        .ConfigureAwait(true);
-                }
-            );
+                SimpleProgressForm.Do(
+                    this,
+                    "Creating tag group...",
+                    async (updateProgress, cancel) =>
+                    {
+                        await _libraryProvider.NewTagTypeAsync(tagType, updateProgress, cancel).ConfigureAwait(false);
+                    }
+                );
+            }
+            else
+            {
+                var newTagType = _tagType.Value with { SingularName = singular, PluralName = plural };
+
+                SimpleProgressForm.Do(
+                    this,
+                    "Renaming tag group...",
+                    async (updateProgress, cancel) =>
+                    {
+                        await _libraryProvider
+                            .UpdateTagTypesAsync([newTagType], updateProgress, cancel)
+                            .ConfigureAwait(false);
+                    }
+                );
+            }
 
             DialogResult = DialogResult.OK;
             Close();

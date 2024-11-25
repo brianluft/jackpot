@@ -24,6 +24,7 @@ public sealed partial class MainForm : Form
     private readonly MovieExporter _movieExporter;
     private readonly M3u8FolderSync _m3U8FolderSync;
     private readonly ImportControl _importControl;
+    private readonly TagsControl _tagsControl;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
@@ -31,7 +32,6 @@ public sealed partial class MainForm : Form
         _sortButton,
         _viewButton;
     private readonly ToolStripMenuItem _aboutButton,
-        _editTagsButton,
         _filterAndButton,
         _filterOrButton,
         _logOutButton,
@@ -57,7 +57,8 @@ public sealed partial class MainForm : Form
         _homeButton,
         _minimizeButton,
         _browserTabButton,
-        _importTabButton;
+        _importTabButton,
+        _tagsTabButton;
     private readonly ToolStripSeparator _rightmostSeparator;
     private readonly MyToolStripTextBox _searchText;
     private readonly WebView2 _browser;
@@ -66,6 +67,7 @@ public sealed partial class MainForm : Form
     private readonly List<MovieId> _movieContextMenuIds = [];
     private FormWindowState _lastWindowState;
     private bool _inhibitSearchTextChangedEvent;
+    private readonly Dictionary<ToolStripItem, bool> _previousToolStripItemEnabledStates = [];
 
     public MainForm(
         IServiceProvider serviceProvider,
@@ -75,7 +77,8 @@ public sealed partial class MainForm : Form
         Preferences preferences,
         MovieExporter movieExporter,
         M3u8FolderSync m3U8FolderSync,
-        ImportControl importControl
+        ImportControl importControl,
+        TagsControl tagsControl
     )
     {
         _serviceProvider = serviceProvider;
@@ -86,6 +89,7 @@ public sealed partial class MainForm : Form
         _movieExporter = movieExporter;
         _m3U8FolderSync = m3U8FolderSync;
         _importControl = importControl;
+        _tagsControl = tagsControl;
         Ui ui = new(this);
         _ui = ui;
 
@@ -250,13 +254,6 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _menuButton.DropDownItems.Add(_editTagsButton = ui.NewToolStripMenuItem("Edit tags..."));
-                {
-                    _editTagsButton.Click += EditTagsButton_Click;
-                }
-
-                _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
-
                 _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Log out"));
                 {
                     _logOutButton.Click += DisconnectButton_Click;
@@ -317,9 +314,15 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_browserTabButton = ui.NewToolStripTabButton("Loading..."));
             {
-                _browserTabButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Movie.png", 16, 16));
+                _browserTabButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Wall.png", 16, 16));
                 _browserTabButton.Checked = true;
                 _browserTabButton.Click += BrowserTabButton_Click;
+            }
+
+            _toolStrip.Items.Add(_tagsTabButton = ui.NewToolStripTabButton("Tags"));
+            {
+                _tagsTabButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Tag.png", 16, 16));
+                _tagsTabButton.Click += TagsTabButton_Click;
             }
 
             _toolStrip.Items.Add(_importTabButton = ui.NewToolStripTabButton("Import"));
@@ -347,6 +350,15 @@ public sealed partial class MainForm : Form
                 _importTabButton.Text = _importControl.Title;
             };
             _importTabButton.Text = _importControl.Title;
+        }
+
+        Controls.Add(_tagsControl);
+        {
+            _tagsControl.BringToFront();
+            _tagsControl.Visible = false;
+            _tagsControl.Dock = DockStyle.Fill;
+            _tagsControl.TagTypeChanged += EditTagsControl_TagTypeChanged;
+            _tagsControl.TagChanged += EditTagsControl_TagChanged;
         }
 
         _searchDebounceTimer = new() { Interval = 500, Enabled = false };
@@ -398,7 +410,7 @@ public sealed partial class MainForm : Form
 
         Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
-        MinimumSize = ui.GetSize(1100, 400);
+        MinimumSize = ui.GetSize(1200, 400);
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
@@ -488,21 +500,17 @@ public sealed partial class MainForm : Form
         }
     }
 
-    private void EditTagsButton_Click(object? sender, EventArgs e)
-    {
-        using var f = _serviceProvider.GetRequiredService<EditTagsForm>();
-        f.ShowDialog(this);
-    }
-
-    private void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
+    private async void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
     {
         UpdateTagTypes();
-        //TODO: see if our filter/sort is still valid
+        await ClearFilterAsync().ConfigureAwait(true);
+        _browser.Reload();
     }
 
-    private void EditTagsControl_TagChanged(object? sender, EventArgs e)
+    private async void EditTagsControl_TagChanged(object? sender, EventArgs e)
     {
-        //TODO: see if our filter is still valid
+        await ClearFilterAsync().ConfigureAwait(true);
+        _browser.Reload();
     }
 
     private void MoviesButton_Click(object? sender, EventArgs e)
@@ -735,6 +743,11 @@ public sealed partial class MainForm : Form
     }
 
     private async void FilterClearButton_Click(object? sender, EventArgs e)
+    {
+        await ClearFilterAsync().ConfigureAwait(true);
+    }
+
+    private async Task ClearFilterAsync()
     {
         _preferences.WithTransaction(() =>
         {
@@ -1388,7 +1401,10 @@ public sealed partial class MainForm : Form
         SwitchTab(_browserTabButton);
     }
 
-    private readonly Dictionary<ToolStripItem, bool> _previousToolStripItemEnabledStates = [];
+    private void TagsTabButton_Click(object? sender, EventArgs e)
+    {
+        SwitchTab(_tagsTabButton);
+    }
 
     private ToolStripButton GetTab()
     {
@@ -1396,6 +1412,8 @@ public sealed partial class MainForm : Form
             return _importTabButton;
         if (_browserTabButton.Checked)
             return _browserTabButton;
+        if (_tagsTabButton.Checked)
+            return _tagsTabButton;
         throw new InvalidOperationException();
     }
 
@@ -1403,9 +1421,11 @@ public sealed partial class MainForm : Form
     {
         var wasBrowser = ReferenceEquals(GetTab(), _browserTabButton);
         var isImport = ReferenceEquals(tab, _importTabButton);
+        var isTags = ReferenceEquals(tab, _tagsTabButton);
         var isBrowser = ReferenceEquals(tab, _browserTabButton);
 
         _importControl.Visible = _importTabButton.Checked = isImport;
+        _tagsControl.Visible = _tagsTabButton.Checked = isTags;
         _browser.Visible = _browserTabButton.Checked = isBrowser;
 
         if (wasBrowser && !isBrowser)
@@ -1414,8 +1434,9 @@ public sealed partial class MainForm : Form
             foreach (ToolStripItem item in _toolStrip.Items)
             {
                 if (
-                    ReferenceEquals(item, _importTabButton)
-                    || ReferenceEquals(item, _browserTabButton)
+                    ReferenceEquals(item, _browserTabButton)
+                    || ReferenceEquals(item, _tagsTabButton)
+                    || ReferenceEquals(item, _importTabButton)
                     || ReferenceEquals(item, _minimizeButton)
                     || ReferenceEquals(item, _exitButton)
                     || ReferenceEquals(item, _fullscreenButton)
@@ -1439,6 +1460,8 @@ public sealed partial class MainForm : Form
 
         if (isImport)
             _importControl.Focus();
+        else if (isTags)
+            _tagsControl.Focus();
         else if (isBrowser)
             _browser.Focus();
     }

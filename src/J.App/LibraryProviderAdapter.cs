@@ -34,10 +34,19 @@ public sealed class LibraryProviderAdapter(
 
     public Tag GetTag(TagId id) => libraryProvider.GetTag(id);
 
-    public async Task DeleteTagAsync(TagId id, Action<double> updateProgress, CancellationToken cancel)
+    public async Task DeleteTagsAsync(List<TagId> ids, Action<double> updateProgress, CancellationToken cancel)
     {
-        m3U8FolderSync.Invalidate(tags: [id]);
-        await MutateAsync(() => libraryProvider.DeleteTag(id), updateProgress, cancel).ConfigureAwait(false);
+        m3U8FolderSync.Invalidate(tags: ids);
+        await MutateAsync(
+                () =>
+                {
+                    foreach (var id in ids)
+                        libraryProvider.DeleteTag(id);
+                },
+                updateProgress,
+                cancel
+            )
+            .ConfigureAwait(false);
     }
 
     public List<Movie> GetMovies() => libraryProvider.GetMovies();

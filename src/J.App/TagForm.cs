@@ -2,20 +2,18 @@
 
 namespace J.App;
 
-public sealed class EditTagsEditTagForm : Form
+public sealed class TagForm : Form
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly TableLayoutPanel _table;
     private readonly TextBox _nameTextBox;
-    private readonly FlowLayoutPanel _leftButtonFlow,
-        _rightButtonFlow;
-    private readonly Button _deleteButton,
-        _saveButton,
+    private readonly FlowLayoutPanel _rightButtonFlow;
+    private readonly Button _saveButton,
         _cancelButton;
     private TagType _type;
     private TagId? _id;
 
-    public EditTagsEditTagForm(LibraryProviderAdapter libraryProvider)
+    public TagForm(LibraryProviderAdapter libraryProvider)
     {
         _libraryProvider = libraryProvider;
         Ui ui = new(this);
@@ -23,16 +21,6 @@ public sealed class EditTagsEditTagForm : Form
         Controls.Add(_table = ui.NewTable(2, 2));
         {
             _nameTextBox = _table.AddPair(0, 0, ui.NewLabeledTextBox("&Name:", 300), 2);
-
-            _table.Controls.Add(_leftButtonFlow = ui.NewFlowRow(), 0, 1);
-            {
-                _leftButtonFlow.Margin = ui.TopSpacingBig;
-
-                _leftButtonFlow.Controls.Add(_deleteButton = ui.NewButton("Delete"));
-                {
-                    _deleteButton.Click += DeleteButton_Click;
-                }
-            }
 
             _table.Controls.Add(_rightButtonFlow = ui.NewFlowRow(), 1, 1);
             {
@@ -61,38 +49,6 @@ public sealed class EditTagsEditTagForm : Form
         ShowIcon = false;
         ShowInTaskbar = false;
         Padding = ui.DefaultPadding;
-    }
-
-    private void DeleteButton_Click(object? sender, EventArgs e)
-    {
-        var response = MessageBox.Show(
-            this,
-            $"Are you sure you want to delete this {_type.SingularName.ToLower()}?",
-            "Delete",
-            MessageBoxButtons.OKCancel,
-            MessageBoxIcon.Question
-        );
-        if (response != DialogResult.OK)
-            return;
-
-        try
-        {
-            SimpleProgressForm.Do(
-                this,
-                "Deleting tag...",
-                async (updateProgress, cancel) =>
-                {
-                    await _libraryProvider.DeleteTagAsync(_id!, updateProgress, cancel).ConfigureAwait(false);
-                }
-            );
-
-            DialogResult = DialogResult.OK;
-            Close();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
     }
 
     private void SaveButton_Click(object? sender, EventArgs e)
@@ -135,7 +91,7 @@ public sealed class EditTagsEditTagForm : Form
         Text = $"{(id is null ? "New" : "Edit")} {type.SingularName}";
         _type = type;
         _id = id;
-        _deleteButton.Visible = _id is not null;
+        _saveButton.Text = id is null ? "Create" : "Rename";
         if (id is not null)
         {
             var tag = _libraryProvider.GetTag(id);

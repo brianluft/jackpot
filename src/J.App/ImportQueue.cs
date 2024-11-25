@@ -290,6 +290,13 @@ public sealed class ImportQueue : IDisposable
             cancel.ThrowIfCancellationRequested();
             if (needsConversion)
             {
+                if (!_preferences.GetBoolean(Preferences.Key.ImportControl_AutoConvert))
+                {
+                    throw new Exception(
+                        $"The file \"{Path.GetFileName(filePath)}\" uses an incompatible movie format."
+                    );
+                }
+
                 UpdateRow(row, FileState.Working, "Waiting to convert", 0d);
                 lock (GlobalLocks.BigCpu)
                 {
