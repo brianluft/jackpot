@@ -188,6 +188,7 @@ public sealed class TagsControl : UserControl
     private void UpdateTagTypes()
     {
         var selectedTagType = GetSelectedTagType();
+        var scrollIndex = _leftGrid.FirstDisplayedScrollingRowIndex;
 
         _leftData.BeginLoadData();
         try
@@ -206,6 +207,8 @@ public sealed class TagsControl : UserControl
 
         // Restore selected tag type
         _leftGrid.ClearSelection();
+        if (scrollIndex >= 0 && scrollIndex < _leftGrid.Rows.Count)
+            _leftGrid.FirstDisplayedScrollingRowIndex = scrollIndex;
         if (selectedTagType.HasValue)
         {
             foreach (DataGridViewRow row in _leftGrid.Rows)
@@ -245,6 +248,7 @@ public sealed class TagsControl : UserControl
 
         var tagType = GetSelectedTagType()!.Value;
         var selectedTagIds = GetSelectedTagIds().ToHashSet();
+        var scrollIndex = _rightGrid.FirstDisplayedScrollingRowIndex;
 
         _rightData.BeginLoadData();
         try
@@ -262,6 +266,8 @@ public sealed class TagsControl : UserControl
 
         // Restore selected tags.
         _rightGrid.ClearSelection();
+        if (scrollIndex >= 0 && scrollIndex < _rightGrid.Rows.Count)
+            _rightGrid.FirstDisplayedScrollingRowIndex = scrollIndex;
         foreach (DataGridViewRow row in _rightGrid.Rows)
         {
             var dataRowView = (DataRowView)row.DataBoundItem!;
