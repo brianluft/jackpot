@@ -1458,6 +1458,7 @@ public sealed partial class MainForm : Form
                 item.Enabled = enabled;
 
             _previousToolStripItemEnabledStates.Clear();
+            _browser.Reload();
         }
 
         if (isImport)
