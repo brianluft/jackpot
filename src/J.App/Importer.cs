@@ -12,6 +12,7 @@ public sealed class Importer(
     S3Uploader s3Uploader
 ) : IDisposable
 {
+    private static readonly Lock _libraryUpdateLock = new();
     private readonly IAmazonS3 _s3 = accountSettingsProvider.CreateAmazonS3Client();
 
     public void Dispose()
@@ -105,7 +106,10 @@ public sealed class Importer(
             .ToList();
 
         List<MovieFile> files = [zipHeaderFile, m3u8File, clipFile, .. otherFiles];
-        libraryProvider.NewMovieAsync(movie, files, _ => { }, cancel).GetAwaiter().GetResult();
+        lock (_libraryUpdateLock)
+        {
+            libraryProvider.NewMovieAsync(movie, files, _ => { }, cancel).GetAwaiter().GetResult();
+        }
     }
 
     private static byte[] ReadFileByteRange(string filePath, OffsetLength offsetLength)

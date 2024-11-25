@@ -9,15 +9,25 @@ public sealed class LibraryProviderAdapter(
     M3u8FolderSync m3U8FolderSync
 )
 {
+    private static readonly SemaphoreSlim _mutateLock = new(1, 1);
+
     public void Disconnect() => libraryProvider.Disconnect();
 
     private async Task MutateAsync(Action action, Action<double> updateProgress, CancellationToken cancel)
     {
-        await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), cancel).ConfigureAwait(false);
-        action();
-        await libraryProvider.SyncUpAsync(x => updateProgress(0.4 + 0.4 * x), cancel).ConfigureAwait(false);
-        await client.RefreshLibraryAsync(cancel).ConfigureAwait(false);
-        m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x));
+        await _mutateLock.WaitAsync(cancel).ConfigureAwait(false);
+        try
+        {
+            await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), cancel).ConfigureAwait(false);
+            action();
+            await libraryProvider.SyncUpAsync(x => updateProgress(0.4 + 0.4 * x), cancel).ConfigureAwait(false);
+            await client.RefreshLibraryAsync(cancel).ConfigureAwait(false);
+            m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x));
+        }
+        finally
+        {
+            _mutateLock.Release();
+        }
     }
 
     public async Task NewTagAsync(Tag tag, Action<double> updateProgress, CancellationToken cancel)

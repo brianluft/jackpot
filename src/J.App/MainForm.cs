@@ -956,7 +956,7 @@ public sealed partial class MainForm : Form
                 _m3U8FolderSync.InvalidateAll();
                 SimpleProgressForm.Do(
                     this,
-                    "Synchronizing M3U8 folder...",
+                    "Synchronizing network sharing folder...",
                     (updateProgress, cancel) =>
                     {
                         _m3U8FolderSync.Sync(updateProgress);

@@ -14,11 +14,12 @@ public sealed class S3Uploader : IDisposable
     private const int PART_SIZE = 10_000_000; // B2's minimum part size is 5 MB, S3's is 5 MiB (!)
     private const int MAX_THREADS = 16; // empirically determined
     private readonly IAmazonS3 _s3;
-    private readonly AsyncRetryPolicy _policy = Policy.Handle<Exception>().RetryAsync(5);
+    private readonly AsyncRetryPolicy _policy = Policy
+        .Handle<Exception>()
+        .WaitAndRetryAsync(10, _ => TimeSpan.FromSeconds(1));
     private readonly Thread[] _threads = new Thread[MAX_THREADS];
     private readonly BlockingCollection<Action> _queue = [];
     private readonly Lock _enqueueLock = new(); // let each file queue all of its tasks together
-    private long _bytesUploaded; // interlocked
     private bool _disposedValue;
 
     public S3Uploader(AccountSettingsProvider accountSettingsProvider)
@@ -57,13 +58,6 @@ public sealed class S3Uploader : IDisposable
             }
         });
         return tcs.Task;
-    }
-
-    public long BytesUploaded => Interlocked.Read(ref _bytesUploaded);
-
-    private void AddBytesUploaded(long count)
-    {
-        Interlocked.Add(ref _bytesUploaded, count);
     }
 
     private sealed class FileState(string filePath, string bucket, string key)
@@ -175,38 +169,32 @@ public sealed class S3Uploader : IDisposable
     private string UploadPart(FileState fileState, Part part, CancellationToken cancel)
     {
         Debug.Assert(fileState.UploadId is not null);
-        var bytesUploadedThisAttempt = 0L;
 
-        try
-        {
-            var response = _s3.UploadPartAsync(
-                    new()
-                    {
-                        BucketName = fileState.Bucket,
-                        FilePath = fileState.FilePath,
-                        FilePosition = part.OffsetLength.Offset,
-                        Key = fileState.Key,
-                        PartSize = part.OffsetLength.Length,
-                        PartNumber = part.PartNumber,
-                        UploadId = fileState.UploadId,
-                        StreamTransferProgress = (sender, e) =>
-                        {
-                            AddBytesUploaded(e.IncrementTransferred);
-                            bytesUploadedThisAttempt += e.IncrementTransferred;
-                        },
-                    },
-                    cancel
-                )
-                .GetAwaiter()
-                .GetResult();
+        return _policy
+            .ExecuteAsync(
+                async cancel =>
+                {
+                    var response = await _s3.UploadPartAsync(
+                            new()
+                            {
+                                BucketName = fileState.Bucket,
+                                FilePath = fileState.FilePath,
+                                FilePosition = part.OffsetLength.Offset,
+                                Key = fileState.Key,
+                                PartSize = part.OffsetLength.Length,
+                                PartNumber = part.PartNumber,
+                                UploadId = fileState.UploadId,
+                            },
+                            cancel
+                        )
+                        .ConfigureAwait(false);
 
-            return response.ETag;
-        }
-        catch
-        {
-            AddBytesUploaded(-bytesUploadedThisAttempt);
-            throw;
-        }
+                    return response.ETag;
+                },
+                cancel
+            )
+            .GetAwaiter()
+            .GetResult();
     }
 
     private void CompleteMultipartUpload(FileState fileState, CancellationToken cancel)

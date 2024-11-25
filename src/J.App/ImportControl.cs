@@ -219,7 +219,7 @@ public sealed class ImportControl : UserControl
                     _colMessage = _grid.Columns[_grid.Columns.Add("message", "Message")];
                     {
                         _colMessage.DataPropertyName = "message";
-                        _colMessage.Width = ui.GetLength(200);
+                        _colMessage.Width = ui.GetLength(225);
                     }
 
                     var colFilePath = _grid.Columns[_grid.Columns.Add("filename", "Filename")];

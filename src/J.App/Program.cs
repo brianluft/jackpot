@@ -188,7 +188,7 @@ public static class Program
                                 updateMessage("Starting background service...");
                                 _client.Start();
 
-                                updateMessage("Synchronizing .m3u8 folder...");
+                                updateMessage("Synchronizing network sharing folder...");
                                 _m3u8FolderSync.InvalidateAll();
                                 _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
                             }
