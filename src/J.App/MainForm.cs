@@ -264,6 +264,8 @@ public sealed partial class MainForm : Form
                     _optionsButton.Click += OptionsButton_Click;
                 }
 
+                _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
+
                 _menuButton.DropDownItems.Add(_aboutButton = ui.NewToolStripMenuItem("About Jackpot"));
                 {
                     _aboutButton.Click += AboutButton_Click;
@@ -271,7 +273,7 @@ public sealed partial class MainForm : Form
 
 #if DEBUG
                 ToolStripMenuItem devToolsItem;
-                _menuButton.DropDownItems.Add(devToolsItem = ui.NewToolStripMenuItem("Dev Tools"));
+                _menuButton.DropDownItems.Add(devToolsItem = ui.NewToolStripMenuItem("🐞 Dev Tools"));
                 {
                     devToolsItem.Click += delegate
                     {

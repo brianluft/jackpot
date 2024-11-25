@@ -70,7 +70,7 @@ public sealed class OptionsForm : Form
                         }
 
                         _generalFlow.Controls.Add(
-                            ui.NewLabeledPair("&VLC installation:", _vlcCombo = ui.NewDropDownList(200))
+                            ui.NewLabeledPair("&VLC installation to use:", _vlcCombo = ui.NewDropDownList(200))
                         );
                         {
                             _vlcCombo.Margin += ui.BottomSpacing;
