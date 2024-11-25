@@ -6,7 +6,6 @@ using System.Web;
 using J.Base;
 using J.Core;
 using J.Core.Data;
-using Microsoft.AspNetCore.Routing.Matching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -20,11 +19,11 @@ public sealed partial class MainForm : Form
     private readonly IServiceProvider _serviceProvider;
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly Client _client;
-    private readonly ImportProgressFormFactory _importProgressFormFactory;
     private readonly SingleInstanceManager _singleInstanceManager;
     private readonly Preferences _preferences;
     private readonly MovieExporter _movieExporter;
     private readonly M3u8FolderSync _m3U8FolderSync;
+    private readonly ImportControl _importControl;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
@@ -32,8 +31,6 @@ public sealed partial class MainForm : Form
         _sortButton,
         _viewButton;
     private readonly ToolStripMenuItem _aboutButton,
-        _addToLibraryButton,
-        _convertMoviesButton,
         _editTagsButton,
         _filterAndButton,
         _filterOrButton,
@@ -58,15 +55,15 @@ public sealed partial class MainForm : Form
         _filterClearButton,
         _fullscreenButton,
         _homeButton,
-        _minimizeButton;
+        _minimizeButton,
+        _browserTabButton,
+        _importTabButton;
     private readonly ToolStripSeparator _rightmostSeparator;
     private readonly MyToolStripTextBox _searchText;
-    private readonly ToolStripLabel _titleLabel;
     private readonly WebView2 _browser;
     private readonly System.Windows.Forms.Timer _searchDebounceTimer;
     private readonly ContextMenuStrip _movieContextMenu;
     private readonly List<MovieId> _movieContextMenuIds = [];
-    private bool _importInProgress;
     private FormWindowState _lastWindowState;
     private bool _inhibitSearchTextChangedEvent;
 
@@ -74,21 +71,21 @@ public sealed partial class MainForm : Form
         IServiceProvider serviceProvider,
         LibraryProviderAdapter libraryProvider,
         Client client,
-        ImportProgressFormFactory importProgressFormFactory,
         SingleInstanceManager singleInstanceManager,
         Preferences preferences,
         MovieExporter movieExporter,
-        M3u8FolderSync m3U8FolderSync
+        M3u8FolderSync m3U8FolderSync,
+        ImportControl importControl
     )
     {
         _serviceProvider = serviceProvider;
         _libraryProvider = libraryProvider;
         _client = client;
-        _importProgressFormFactory = importProgressFormFactory;
         _singleInstanceManager = singleInstanceManager;
         _preferences = preferences;
         _movieExporter = movieExporter;
         _m3U8FolderSync = m3U8FolderSync;
+        _importControl = importControl;
         Ui ui = new(this);
         _ui = ui;
 
@@ -253,24 +250,9 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _menuButton.DropDownItems.Add(_addToLibraryButton = ui.NewToolStripMenuItem("Add movies..."));
-                {
-                    _addToLibraryButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Add.png", 16, 16));
-                    _addToLibraryButton.Click += AddToLibraryButton_Click;
-                }
-
                 _menuButton.DropDownItems.Add(_editTagsButton = ui.NewToolStripMenuItem("Edit tags..."));
                 {
                     _editTagsButton.Click += EditTagsButton_Click;
-                }
-
-                _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
-
-                _menuButton.DropDownItems.Add(
-                    _convertMoviesButton = ui.NewToolStripMenuItem("Convert movies to MP4...")
-                );
-                {
-                    _convertMoviesButton.Click += ConvertMoviesButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
@@ -333,14 +315,17 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(ui.NewToolStripSeparator());
 
-            _toolStrip.Items.Add(_titleLabel = ui.NewToolStripLabel(""));
+            _toolStrip.Items.Add(_browserTabButton = ui.NewToolStripTabButton("Loading..."));
             {
-                Font titleFont = new(_titleLabel.Font, FontStyle.Bold);
-                Disposed += delegate
-                {
-                    titleFont.Dispose();
-                };
-                _titleLabel.Font = titleFont;
+                _browserTabButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Movie.png", 16, 16));
+                _browserTabButton.Checked = true;
+                _browserTabButton.Click += BrowserTabButton_Click;
+            }
+
+            _toolStrip.Items.Add(_importTabButton = ui.NewToolStripTabButton("Import"));
+            {
+                _importTabButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Add.png", 16, 16));
+                _importTabButton.Click += ImportTabButton_Click;
             }
         }
 
@@ -350,6 +335,18 @@ public sealed partial class MainForm : Form
             _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
             _browser.WebMessageReceived += Browser_WebMessageReceived;
+        }
+
+        Controls.Add(_importControl);
+        {
+            _importControl.BringToFront();
+            _importControl.Visible = false;
+            _importControl.Dock = DockStyle.Fill;
+            _importControl.TitleChanged += delegate
+            {
+                _importTabButton.Text = _importControl.Title;
+            };
+            _importTabButton.Text = _importControl.Title;
         }
 
         _searchDebounceTimer = new() { Interval = 500, Enabled = false };
@@ -401,7 +398,7 @@ public sealed partial class MainForm : Form
 
         Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
-        MinimumSize = ui.GetSize(900, 400);
+        MinimumSize = ui.GetSize(1100, 400);
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
@@ -466,7 +463,7 @@ public sealed partial class MainForm : Form
 
     private void DisconnectButton_Click(object? sender, EventArgs e)
     {
-        if (_importInProgress)
+        if (_importControl.ImportInProgress)
         {
             MessageBox.Show(
                 this,
@@ -508,130 +505,6 @@ public sealed partial class MainForm : Form
         //TODO: see if our filter is still valid
     }
 
-    private void AddToLibraryButton_Click(object? sender, EventArgs e)
-    {
-        var f = _serviceProvider.GetRequiredService<ImportForm>();
-        f.Show();
-        f.FormClosed += delegate
-        {
-            if (f.DialogResult != DialogResult.OK)
-                return;
-
-            var filePaths = f.SelectedFilePaths;
-
-            var totalBytes = filePaths.Select(x => new FileInfo(x).Length).Sum();
-            ConcurrentBag<string> failedFiles = [];
-
-            var p = _importProgressFormFactory.New(
-                totalBytes,
-                (updateFile, cancel) =>
-                {
-                    using var importer = _serviceProvider.GetRequiredService<Importer>();
-
-                    ConcurrentQueue<string> queue = new(filePaths);
-                    var numCompleted = 0;
-                    var numFiles = filePaths.Count;
-
-                    var tasks = new Task[3];
-                    for (var i = 0; i < tasks.Length; i++)
-                    {
-                        tasks[i] = Task.Run(
-                            () =>
-                            {
-                                while (queue.TryDequeue(out var filePath))
-                                {
-                                    cancel.ThrowIfCancellationRequested();
-
-                                    var filename = Path.GetFileName(filePath);
-                                    updateFile(numCompleted, numFiles, filename);
-
-                                    try
-                                    {
-                                        importer.Import(filePath, cancel);
-                                    }
-                                    catch
-                                    {
-                                        failedFiles.Add(filePath);
-                                        // Keep going.
-                                    }
-
-                                    numCompleted++;
-                                    updateFile(numCompleted, numFiles, filename);
-                                }
-                            },
-                            cancel
-                        );
-                    }
-
-                    Task.WaitAll(tasks, cancel);
-                    foreach (var task in tasks)
-                        task.GetAwaiter().GetResult();
-                }
-            );
-
-            p.FormClosed += delegate
-            {
-                _importInProgress = false;
-                _browser.Reload();
-
-                if (p.DialogResult == DialogResult.Cancel)
-                    return;
-
-                p.Visible = false;
-                var s = filePaths.Count == 1 ? "" : "s";
-                var numSuccesses = filePaths.Count - failedFiles.Count;
-
-                if (failedFiles.IsEmpty)
-                {
-                    MessageBox.Show(
-                        this,
-                        $"Imported {numSuccesses} movie{s}.",
-                        "Import",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-                }
-                else if (failedFiles.Count < 5)
-                {
-                    var failedFilenames = failedFiles.Select(Path.GetFileName).OrderBy(x => x).ToList();
-                    MessageBox.Show(
-                        this,
-                        $"Imported {numSuccesses} movie{s}.\n\nFailed to import {failedFiles.Count} movies:\n{string.Join("\n", failedFilenames)}",
-                        "Import",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
-                    );
-                }
-                else
-                {
-                    MessageBox.Show(
-                        this,
-                        $"Imported {numSuccesses} movie{s}. Failed to import {failedFiles.Count} movies.",
-                        "Import",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
-                    );
-                }
-            };
-
-            if (_importInProgress)
-            {
-                MessageBox.Show(
-                    this,
-                    "Another import is already in progress.",
-                    "Jackpot",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
-                return;
-            }
-
-            _importInProgress = true;
-
-            p.Show();
-        };
-    }
-
     private void MoviesButton_Click(object? sender, EventArgs e)
     {
         GoHome();
@@ -658,7 +531,7 @@ public sealed partial class MainForm : Form
 
     private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
-        _titleLabel.Text = "Loading...";
+        _browserTabButton.Text = "Loading...";
     }
 
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -667,7 +540,7 @@ public sealed partial class MainForm : Form
         if (title.Length > 100)
             title = title[..100] + "...";
 
-        _titleLabel.Text = title?.Replace("&", "&&") ?? "";
+        _browserTabButton.Text = title?.Replace("&", "&&") ?? "";
         _browseBackButton.Enabled = _browser.CanGoBack;
         _browseForwardButton.Enabled = _browser.CanGoForward;
     }
@@ -967,7 +840,7 @@ public sealed partial class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_importInProgress)
+        if (_importControl.ImportInProgress)
         {
             MessageBox.Show(
                 this,
@@ -980,6 +853,7 @@ public sealed partial class MainForm : Form
             return;
         }
 
+#if !DEBUG
         if (DialogResult != DialogResult.Retry)
         {
             var response = MessageBox.Show(
@@ -996,6 +870,7 @@ public sealed partial class MainForm : Form
                 return;
             }
         }
+#endif
 
         var state = CompleteWindowState.Save(this);
         _preferences.SetJson(Preferences.Key.MainForm_CompleteWindowState, state);
@@ -1046,12 +921,6 @@ public sealed partial class MainForm : Form
         _searchDebounceTimer.Stop();
 
         await ChangeFilterAsync(x => x with { Search = _searchText.Text }).ConfigureAwait(true);
-    }
-
-    private void ConvertMoviesButton_Click(object? sender, EventArgs e)
-    {
-        var f = _serviceProvider.GetRequiredService<ConvertMoviesForm>();
-        f.Show();
     }
 
     private async void OptionsButton_Click(object? sender, EventArgs e)
@@ -1386,16 +1255,7 @@ public sealed partial class MainForm : Form
                     (updateProgress, updateMessage, cancel) =>
                     {
                         updateMessage("Deleting...");
-
-                        var count = movieIds.Count;
-                        var i = 0;
-                        foreach (var id in movieIds)
-                        {
-                            _libraryProvider.DeleteMovieAsync(id, updateProgress, cancel).GetAwaiter().GetResult();
-
-                            i++;
-                            updateProgress((double)i / count);
-                        }
+                        _libraryProvider.DeleteMoviesAsync(movieIds, updateProgress, cancel).GetAwaiter().GetResult();
                     }
                 );
 
@@ -1516,5 +1376,70 @@ public sealed partial class MainForm : Form
                 MessageBoxIcon.Error
             );
         }
+    }
+
+    private void ImportTabButton_Click(object? sender, EventArgs e)
+    {
+        SwitchTab(_importTabButton);
+    }
+
+    private void BrowserTabButton_Click(object? sender, EventArgs e)
+    {
+        SwitchTab(_browserTabButton);
+    }
+
+    private readonly Dictionary<ToolStripItem, bool> _previousToolStripItemEnabledStates = [];
+
+    private ToolStripButton GetTab()
+    {
+        if (_importTabButton.Checked)
+            return _importTabButton;
+        if (_browserTabButton.Checked)
+            return _browserTabButton;
+        throw new InvalidOperationException();
+    }
+
+    private void SwitchTab(ToolStripButton tab)
+    {
+        var wasBrowser = ReferenceEquals(GetTab(), _browserTabButton);
+        var isImport = ReferenceEquals(tab, _importTabButton);
+        var isBrowser = ReferenceEquals(tab, _browserTabButton);
+
+        _importControl.Visible = _importTabButton.Checked = isImport;
+        _browser.Visible = _browserTabButton.Checked = isBrowser;
+
+        if (wasBrowser && !isBrowser)
+        {
+            // Switching away from the browser.
+            foreach (ToolStripItem item in _toolStrip.Items)
+            {
+                if (
+                    ReferenceEquals(item, _importTabButton)
+                    || ReferenceEquals(item, _browserTabButton)
+                    || ReferenceEquals(item, _minimizeButton)
+                    || ReferenceEquals(item, _exitButton)
+                    || ReferenceEquals(item, _fullscreenButton)
+                )
+                {
+                    continue;
+                }
+
+                _previousToolStripItemEnabledStates[item] = item.Enabled;
+                item.Enabled = isBrowser;
+            }
+        }
+        else if (!wasBrowser && isBrowser)
+        {
+            // Switching back to the browser.
+            foreach (var (item, enabled) in _previousToolStripItemEnabledStates)
+                item.Enabled = enabled;
+
+            _previousToolStripItemEnabledStates.Clear();
+        }
+
+        if (isImport)
+            _importControl.Focus();
+        else if (isBrowser)
+            _browser.Focus();
     }
 }

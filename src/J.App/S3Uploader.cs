@@ -17,7 +17,7 @@ public sealed class S3Uploader : IDisposable
     private readonly AsyncRetryPolicy _policy = Policy.Handle<Exception>().RetryAsync(5);
     private readonly Thread[] _threads = new Thread[MAX_THREADS];
     private readonly BlockingCollection<Action> _queue = [];
-    private readonly object _enqueueLock = new(); // let each file queue all of its tasks together
+    private readonly Lock _enqueueLock = new(); // let each file queue all of its tasks together
     private long _bytesUploaded; // interlocked
     private bool _disposedValue;
 
@@ -75,7 +75,13 @@ public sealed class S3Uploader : IDisposable
         public ConcurrentBag<PartETag> PartETags { get; } = [];
     }
 
-    public void PutObject(string filePath, string bucket, string key, CancellationToken cancel)
+    public void PutObject(
+        string filePath,
+        string bucket,
+        string key,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
     {
         var parts = PlanParts(filePath).ToList();
 
@@ -91,6 +97,8 @@ public sealed class S3Uploader : IDisposable
                 InitiateMultipartUpload(fileState, cancel);
             });
 
+            var partsComplete = 0; // interlocked
+
             foreach (var part in parts)
             {
                 partTasks.Add(
@@ -102,6 +110,9 @@ public sealed class S3Uploader : IDisposable
 
                         var etag = UploadPart(fileState, part, cancel);
                         fileState.PartETags.Add(new(part.PartNumber, etag));
+
+                        var i = Interlocked.Increment(ref partsComplete);
+                        updateProgress(i / (double)parts.Count);
                     })
                 );
             }

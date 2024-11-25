@@ -18,6 +18,7 @@ public static class EncryptedZipFile
         string zipFilePath,
         string dir,
         Password password,
+        Action<string> updateMessage,
         out ZipIndex zipIndex,
         CancellationToken cancel
     )
@@ -25,7 +26,8 @@ public static class EncryptedZipFile
         using (var fileStream = File.Create(zipFilePath))
         {
             using ZipOutputStream zipStream = new(fileStream) { Password = password.Value };
-            foreach (var filePath in Directory.GetFiles(dir))
+            var files = Directory.GetFiles(dir);
+            foreach (var (i, filePath) in files.Index())
             {
                 cancel.ThrowIfCancellationRequested();
                 using var entryStream = File.OpenRead(filePath);
@@ -35,12 +37,24 @@ public static class EncryptedZipFile
                     entryName: Path.GetFileName(filePath),
                     entryTime: new FileInfo(filePath).LastWriteTime
                 );
+                var progress = (double)(i + 1) / files.Length;
+                updateMessage($"Encrypting ({progress * 100:0}%)");
             }
         }
 
         cancel.ThrowIfCancellationRequested();
-        zipIndex = GetZipIndex(zipFilePath, password);
+        updateMessage("Waiting to verify");
+        lock (GlobalLocks.BigCpu)
+        {
+            zipIndex = GetZipIndex(
+                zipFilePath,
+                password,
+                progress => updateMessage($"Verifying ({progress * 100:0}%)")
+            );
+        }
         cancel.ThrowIfCancellationRequested();
+
+        updateMessage("Verifying (100%)");
         AppendZipIndex(zipFilePath, zipIndex);
     }
 
@@ -109,7 +123,7 @@ public static class EncryptedZipFile
         }
     }
 
-    private static ZipIndex GetZipIndex(string zipFilePath, Password password)
+    private static ZipIndex GetZipIndex(string zipFilePath, Password password, Action<double> updateProgress)
     {
         List<string> zipEntryNames;
         long zipHeaderOffset;
@@ -137,6 +151,8 @@ public static class EncryptedZipFile
         }
 
         ConcurrentBag<ZipEntryLocation> entryLocations = [];
+        var i = 0; // interlocked
+        var count = zipEntryNames.Count;
         Parallel.ForEach(
             zipEntryNames,
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
@@ -174,6 +190,8 @@ public static class EncryptedZipFile
                 }
 
                 entryLocations.Add(new(entry.Name, new(offset, length)));
+
+                updateProgress((double)Interlocked.Increment(ref i) / count);
             }
         );
 

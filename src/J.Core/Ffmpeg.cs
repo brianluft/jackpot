@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text.Json;
 using J.Base;
 
 namespace J.Core;
@@ -9,15 +10,27 @@ public static class Ffmpeg
 
     public readonly record struct Result(int ExitCode, string Log);
 
-    public static Result Run(string arguments, CancellationToken cancel) => Run(arguments, null, null, cancel);
+    public static Result Run(string arguments, CancellationToken cancel) =>
+        Run(arguments, null, null, LOG_LINES, cancel);
 
     public static Result Run(string arguments, Action<string> outputCallback, CancellationToken cancel) =>
-        Run(arguments, outputCallback, null, cancel);
+        Run(arguments, outputCallback, null, LOG_LINES, cancel);
+
+    public static Result Probe(string arguments, CancellationToken cancel) =>
+        Run(arguments, null, "ffprobe.exe", 1_000_000, cancel);
 
     public static Result Run(
         string arguments,
         Action<string>? outputCallback,
         string? filename,
+        CancellationToken cancel
+    ) => Run(arguments, outputCallback, filename, LOG_LINES, cancel);
+
+    public static Result Run(
+        string arguments,
+        Action<string>? outputCallback,
+        string? filename,
+        int maxLogLines,
         CancellationToken cancel
     )
     {
@@ -89,6 +102,40 @@ public static class Ffmpeg
             }
         }
 
+        p.WaitForExit();
+
         return new(p.ExitCode, string.Join("\n", log));
+    }
+
+    public static bool IsCompatibleCodec(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var arguments = $"-v error -select_streams v:0 -show_entries stream=codec_name -of json -i \"{filePath}\"";
+            var result = Probe(arguments, CancellationToken.None);
+
+            if (result.ExitCode != 0)
+                return false;
+
+            using var doc = JsonDocument.Parse(result.Log);
+            var streams = doc.RootElement.GetProperty("streams");
+
+            if (streams.GetArrayLength() == 0)
+                return false;
+
+            var codecName = streams[0].GetProperty("codec_name").GetString()?.ToLowerInvariant();
+            if (codecName is not "h264" or "hevc")
+                Debugger.Break();
+            return codecName is "h264" or "hevc";
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

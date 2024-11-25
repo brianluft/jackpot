@@ -1,2 +1,5 @@
 [*.cs]
 dotnet_diagnostic.CA2007.severity = error
+
+# WFO1000: Missing code serialization configuration for property content
+dotnet_diagnostic.WFO1000.severity = none

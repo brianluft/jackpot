@@ -649,6 +649,16 @@ INSERT INTO file_version VALUES (@n);
         );
     }
 
+    public bool MovieExists(string filename) =>
+        Query(
+            "SELECT 1 FROM movies WHERE filename = @filename COLLATE NOCASE",
+            p =>
+            {
+                p.AddWithValue("@filename", filename);
+            },
+            r => true
+        ).Count > 0;
+
     public void WithTransaction(Action action)
     {
         lock (_lock)

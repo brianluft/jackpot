@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using Amazon.S3;
-using J.Base;
+﻿using Amazon.S3;
 using J.Core;
 using J.Core.Data;
 
@@ -14,7 +12,6 @@ public sealed class Importer(
     S3Uploader s3Uploader
 ) : IDisposable
 {
-    private static readonly object _cpuLock = new();
     private readonly IAmazonS3 _s3 = accountSettingsProvider.CreateAmazonS3Client();
 
     public void Dispose()
@@ -22,7 +19,12 @@ public sealed class Importer(
         _s3.Dispose();
     }
 
-    public void Import(string sourceFilePath, CancellationToken cancel)
+    public void Import(
+        string sourceFilePath,
+        Action<double> updateProgress,
+        Action<string> updateMessage,
+        CancellationToken cancel
+    )
     {
         var password = accountSettingsProvider.Current.Password;
 
@@ -31,27 +33,42 @@ public sealed class Importer(
         var clipFilePath = Path.Combine(dir.Path, "clip.mp4");
         var m3u8FilePath = Path.Combine(dir.Path, "movie.m3u8");
 
-        ZipIndex zipIndex;
-        lock (_cpuLock)
+        updateMessage("Scanning");
+        var duration = GetMovieDuration(sourceFilePath, cancel);
+        cancel.ThrowIfCancellationRequested();
+
+        updateMessage("Waiting to make thumbnails");
+        lock (GlobalLocks.BigCpu)
         {
-            var duration = GetMovieDuration(sourceFilePath, cancel);
-
+            updateMessage("Making thumbnails");
             MakeClip(sourceFilePath, duration, clipFilePath, cancel);
-            cancel.ThrowIfCancellationRequested();
-
-            movieEncoder.Encode(
-                sourceFilePath,
-                duration,
-                clipFilePath,
-                encodedFullMovieFilePath,
-                m3u8FilePath,
-                out zipIndex,
-                cancel
-            );
             cancel.ThrowIfCancellationRequested();
         }
 
-        UploadEncodedFullMovie(encodedFullMovieFilePath, out var s3Key, cancel);
+        updateMessage("Encrypting (0%)");
+        movieEncoder.Encode(
+            sourceFilePath,
+            duration,
+            clipFilePath,
+            encodedFullMovieFilePath,
+            m3u8FilePath,
+            updateMessage,
+            out var zipIndex,
+            cancel
+        );
+        cancel.ThrowIfCancellationRequested();
+
+        updateMessage("Uploading (0%)");
+        UploadEncodedFullMovie(
+            encodedFullMovieFilePath,
+            progress =>
+            {
+                updateMessage($"Uploading ({progress * 100:0}%)");
+                updateProgress(progress);
+            },
+            out var s3Key,
+            cancel
+        );
 
         Movie movie =
             new(
@@ -124,14 +141,18 @@ public sealed class Importer(
         );
 
         if (exitCode != 0)
+        {
             throw new Exception(
                 $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe failed with exit code {exitCode}.\n\nFFprobe output:\n{log}"
             );
+        }
 
         if (duration is null)
+        {
             throw new Exception(
                 $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe returned successfully, but did not produce the movie duration.\n\nFFprobe output:\n{log}"
             );
+        }
 
         return duration.Value;
     }
@@ -212,11 +233,16 @@ public sealed class Importer(
             throw new Exception($"FFmpeg failed with exit code: {exitCode}\n\nFFmpeg output: {log}");
     }
 
-    private void UploadEncodedFullMovie(string encodedFilePath, out string outS3Key, CancellationToken cancel)
+    private void UploadEncodedFullMovie(
+        string encodedFilePath,
+        Action<double> updateProgress,
+        out string outS3Key,
+        CancellationToken cancel
+    )
     {
         var guid = Guid.NewGuid().ToString();
         var s3Key = outS3Key = $"content/{guid[..2]}/{guid}.zip";
 
-        s3Uploader.PutObject(encodedFilePath, accountSettingsProvider.Current.Bucket, s3Key, cancel);
+        s3Uploader.PutObject(encodedFilePath, accountSettingsProvider.Current.Bucket, s3Key, updateProgress, cancel);
     }
 }

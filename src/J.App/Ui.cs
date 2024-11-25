@@ -236,7 +236,13 @@ public sealed partial class Ui
     public Control NewLabeledPair<T>(string text, T child)
         where T : Control
     {
-        var label = NewLabel(text);
+        return NewLabeledPair(text, child, out _);
+    }
+
+    public Control NewLabeledPair<T>(string text, T child, out Label label)
+        where T : Control
+    {
+        label = NewLabel(text);
         label.Margin += GetPadding(0, 0, 0, 2);
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
@@ -326,12 +332,20 @@ public sealed partial class Ui
         return new(originalBitmap, scaledSize);
     }
 
+    private sealed class ToolStripButtonTabAppearanceTag { }
+
     private sealed class MyToolStripRenderer(Ui ui) : ToolStripSystemRenderer
     {
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { }
 
         protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
         {
+            if (e.Item.Tag is ToolStripButtonTabAppearanceTag)
+            {
+                OnRenderTabButtonBackground(e);
+                return;
+            }
+
             var g = e.Graphics;
             Rectangle bounds = new(Point.Empty, e.Item.Size);
 
@@ -355,6 +369,79 @@ public sealed partial class Ui
                 using SolidBrush brush = new(e.Item.BackColor);
                 g.FillRectangle(brush, bounds);
             }
+        }
+
+        private void OnRenderTabButtonBackground(ToolStripItemRenderEventArgs e)
+        {
+            var g = e.Graphics;
+            if (e.Item is not ToolStripButton button)
+                return;
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Get the button's bounds
+            var bounds = new Rectangle(Point.Empty, e.Item.Size);
+            bounds.Y += ui.GetLength(2);
+
+            using (var path = CreateTabPath(bounds))
+            {
+                Color bgColor;
+                Color textColor;
+
+                // Determine colors based on button state
+                if (button.Checked)
+                {
+                    bgColor = MyColors.ToolStripTabButtonTabActiveBg;
+                    textColor = MyColors.ToolStripTabButtonTextActive;
+                }
+                else if (button.Pressed)
+                {
+                    bgColor = MyColors.ToolStripTabButtonTabPressedBg;
+                    textColor = MyColors.ToolStripTabButtonTextActive;
+                }
+                else
+                {
+                    bgColor = MyColors.ToolStripTabButtonTabInactiveBg;
+                    textColor = MyColors.ToolStripTabButtonTextInactive;
+                }
+
+                // Fill background
+                using (var brush = new SolidBrush(bgColor))
+                {
+                    g.FillPath(brush, path);
+                }
+
+                // Update text color
+                button.ForeColor = textColor;
+            }
+
+            GraphicsPath CreateTabPath(Rectangle bounds)
+            {
+                GraphicsPath path = new();
+                var radius = ui.GetLength(6); // Radius for rounded corners
+
+                // Create a path for a rectangle with rounded top corners and flat bottom
+                path.StartFigure();
+                path.AddLine(bounds.Left, bounds.Bottom, bounds.Left, bounds.Top + radius);
+                path.AddArc(bounds.Left, bounds.Top, radius * 2, radius * 2, 180, 90);
+                path.AddLine(bounds.Left + radius, bounds.Top, bounds.Right - radius, bounds.Top);
+                path.AddArc(bounds.Right - radius * 2, bounds.Top, radius * 2, radius * 2, 270, 90);
+                path.AddLine(bounds.Right, bounds.Top + radius, bounds.Right, bounds.Bottom);
+                path.CloseFigure();
+
+                return path;
+            }
+        }
+
+        protected override void OnRenderItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            if (e.Item.Tag is ToolStripButtonTabAppearanceTag)
+            {
+                // Handled in OnRenderTabButtonBackground.
+                return;
+            }
+
+            base.OnRenderItemBackground(e);
         }
 
         protected override void OnRenderDropDownButtonBackground(ToolStripItemRenderEventArgs e)
@@ -395,7 +482,9 @@ public sealed partial class Ui
             string? text = e.Text;
             Rectangle textRect = e.TextRectangle;
 
-            if (e.Item.Owner!.IsDropDown)
+            if (e.Item.Tag is ToolStripButtonTabAppearanceTag)
+                textRect.Offset(ui.GetPoint(7, 1));
+            else if (e.Item.Owner!.IsDropDown)
                 textRect.Offset(ui.GetPoint(0, 5));
             else if (e.Item.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText)
                 textRect.Offset(ui.GetPoint(7, 0));
@@ -412,8 +501,12 @@ public sealed partial class Ui
             ArgumentNullException.ThrowIfNull(e);
 
             Rectangle imageRect = e.ImageRectangle;
-            if (e.Item.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText)
+
+            if (e.Item.Tag is ToolStripButtonTabAppearanceTag)
+                imageRect.Offset(ui.GetPoint(5, 2));
+            else if (e.Item.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText)
                 imageRect.Offset(ui.GetPoint(5, 0));
+
             Image? image = e.Image;
 
             if (imageRect != Rectangle.Empty && image is not null)
@@ -504,6 +597,22 @@ public sealed partial class Ui
         };
     }
 
+    public ToolStripButton NewToolStripTabButton(string text)
+    {
+        return new()
+        {
+            Text = text,
+            DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
+            AutoSize = true,
+            Padding = GetPadding(9, 6),
+            Margin = GetPadding(5, 0, 5, 0),
+            TextAlign = ContentAlignment.MiddleCenter,
+            ImageAlign = ContentAlignment.MiddleCenter,
+            AutoToolTip = false,
+            Tag = new ToolStripButtonTabAppearanceTag(),
+        };
+    }
+
     public ToolStripDropDownButton NewToolStripDropDownButton(string text)
     {
         return new()
@@ -591,7 +700,12 @@ public sealed partial class Ui
 
     public ProgressBar NewProgressBar(int unscaledWidth)
     {
-        return new() { Size = GetSize(unscaledWidth, 12), BackColor = MyColors.ProgressBarBackground };
+        return new()
+        {
+            Size = GetSize(unscaledWidth, 12),
+            BackColor = MyColors.ProgressBarBackground,
+            ForeColor = MyColors.ProgressBarForeground,
+        };
     }
 
     public MyTabControl NewTabControl(int unscaledTabWidth)
@@ -676,12 +790,11 @@ public sealed partial class Ui
                 CellBorderStyle = DataGridViewCellBorderStyle.None,
                 GridColor = MyColors.DataGridLines,
                 BackgroundColor = MyColors.DataGridBackground,
-                AlternatingRowsDefaultCellStyle = new() { BackColor = Color.Gray },
-                Font = BigFont,
+                Font = Font,
             };
         grid.AlternatingRowsDefaultCellStyle.BackColor = MyColors.DataGridAlternateRowBackground;
         grid.DefaultCellStyle.BackColor = MyColors.DataGridRowBackground;
-        grid.RowTemplate.Height = GetLength(26);
+        grid.RowTemplate.Height = GetLength(32);
         FixRightClickSelection(grid);
         return grid;
     }

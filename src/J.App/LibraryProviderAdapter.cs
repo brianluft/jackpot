@@ -172,13 +172,24 @@ public sealed class LibraryProviderAdapter(
             .ConfigureAwait(false);
     }
 
+    public bool MovieExists(string filename) => libraryProvider.MovieExists(filename);
+
     private async Task WithTransactionAsync(Action action, Action<double> updateProgress, CancellationToken cancel) =>
         await MutateAsync(() => libraryProvider.WithTransaction(action), updateProgress, cancel).ConfigureAwait(false);
 
-    public async Task DeleteMovieAsync(MovieId id, Action<double> updateProgress, CancellationToken cancel)
+    public async Task DeleteMoviesAsync(List<MovieId> movieIds, Action<double> updateProgress, CancellationToken cancel)
     {
         m3U8FolderSync.InvalidateAll();
-        await MutateAsync(() => libraryProvider.DeleteMovie(id), updateProgress, cancel).ConfigureAwait(false);
+        await MutateAsync(
+                () =>
+                {
+                    foreach (var id in movieIds)
+                        libraryProvider.DeleteMovie(id);
+                },
+                updateProgress,
+                cancel
+            )
+            .ConfigureAwait(false);
     }
 
     public async Task SyncDownAsync(Action<double> updateProgress, CancellationToken cancel) =>

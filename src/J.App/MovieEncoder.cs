@@ -14,6 +14,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         string clipFilePath,
         string outZipFilePath,
         string outM3u8FilePath,
+        Action<string> updateMessage,
         out ZipIndex zipIndex,
         CancellationToken cancel
     )
@@ -29,14 +30,17 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         // So we'll do half that: 5 seconds per 45 minutes.
         var hlsTime = 5 * (1 + (int)(movieDuration.TotalMinutes / 45));
 
+        updateMessage("Segmenting");
         var (exitCode, log) = Ffmpeg.Run(
             $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls \"{m3u8Path}\"",
             cancel
         );
         if (exitCode != 0)
+        {
             throw new Exception(
                 $"Failed to encode \"{Path.GetFileName(movieFilePath)}\". FFmpeg failed with exit code {exitCode}.\n\nFFmpeg output:\n{log}"
             );
+        }
 
         // We now have movie.m3u8 and movie0.ts, movie1.ts, etc.
         // Make a copy of the .m3u8 for the caller before we encrypt it.
@@ -61,7 +65,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
 
         // Make an archive file.
         cancel.ThrowIfCancellationRequested();
-        EncryptedZipFile.CreateMovieZip(outZipFilePath, tempDir.Path, password, out zipIndex, cancel);
+        EncryptedZipFile.CreateMovieZip(outZipFilePath, tempDir.Path, password, updateMessage, out zipIndex, cancel);
     }
 
     private readonly record struct SourceFileMetadata(

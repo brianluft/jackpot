@@ -22,7 +22,7 @@ public sealed class MyTextBox(Ui ui) : TextBox
 
         if (m.Msg == WM_PAINT)
         {
-            if (!string.IsNullOrEmpty(Text) || Focused)
+            if (!string.IsNullOrEmpty(Text) || Focused || !Enabled)
                 return;
 
             var cueText = Tag as string;

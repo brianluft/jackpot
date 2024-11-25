@@ -52,15 +52,14 @@ public static class Program
         services.AddSingleton<MyApplicationContext>();
 
         services.AddTransient<AddTagToMoviesForm>();
-        services.AddTransient<ConvertMoviesForm>();
         services.AddTransient<EditTagsEditTagForm>();
         services.AddTransient<EditTagsForm>();
         services.AddTransient<EditTagsRenameTagTypeForm>();
         services.AddTransient<FilterChooseTagForm>();
         services.AddTransient<FilterEnterStringForm>();
+        services.AddTransient<ImportControl>();
         services.AddTransient<Importer>();
-        services.AddTransient<ImportForm>();
-        services.AddTransient<ImportProgressFormFactory>();
+        services.AddTransient<ImportQueue>();
         services.AddTransient<LibraryProviderAdapter>();
         services.AddTransient<LoginForm>();
         services.AddTransient<MainForm>();

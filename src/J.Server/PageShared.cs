@@ -24,6 +24,7 @@ public static class PageShared
 
             * {
                 user-select: none;
+                -webkit-font-smoothing: subpixel-antialiased;
             }
 
             body {
