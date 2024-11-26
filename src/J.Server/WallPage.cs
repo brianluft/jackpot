@@ -270,6 +270,23 @@ public static class WallPage
                         }, 150);
                     });
 
+                    // Pause and resume videos when browser is hidden or shown
+                    (function() {
+                        function adjustPlayback(play) {
+                            var videos = document.querySelectorAll('video');
+                            for (var i = 0; i < videos.length; i++) {
+                                if (play) {
+                                   videos[i].play();
+                                } else {
+                                    videos[i].pause();
+                                }
+                            }
+                        }
+
+                        window.addEventListener('blur', function() { adjustPlayback(false); });
+                        window.addEventListener('focus', function() { adjustPlayback(true); });
+                    })();
+
                     // Initial setup
                     setVirtualHeight();
                     updateVisibleVideos();

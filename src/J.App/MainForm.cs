@@ -563,18 +563,6 @@ public sealed partial class MainForm : Form
         _browseForwardButton.Enabled = _browser.CanGoForward;
     }
 
-    protected override void OnActivated(EventArgs e)
-    {
-        base.OnActivated(e);
-        _browser.Visible = true;
-    }
-
-    protected override void OnDeactivate(EventArgs e)
-    {
-        base.OnDeactivate(e);
-        _browser.Visible = false;
-    }
-
     private void GoHome()
     {
         var query = HttpUtility.ParseQueryString("");
