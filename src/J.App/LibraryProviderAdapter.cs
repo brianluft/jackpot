@@ -3,11 +3,7 @@ using J.Core.Data;
 
 namespace J.App;
 
-public sealed class LibraryProviderAdapter(
-    LibraryProvider libraryProvider,
-    Client client,
-    M3u8FolderSync m3U8FolderSync
-)
+public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8FolderSync m3U8FolderSync)
 {
     private static readonly SemaphoreSlim _mutateLock = new(1, 1);
 
@@ -21,7 +17,6 @@ public sealed class LibraryProviderAdapter(
             await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), cancel).ConfigureAwait(false);
             action();
             await libraryProvider.SyncUpAsync(x => updateProgress(0.4 + 0.4 * x), cancel).ConfigureAwait(false);
-            await client.RefreshLibraryAsync(cancel).ConfigureAwait(false);
             m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x));
         }
         finally

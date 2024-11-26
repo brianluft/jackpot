@@ -27,79 +27,34 @@ var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
 var preferences = app.Services.GetRequiredService<Preferences>();
-var m3u8Hostname = "localhost";
-Dictionary<ListPageKey, Lazy<Html>> listPages = [];
-Dictionary<TagId, Lazy<Html>> tagPages = [];
 
 var staticFiles = Directory
     .GetFiles(Path.Combine(AppContext.BaseDirectory, "static"))
-    .ToDictionary(x => Path.GetFileName(x), x => File.ReadAllBytes(x));
+    .ToDictionary(x => Path.GetFileName(x), File.ReadAllBytes);
 
-void RefreshLibrary()
+string GetM3u8Hostname()
 {
-    var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
-    var filter = preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
-    m3u8Hostname = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).M3u8Hostname;
+    var m3u8Hostname = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).M3u8Hostname;
     if (string.IsNullOrWhiteSpace(m3u8Hostname))
         m3u8Hostname = "localhost";
 
-    LibraryMetadata libraryMetadata =
-        new(
-            libraryProvider.GetMovies().ToDictionary(x => x.Id),
-            libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId),
-            libraryProvider.GetTags().ToDictionary(x => x.Id),
-            libraryProvider.GetTagTypes().ToDictionary(x => x.Id)
-        );
-
-    var movies = GetFilteredMovies(libraryProvider, filter);
-
-    // List pages
-    {
-        Dictionary<ListPageKey, Lazy<Html>> dict = [];
-        dict[new ListPageKey(ListPageType.Movies, null)] = new(
-            () => NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies", "movies")
-        );
-
-        foreach (var tagType in libraryProvider.GetTagTypes())
-        {
-            ListPageKey key = new(ListPageType.TagType, tagType.Id);
-            dict[key] = new(() => GetTagListPage(libraryProvider, tagType, sortOrder, libraryMetadata));
-        }
-
-        listPages = dict;
-    }
-
-    // Individual tag pages
-    {
-        Dictionary<TagId, Lazy<Html>> dict = [];
-        var movieIds = movies.Select(x => x.Id).ToHashSet();
-        foreach (var tag in libraryProvider.GetTags())
-            dict[tag.Id] = new(
-                () =>
-                    NewPageFromMovies(
-                        libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
-                        libraryMetadata,
-                        sortOrder,
-                        tag.Name,
-                        $"tag_{tag.Id.Value}"
-                    )
-            );
-        tagPages = dict;
-    }
+    return m3u8Hostname;
 }
 
-static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter filter)
+List<Movie> GetFilteredMovies(LibraryMetadata libraryMetadata)
 {
-    var movies = libraryProvider.GetMovies();
-    var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId);
-    var tagTypes = libraryProvider.GetTags().ToDictionary(x => x.Id, x => x.TagTypeId);
+    var filter = preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
+    var movies = libraryMetadata.Movies.Values;
+    var movieTags = libraryMetadata.MovieTags;
+    var tagTypes = libraryMetadata.TagTypes;
+    var tags = libraryMetadata.Tags;
     var searchTerms = WhitespaceRegex().Split(filter.Search);
     return movies.Where(IsMovieIncludedInFilter).ToList();
 
     bool IsMovieIncludedInFilter(Movie movie)
     {
         var thisTagIds = movieTags[movie.Id];
-        var thisTagTypes = thisTagIds.Select(x => tagTypes[x]);
+        var thisTagTypeIds = thisTagIds.Select(x => tagTypes[tags[x].TagTypeId].Id);
 
         var anyTrue = false;
         var anyFalse = false;
@@ -124,11 +79,11 @@ static List<Movie> GetFilteredMovies(LibraryProvider libraryProvider, Filter fil
             switch (rule.Operator)
             {
                 case FilterOperator.IsTagged:
-                    Add(thisTagTypes.Contains(rule.Field.TagTypeId!));
+                    Add(thisTagTypeIds.Contains(rule.Field.TagTypeId!));
                     break;
 
                 case FilterOperator.IsNotTagged:
-                    Add(!thisTagTypes.Contains(rule.Field.TagTypeId!));
+                    Add(!thisTagTypeIds.Contains(rule.Field.TagTypeId!));
                     break;
 
                 case FilterOperator.IsTag:
@@ -347,7 +302,15 @@ void CheckSessionPassword(string sessionPassword)
         throw new Exception("Unrecognized caller.");
 }
 
-RefreshLibrary();
+LibraryMetadata GetLibraryMetadata()
+{
+    return new(
+        libraryProvider.GetMovies().ToDictionary(x => x.Id),
+        libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId),
+        libraryProvider.GetTags().ToDictionary(x => x.Id),
+        libraryProvider.GetTagTypes().ToDictionary(x => x.Id)
+    );
+}
 
 // ---
 
@@ -385,7 +348,7 @@ app.MapGet(
     ) =>
     {
         CheckSessionPassword(sessionPassword);
-        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword, m3u8Hostname);
+        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword, GetM3u8Hostname());
         response.ContentType = "application/vnd.apple.mpegurl";
         await response.StartAsync(cancel);
         await response.Body.WriteAsync(m3u8, cancel);
@@ -439,15 +402,6 @@ app.MapGet(
     }
 );
 
-app.MapPost(
-    "/refresh-library",
-    ([FromQuery, Required] string sessionPassword) =>
-    {
-        CheckSessionPassword(sessionPassword);
-        RefreshLibrary();
-    }
-);
-
 app.MapGet(
     "/list.html",
     (
@@ -460,10 +414,27 @@ app.MapGet(
         CheckSessionPassword(sessionPassword);
 
         var listPageType = Enum.Parse<ListPageType>(type);
-        ListPageKey key = new(listPageType, tagTypeId is null ? null : new(tagTypeId));
+        var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+        var libraryMetadata = GetLibraryMetadata();
+
+        Html html;
+        if (listPageType == ListPageType.Movies)
+        {
+            var movies = GetFilteredMovies(libraryMetadata);
+            html = NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies", "movies");
+        }
+        else if (listPageType == ListPageType.TagType)
+        {
+            var tagType = libraryProvider.GetTagType(new(tagTypeId!));
+            html = GetTagListPage(libraryProvider, tagType, sortOrder, libraryMetadata);
+        }
+        else
+        {
+            throw new Exception($"Unexpected ListPageType: {listPageType}");
+        }
 
         response.ContentType = "text/html";
-        return listPages[key].Value.Content;
+        return html.Content;
     }
 );
 
@@ -473,8 +444,22 @@ app.MapGet(
     {
         CheckSessionPassword(sessionPassword);
 
+        var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+        var libraryMetadata = GetLibraryMetadata();
+        var movies = GetFilteredMovies(libraryMetadata);
+        var movieIds = movies.Select(x => x.Id).ToHashSet();
+        var tag = libraryProvider.GetTag(new(tagId));
+
+        var html = NewPageFromMovies(
+            libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
+            libraryMetadata,
+            sortOrder,
+            tag.Name,
+            $"tag_{tag.Id.Value}"
+        );
+
         response.ContentType = "text/html";
-        return tagPages[new(tagId)].Value.Content;
+        return html.Content;
     }
 );
 

@@ -479,12 +479,12 @@ public sealed partial class MainForm : Form
         UpdateTagTypes();
     }
 
-    protected override async void OnShown(EventArgs e)
+    protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
 
-        await UpdateViewFromPreferencesAsync(reload: false).ConfigureAwait(true);
-        await UpdateFilterSortFromPreferencesAsync(reload: false).ConfigureAwait(true);
+        UpdateViewFromPreferences(reload: false);
+        UpdateFilterSortFromPreferences(reload: false);
         GoHome();
     }
 
@@ -515,16 +515,16 @@ public sealed partial class MainForm : Form
         }
     }
 
-    private async void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
+    private void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
     {
         UpdateTagTypes();
-        await ClearFilterAsync().ConfigureAwait(true);
+        ClearFilter();
         _browser.Reload();
     }
 
-    private async void EditTagsControl_TagChanged(object? sender, EventArgs e)
+    private void EditTagsControl_TagChanged(object? sender, EventArgs e)
     {
-        await ClearFilterAsync().ConfigureAwait(true);
+        ClearFilter();
         _browser.Reload();
     }
 
@@ -571,48 +571,48 @@ public sealed partial class MainForm : Form
         Navigate($"/list.html?{query}");
     }
 
-    private async Task ChangeSortOrderAsync(Func<SortOrder, SortOrder> func)
+    private void ChangeSortOrder(Func<SortOrder, SortOrder> func)
     {
         var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
         sortOrder = func(sortOrder);
         _preferences.SetJson(Preferences.Key.Shared_SortOrder, sortOrder);
-        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+        UpdateFilterSortFromPreferences();
     }
 
-    private async void ShuffleButton_Click(object? sender, EventArgs e)
+    private void ShuffleButton_Click(object? sender, EventArgs e)
     {
         var shuffle = !_shuffleButton.Checked;
-        await ChangeSortOrderAsync(x => x with { Shuffle = shuffle }).ConfigureAwait(true);
+        ChangeSortOrder(x => x with { Shuffle = shuffle });
     }
 
-    private async void SortAscendingButton_Click(object? sender, EventArgs e)
+    private void SortAscendingButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Ascending = true }).ConfigureAwait(true);
+        ChangeSortOrder(x => x with { Ascending = true });
     }
 
-    private async void SortDescendingButton_Click(object? sender, EventArgs e)
+    private void SortDescendingButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Ascending = false }).ConfigureAwait(true);
+        ChangeSortOrder(x => x with { Ascending = false });
     }
 
-    private async void SortByNameButton_Click(object? sender, EventArgs e)
+    private void SortByNameButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Field = "name" }).ConfigureAwait(true);
+        ChangeSortOrder(x => x with { Field = "name" });
     }
 
-    private async void SortByDateAddedButton_Click(object? sender, EventArgs e)
+    private void SortByDateAddedButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Field = "date" }).ConfigureAwait(true);
+        ChangeSortOrder(x => x with { Field = "date" });
     }
 
-    private async void SortItem_Click(object? sender, EventArgs e)
+    private void SortItem_Click(object? sender, EventArgs e)
     {
         var menuItem = (ToolStripMenuItem)sender!;
         var tagTypeId = (TagTypeId)menuItem.Tag!;
-        await ChangeSortOrderAsync(x => x with { Field = tagTypeId.Value }).ConfigureAwait(true);
+        ChangeSortOrder(x => x with { Field = tagTypeId.Value });
     }
 
-    private async Task UpdateFilterSortFromPreferencesAsync(bool reload = true)
+    private void UpdateFilterSortFromPreferences(bool reload = true)
     {
         var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
         var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
@@ -677,11 +677,11 @@ public sealed partial class MainForm : Form
                 var item = _ui.NewToolStripMenuItem(rule.GetDisplayName(tagTypes, tagNames));
                 _filterButton.DropDownItems.Add(item);
                 item.Image = _ui.InvertColorsInPlace(_ui.GetScaledBitmapResource("DeleteBullet.png", 16, 16));
-                item.Click += async delegate
+                item.Click += delegate
                 {
                     filter.Rules.RemoveAt(thisIndex);
                     _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
-                    await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+                    UpdateFilterSortFromPreferences();
                 };
             }
 
@@ -693,12 +693,11 @@ public sealed partial class MainForm : Form
         UpdateFilterSortButtons(filter, sortOrder);
 
         // Update the web view
-        await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
         if (reload)
             _browser.Reload();
     }
 
-    private async Task AddFilterMenuItem_Click(FilterField filterField, FilterOperator filterOperator)
+    private void AddFilterMenuItem_Click(FilterField filterField, FilterOperator filterOperator)
     {
         var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
 
@@ -728,7 +727,7 @@ public sealed partial class MainForm : Form
         }
 
         _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
-        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+        UpdateFilterSortFromPreferences();
     }
 
     private void UpdateFilterSortButtons(Filter filter, SortOrder sortOrder)
@@ -740,12 +739,12 @@ public sealed partial class MainForm : Form
         _filterClearButton.Enabled = !filter.IsDefault || !sortOrder.IsDefault;
     }
 
-    private async void FilterClearButton_Click(object? sender, EventArgs e)
+    private void FilterClearButton_Click(object? sender, EventArgs e)
     {
-        await ClearFilterAsync().ConfigureAwait(true);
+        ClearFilter();
     }
 
-    private async Task ClearFilterAsync()
+    private void ClearFilter()
     {
         _preferences.WithTransaction(() =>
         {
@@ -756,25 +755,25 @@ public sealed partial class MainForm : Form
         // Remove focus from the search box so we can replace the text.
         _browser.Focus();
 
-        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+        UpdateFilterSortFromPreferences();
     }
 
-    private async Task ChangeFilterAsync(Func<Filter, Filter> func)
+    private void ChangeFilter(Func<Filter, Filter> func)
     {
         var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
         filter = func(filter);
         _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
-        await UpdateFilterSortFromPreferencesAsync().ConfigureAwait(true);
+        UpdateFilterSortFromPreferences();
     }
 
-    private async void FilterOrButton_Click(object? sender, EventArgs e)
+    private void FilterOrButton_Click(object? sender, EventArgs e)
     {
-        await ChangeFilterAsync(x => x with { Or = true }).ConfigureAwait(true);
+        ChangeFilter(x => x with { Or = true });
     }
 
-    private async void FilterAndButton_Click(object? sender, EventArgs e)
+    private void FilterAndButton_Click(object? sender, EventArgs e)
     {
-        await ChangeFilterAsync(x => x with { Or = false }).ConfigureAwait(true);
+        ChangeFilter(x => x with { Or = false });
     }
 
     private void UpdateTagTypes()
@@ -841,9 +840,9 @@ public sealed partial class MainForm : Form
                 var operatorItem = _ui.NewToolStripMenuItem(filterOperator.GetDisplayName(true));
                 fieldItem.DropDownItems.Add(operatorItem);
 
-                operatorItem.Click += async delegate
+                operatorItem.Click += delegate
                 {
-                    await AddFilterMenuItem_Click(filterField, filterOperator).ConfigureAwait(true);
+                    AddFilterMenuItem_Click(filterField, filterOperator);
                 };
             }
         }
@@ -927,14 +926,14 @@ public sealed partial class MainForm : Form
         _searchDebounceTimer.Start();
     }
 
-    private async void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+    private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
     {
         _searchDebounceTimer.Stop();
 
-        await ChangeFilterAsync(x => x with { Search = _searchText.Text }).ConfigureAwait(true);
+        ChangeFilter(x => x with { Search = _searchText.Text });
     }
 
-    private async void OptionsButton_Click(object? sender, EventArgs e)
+    private void OptionsButton_Click(object? sender, EventArgs e)
     {
         var oldM3u8Settings = _preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
 
@@ -961,7 +960,6 @@ public sealed partial class MainForm : Form
             }
 
             ApplyFullscreenPreference();
-            await _client.RefreshLibraryAsync(CancellationToken.None).ConfigureAwait(true);
             _browser.Reload();
         }
         catch (Exception ex)
@@ -1142,6 +1140,7 @@ public sealed partial class MainForm : Form
     private void ShowTagContextMenu(IEnumerable<TagId> tagIds)
     {
         //TODO
+        _ = tagIds;
     }
 
     private void OpenMovie(MovieId movieId)
@@ -1298,28 +1297,27 @@ public sealed partial class MainForm : Form
             _browser.Reload();
     }
 
-    private async void ViewListButton_Click(object? sender, EventArgs e)
+    private void ViewListButton_Click(object? sender, EventArgs e)
     {
-        await ChangeViewAsync(LibraryViewStyle.List).ConfigureAwait(true);
+        ChangeView(LibraryViewStyle.List);
     }
 
-    private async void ViewGridButton_Click(object? sender, EventArgs e)
+    private void ViewGridButton_Click(object? sender, EventArgs e)
     {
-        await ChangeViewAsync(LibraryViewStyle.Grid).ConfigureAwait(true);
+        ChangeView(LibraryViewStyle.Grid);
     }
 
-    private async Task ChangeViewAsync(LibraryViewStyle style)
+    private void ChangeView(LibraryViewStyle style)
     {
         _preferences.SetEnum(Preferences.Key.Shared_LibraryViewStyle, style);
-        await UpdateViewFromPreferencesAsync().ConfigureAwait(true);
+        UpdateViewFromPreferences();
     }
 
-    private async Task UpdateViewFromPreferencesAsync(bool reload = true, CancellationToken cancel = default)
+    private void UpdateViewFromPreferences(bool reload = true)
     {
         var style = _preferences.GetEnum<LibraryViewStyle>(Preferences.Key.Shared_LibraryViewStyle);
         _viewListButton.Checked = style == LibraryViewStyle.List;
         _viewGridButton.Checked = style == LibraryViewStyle.Grid;
-        await _client.RefreshLibraryAsync(cancel).ConfigureAwait(true);
         if (reload)
             _browser.Reload();
     }

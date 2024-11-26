@@ -85,15 +85,6 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
         return $"http://localhost:{Port}/movie.m3u8?{query}";
     }
 
-    public async Task RefreshLibraryAsync(CancellationToken cancel)
-    {
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = SessionPassword;
-        await _httpClient
-            .PostAsync($"http://localhost:{Port}/refresh-library?{query}", new StringContent(""), cancel)
-            .ConfigureAwait(false);
-    }
-
     private static int FindRandomUnusedPort()
     {
         // Create a TCP/IP socket and bind to a random port assigned by the OS
