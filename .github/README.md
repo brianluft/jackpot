@@ -2,49 +2,19 @@
 
 <h3 align="center"><i>Personal streaming video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</i></h3>
 
-<br><br>
+<p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif"></a></p>
 
-<h3 align="center">Browse a wall of moving video clips</h3>
+<br>
 
-<p align="center">A fun, visual way to find something to watch in your collection.</p>
+## Features
 
-<p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif" width=640 height=360></a></p>
+- **Browse a grid of moving video clips.** A fun, visual way to find something to watch in your collection.<br><br>
+- **Organize your media with custom tags.** Create your own tags and apply them to your videos.<br><br>
+- **Stream videos using the <a href="https://www.videolan.org/vlc/">VLC app</a> on any local device.** Automatically share a folder of <a href="https://en.wikipedia.org/wiki/M3U"><code>.M3U8</code></a> playlist files to allow Apple and Android devices to stream through your PC.<br><br>
+- **End-to-end encryption.** All data in the cloud is stored in AES-encrypted <code>.ZIP</code> files with a password that only you know.<br><br>
+- **No Linux, no Docker, and no complex setup.** Jackpot is a Windows app that comes with everything you need.
 
-<br><br>
-
-<h3 align="center">Fullscreen, mouse-driven design</h3>
-
-<p align="center">Action buttons are along the edges of the screen.</p>
-
-<p align="center"><img src="img/main-help.png" width=640 height=191></p>
-
-<br><br>
-
-<h3 align="center">Organize your media with custom tags</h3>
-
-<p align="center">Create your own tags and apply them to your videos.</p>
-
-<p align="center"><img src="img/edit-movies.png" width=640 height=221></p>
-
-<br><br>
-
-<h3 align="center">Stream videos using the <a href="https://www.videolan.org/vlc/">VLC app</a> on local devices</h3>
-
-<p align="center">Share a folder of <code>M3U8</code> files to allow non-Windows devices to stream through your PC.</p>
-
-<p align="center"><img src="img/share.jpg" width=640 height=237></p>
-
-<br><br>
-
-<h3 align="center">End-to-end encryption</h3>
-
-<p align="center">All data in the cloud is stored in AES-encrypted <code>ZIP</code> files with a password that only you know. </p>
-
-<br><br>
-
-<h3 align="center">No Linux, no Docker, and no complex setup</h3>
-
-<p align="center">Jackpot is a Windows app that comes with everything you need.</p>
+<br>
 
 ## Pricing
 
@@ -65,7 +35,7 @@ Prices are in U.S. dollars.
 </tr>
 <tr>
 <td align="right"><i>Additional streaming:</i></td>
-<td>1¢ per GB</td>
+<td>$0.01 per GB</td>
 </tr>
 <tr>
 <td align="right"><i>Uploading:</i></td>
