@@ -1,9 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Data;
+﻿using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Web;
-using J.Base;
 using J.Core;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +49,7 @@ public sealed partial class MainForm : Form
         _viewListButton;
     private readonly ToolStripButton _browseBackButton,
         _browseForwardButton,
+        _refreshButton,
         _exitButton,
         _filterClearButton,
         _fullscreenButton,
@@ -142,6 +141,7 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_filterClearButton = ui.NewToolStripButton("Clear Filter", true));
             {
+                _filterClearButton.ToolTipText = "Clear filter";
                 _filterClearButton.Alignment = ToolStripItemAlignment.Right;
                 _filterClearButton.Image = ui.InvertColorsInPlace(
                     ui.GetScaledBitmapResource("FilterClear.png", 16, 16)
@@ -285,6 +285,7 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_browseBackButton = ui.NewToolStripButton("Back"));
             {
+                _browseBackButton.ToolTipText = "Go back";
                 _browseBackButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _browseBackButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("BrowseBack.png", 16, 16));
                 _browseBackButton.Click += BrowseBackButton_Click;
@@ -292,6 +293,7 @@ public sealed partial class MainForm : Form
 
             _toolStrip.Items.Add(_browseForwardButton = ui.NewToolStripButton("Forward"));
             {
+                _browseForwardButton.ToolTipText = "Go forward";
                 _browseForwardButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _browseForwardButton.Image = ui.InvertColorsInPlace(
                     ui.GetScaledBitmapResource("BrowseForward.png", 16, 16)
@@ -302,8 +304,20 @@ public sealed partial class MainForm : Form
                 };
             }
 
+            _toolStrip.Items.Add(_refreshButton = ui.NewToolStripButton("Refresh"));
+            {
+                _refreshButton.ToolTipText = "Refresh";
+                _refreshButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+                _refreshButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Refresh.png", 16, 16));
+                _refreshButton.Click += delegate
+                {
+                    _browser!.Reload();
+                };
+            }
+
             _toolStrip.Items.Add(_homeButton = ui.NewToolStripButton("Home"));
             {
+                _homeButton.ToolTipText = "Go home";
                 _homeButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _homeButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Home.png", 16, 16));
                 _homeButton.Click += delegate
@@ -337,7 +351,6 @@ public sealed partial class MainForm : Form
         Controls.Add(_browser = ui.NewWebView2());
         {
             _browser.BringToFront();
-            _browser.NavigationStarting += Browser_NavigationStarting;
             _browser.NavigationCompleted += Browser_NavigationCompleted;
             _browser.WebMessageReceived += Browser_WebMessageReceived;
         }
@@ -537,11 +550,6 @@ public sealed partial class MainForm : Form
     private void BrowseBackButton_Click(object? sender, EventArgs e)
     {
         _browser.GoBack();
-    }
-
-    private void Browser_NavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
-    {
-        _browserTabButton.Text = "Loading...";
     }
 
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
