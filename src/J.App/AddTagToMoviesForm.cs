@@ -100,24 +100,19 @@ public sealed class AddTagToMoviesForm : Form
         foreach (var movieId in _movieIds)
             movieTags.Add((movieId, tag));
 
-        try
-        {
-            ProgressForm.Do(
-                this,
-                "Adding tags...",
-                async (updateProgress, cancel) =>
-                {
-                    await _libraryProvider.AddMovieTagsAsync(movieTags, updateProgress, cancel).ConfigureAwait(false);
-                }
-            );
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
+        var outcome = ProgressForm.Do(
+            this,
+            "Adding tags...",
+            async (updateProgress, cancel) =>
+            {
+                await _libraryProvider.AddMovieTagsAsync(movieTags, updateProgress, cancel).ConfigureAwait(false);
+            }
+        );
 
-        DialogResult = DialogResult.OK;
-        Close();
+        if (outcome == Outcome.Success)
+        {
+            DialogResult = DialogResult.OK;
+            Close();
+        }
     }
 }

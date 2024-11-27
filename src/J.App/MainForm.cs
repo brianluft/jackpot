@@ -960,14 +960,17 @@ public sealed partial class MainForm : Form
             {
                 _client.Restart();
                 _m3U8FolderSync.InvalidateAll();
-                ProgressForm.Do(
+                var outcome = ProgressForm.Do(
                     this,
                     "Synchronizing network sharing folder...",
                     (updateProgress, cancel) =>
                     {
                         _m3U8FolderSync.Sync(updateProgress);
+                        return Task.CompletedTask;
                     }
                 );
+                if (outcome != Outcome.Success)
+                    return;
             }
 
             ApplyFullscreenPreference();
@@ -1268,34 +1271,18 @@ public sealed partial class MainForm : Form
             return;
         }
 
-        try
-        {
-            using ProgressForm f =
-                new(
-                    (updateProgress, updateMessage, cancel) =>
-                    {
-                        updateMessage("Deleting...");
-                        _libraryProvider.DeleteMoviesAsync(movieIds, updateProgress, cancel).GetAwaiter().GetResult();
-                    }
-                );
-
-            var result = f.ShowDialog(this);
-            if (result == DialogResult.Abort)
+        var outcome = ProgressForm.Do(
+            this,
+            "Deleting...",
+            async (updateProgress, cancel) =>
             {
-                MessageBox.Show(
-                    this,
-                    f.Exception!.SourceException.Message,
-                    "Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                await _libraryProvider.DeleteMoviesAsync(movieIds, updateProgress, cancel).ConfigureAwait(false);
             }
+        );
 
-            _browser.Reload();
-        }
-        catch (Exception ex)
+        if (outcome == Outcome.Success)
         {
-            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _browser.Reload();
         }
     }
 
@@ -1353,48 +1340,36 @@ public sealed partial class MainForm : Form
 
         var movies = _libraryProvider.GetMovies().ToDictionary(x => x.Id);
 
-        using ProgressForm f =
-            new(
-                (updateProgress, updateMessage, cancel) =>
+        _ = ProgressForm.Do(
+            this,
+            "Please wait...",
+            (updateProgress, updateMessage, cancel) =>
+            {
+                var count = movieIds.Count;
+                var i = 0;
+                var fileInterval = 1d / count;
+
+                foreach (var movieId in movieIds)
                 {
-                    var count = movieIds.Count;
-                    var i = 0;
-                    var fileInterval = 1d / count;
-                    foreach (var movieId in movieIds)
-                    {
-                        var movie = movies[movieId];
-                        var outFilePath = Path.Combine(outDir, movie.Filename + ".mp4");
+                    var movie = movies[movieId];
+                    var outFilePath = Path.Combine(outDir, movie.Filename + ".mp4");
 
-                        var name = movie.Filename;
-                        if (name.Length > 40)
-                            name = name[..40] + "...";
+                    var name = movie.Filename;
+                    if (name.Length > 40)
+                        name = name[..40] + "...";
 
-                        updateMessage($"File {i + 1:#,##0} of {count:#,##0}\n{name}");
+                    updateMessage($"File {i + 1:#,##0} of {count:#,##0}\n{name}");
 
-                        if (!File.Exists(outFilePath))
-                            _movieExporter.Export(
-                                movie,
-                                outFilePath,
-                                x => updateProgress((x + i) * fileInterval),
-                                cancel
-                            );
+                    if (!File.Exists(outFilePath))
+                        _movieExporter.Export(movie, outFilePath, x => updateProgress((x + i) * fileInterval), cancel);
 
-                        i++;
-                        updateProgress((double)i / count);
-                    }
+                    i++;
+                    updateProgress((double)i / count);
                 }
-            );
 
-        if (f.ShowDialog(this) == DialogResult.Abort)
-        {
-            MessageBox.Show(
-                this,
-                f.Exception!.SourceException.Message,
-                "Error",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
+                return Task.CompletedTask;
+            }
+        );
     }
 
     private void ImportTabButton_Click(object? sender, EventArgs e)

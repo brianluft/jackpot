@@ -58,7 +58,7 @@ public sealed class TagForm : Form
             if (string.IsNullOrWhiteSpace(_nameTextBox.Text))
                 throw new Exception("Please enter a name.");
 
-            ProgressForm.Do(
+            var outcome = ProgressForm.Do(
                 this,
                 "Saving tag...",
                 async (updateProgress, cancel) =>
@@ -77,8 +77,11 @@ public sealed class TagForm : Form
                 }
             );
 
-            DialogResult = DialogResult.OK;
-            Close();
+            if (outcome == Outcome.Success)
+            {
+                DialogResult = DialogResult.OK;
+                Close();
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

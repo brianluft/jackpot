@@ -93,11 +93,12 @@ public sealed class TagTypeForm : Form
             if (string.IsNullOrWhiteSpace(plural))
                 throw new Exception("Please enter a plural name.");
 
+            Outcome outcome;
             if (_tagType is null)
             {
                 var tagType = new TagType(new(), 0, singular, plural);
 
-                ProgressForm.Do(
+                outcome = ProgressForm.Do(
                     this,
                     "Creating tag group...",
                     async (updateProgress, cancel) =>
@@ -110,7 +111,7 @@ public sealed class TagTypeForm : Form
             {
                 var newTagType = _tagType.Value with { SingularName = singular, PluralName = plural };
 
-                ProgressForm.Do(
+                outcome = ProgressForm.Do(
                     this,
                     "Renaming tag group...",
                     async (updateProgress, cancel) =>
@@ -122,8 +123,11 @@ public sealed class TagTypeForm : Form
                 );
             }
 
-            DialogResult = DialogResult.OK;
-            Close();
+            if (outcome == Outcome.Success)
+            {
+                DialogResult = DialogResult.OK;
+                Close();
+            }
         }
         catch (Exception ex)
         {

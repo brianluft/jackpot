@@ -381,7 +381,7 @@ public sealed class TagsControl : UserControl
             tagTypes[i] = tagTypes[i] with { SortIndex = i };
         }
 
-        ProgressForm.Do(
+        var outcome = ProgressForm.Do(
             FindForm()!,
             "Moving tag group...",
             async (updateProgress, cancel) =>
@@ -390,8 +390,11 @@ public sealed class TagsControl : UserControl
             }
         );
 
-        TagTypeChanged?.Invoke(this, EventArgs.Empty);
-        UpdateTagTypes();
+        if (outcome == Outcome.Success)
+        {
+            TagTypeChanged?.Invoke(this, EventArgs.Empty);
+            UpdateTagTypes();
+        }
     }
 
     private void LeftDeleteGroupButton_Click(object? sender, EventArgs e)
@@ -408,7 +411,7 @@ public sealed class TagsControl : UserControl
         if (response != DialogResult.OK)
             return;
 
-        ProgressForm.Do(
+        var outcome = ProgressForm.Do(
             FindForm()!,
             "Deleting tag group...",
             async (updateProgress, cancel) =>
@@ -417,8 +420,11 @@ public sealed class TagsControl : UserControl
             }
         );
 
-        TagTypeChanged?.Invoke(this, EventArgs.Empty);
-        UpdateTagTypes();
+        if (outcome == Outcome.Success)
+        {
+            TagTypeChanged?.Invoke(this, EventArgs.Empty);
+            UpdateTagTypes();
+        }
     }
 
     private void RightNewTagButton_Click(object? sender, EventArgs e)
@@ -470,23 +476,19 @@ public sealed class TagsControl : UserControl
         if (response != DialogResult.OK)
             return;
 
-        try
-        {
-            ProgressForm.Do(
-                FindForm()!,
-                "Deleting...",
-                async (updateProgress, cancel) =>
-                {
-                    await _libraryProvider.DeleteTagsAsync(tags, updateProgress, cancel).ConfigureAwait(false);
-                }
-            );
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
+        var outcome = ProgressForm.Do(
+            FindForm()!,
+            "Deleting...",
+            async (updateProgress, cancel) =>
+            {
+                await _libraryProvider.DeleteTagsAsync(tags, updateProgress, cancel).ConfigureAwait(false);
+            }
+        );
 
-        TagChanged?.Invoke(this, EventArgs.Empty);
-        UpdateTags();
+        if (outcome == Outcome.Success)
+        {
+            TagChanged?.Invoke(this, EventArgs.Empty);
+            UpdateTags();
+        }
     }
 }

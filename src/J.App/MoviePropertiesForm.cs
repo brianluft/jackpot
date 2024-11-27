@@ -285,7 +285,7 @@ public sealed class MoviePropertiesForm : Form
             foreach (DataRow row in _tagsTable.Rows)
                 tagIds.Add((TagId)row["tag_id"]);
 
-            ProgressForm.Do(
+            var outcome = ProgressForm.Do(
                 this,
                 "Saving changes...",
                 async (updateProgress, cancel) =>
@@ -296,8 +296,11 @@ public sealed class MoviePropertiesForm : Form
                 }
             );
 
-            DialogResult = DialogResult.OK;
-            Close();
+            if (outcome == Outcome.Success)
+            {
+                DialogResult = DialogResult.OK;
+                Close();
+            }
         }
         catch (Exception ex)
         {

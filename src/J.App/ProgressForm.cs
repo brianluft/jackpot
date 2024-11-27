@@ -3,6 +3,13 @@ using System.Runtime.ExceptionServices;
 
 namespace J.App;
 
+public enum Outcome
+{
+    Success,
+    Failure,
+    Cancellation,
+}
+
 public sealed class ProgressForm : Form
 {
     private readonly CancellationTokenSource _cts = new();
@@ -22,29 +29,99 @@ public sealed class ProgressForm : Form
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public ExceptionDispatchInfo? Exception { get; private set; }
 
-    public static void Do(IWin32Window owner, string text, Func<Action<double>, CancellationToken, Task> action)
+    public static Outcome Do(IWin32Window? owner, string text, Func<Action<double>, CancellationToken, Task> action)
     {
-        Do(owner, text, (updateProgress, cancel) => action(updateProgress, cancel).GetAwaiter().GetResult());
+        return Do(owner, text, (updateProgress, _, cancel) => action(updateProgress, cancel));
     }
 
-    public static void Do(IWin32Window owner, string text, Action<Action<double>, CancellationToken> action)
+    public static Outcome Do(
+        IWin32Window? owner,
+        string text,
+        Func<Action<double>, Action<string>, CancellationToken, Task> action
+    )
     {
         using ProgressForm f =
             new(
                 (updateProgress, updateMessage, cancel) =>
                 {
                     updateMessage(text);
-                    action(updateProgress, cancel);
+                    action(updateProgress, updateMessage, cancel).GetAwaiter().GetResult();
                 }
             );
-        var result = f.ShowDialog(owner);
-        if (result == DialogResult.Cancel)
-            throw new OperationCanceledException();
-        else if (result == DialogResult.Abort)
-            f.Exception!.Throw();
+
+        var result = owner is null ? f.ShowDialog() : f.ShowDialog(owner);
+
+        switch (result)
+        {
+            case DialogResult.Cancel:
+                return Outcome.Cancellation;
+
+            case DialogResult.Abort:
+                MessageBox.Show(
+                    owner,
+                    f.Exception!.SourceException.Message,
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+                return Outcome.Failure;
+
+            default:
+                return Outcome.Success;
+        }
     }
 
-    public ProgressForm(WorkDelegate action)
+    public static void DoModeless(
+        IWin32Window? owner,
+        string text,
+        Func<Action<double>, Action<string>, CancellationToken, Task> action,
+        Action<Outcome> continuation
+    )
+    {
+        ProgressForm f =
+            new(
+                (updateProgress, updateMessage, cancel) =>
+                {
+                    updateMessage(text);
+                    action(updateProgress, updateMessage, cancel).GetAwaiter().GetResult();
+                }
+            )
+            {
+                ShowInTaskbar = true,
+            };
+
+        f.FormClosed += delegate
+        {
+            switch (f.DialogResult)
+            {
+                case DialogResult.Cancel:
+                    continuation(Outcome.Cancellation);
+                    break;
+
+                case DialogResult.Abort:
+                    MessageBox.Show(
+                        owner,
+                        f.Exception!.SourceException.Message,
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    continuation(Outcome.Failure);
+                    break;
+
+                default:
+                    continuation(Outcome.Success);
+                    break;
+            }
+        };
+
+        if (owner is null)
+            f.Show();
+        else
+            f.Show(owner);
+    }
+
+    private ProgressForm(WorkDelegate action)
     {
         Ui ui = new(this);
 

@@ -171,57 +171,37 @@ public static class Program
             Try(
                 () =>
                 {
-                    ProgressForm f =
-                        new(
-                            (updateProgress, updateMessage, cancel) =>
-                            {
-                                updateMessage("Connecting...");
-                                _libraryProvider.Connect();
-                                updateProgress(0.05);
-
-                                updateMessage("Synchronizing library...");
-                                _libraryProvider
-                                    .SyncDownAsync(x => updateProgress(0.05 + 0.75 * x), cancel)
-                                    .GetAwaiter()
-                                    .GetResult();
-
-                                updateMessage("Starting background service...");
-                                _client.Start();
-
-                                updateMessage("Synchronizing network sharing folder...");
-                                _m3u8FolderSync.InvalidateAll();
-                                _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
-                            }
-                        )
+                    ProgressForm.DoModeless(
+                        null,
+                        "Connecting...",
+                        (updateProgress, updateMessage, cancel) =>
                         {
-                            Text = "Jackpot Login",
-                        };
-                    f.FormClosed += delegate
-                    {
-                        switch (f.DialogResult)
+                            _libraryProvider.Connect();
+                            updateProgress(0.05);
+
+                            updateMessage("Synchronizing library...");
+                            _libraryProvider
+                                .SyncDownAsync(x => updateProgress(0.05 + 0.75 * x), cancel)
+                                .GetAwaiter()
+                                .GetResult();
+
+                            updateMessage("Starting background service...");
+                            _client.Start();
+
+                            updateMessage("Synchronizing network sharing folder...");
+                            _m3u8FolderSync.InvalidateAll();
+                            _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
+
+                            return Task.CompletedTask;
+                        },
+                        outcome =>
                         {
-                            case DialogResult.Cancel:
-                                ShowLoginForm();
-                                break;
-                            case DialogResult.Abort:
-                                MessageBox.Show(
-                                    "Jackpot login failed.\n\n" + f.Exception!.SourceException.Message,
-                                    "Jackpot Login",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Error
-                                );
-                                ShowLoginForm();
-                                break;
-                            case DialogResult.OK:
+                            if (outcome == Outcome.Success)
                                 ShowMainForm();
-                                break;
-                            default:
-                                ExitThread();
-                                break;
+                            else
+                                ShowLoginForm();
                         }
-                    };
-                    f.ShowInTaskbar = true;
-                    f.Show();
+                    );
                 },
                 ExitThread
             );
