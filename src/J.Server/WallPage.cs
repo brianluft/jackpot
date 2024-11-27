@@ -111,6 +111,9 @@ public static class WallPage
                     // Gap between cells
                     const GAP = 4;
 
+                    // Whether newly visible videos should autoplay
+                    let autoPlayNewVideos = true;
+
                     const gridContainer = document.getElementById('gridContainer');
                     const virtualHeight = document.getElementById('virtualHeight');
                     const activeVideos = new Map();
@@ -234,7 +237,7 @@ public static class WallPage
                                     gridContainer.appendChild(cell);
                                     activeVideos.set(i.toString(), cell);
                                     const video = cell.querySelector('video');
-                                    if (video) {
+                                    if (video && autoPlayNewVideos) {
                                         video.play().catch(() => {});
                                     }
                                 }
@@ -273,6 +276,7 @@ public static class WallPage
                     // Pause and resume videos when browser is hidden or shown
                     (function() {
                         function adjustPlayback(play) {
+                            autoPlayNewVideos = play;
                             var videos = document.querySelectorAll('video');
                             for (var i = 0; i < videos.length; i++) {
                                 if (play) {
