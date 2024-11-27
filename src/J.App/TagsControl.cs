@@ -31,6 +31,10 @@ public sealed class TagsControl : UserControl
     public event EventHandler? TagTypeChanged;
     public event EventHandler? TagChanged;
 
+    public readonly record struct TagActivatedEventArgs(TagId Id);
+
+    public event EventHandler<TagActivatedEventArgs>? TagActivated;
+
     public TagsControl(LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
     {
         _libraryProvider = libraryProvider;
@@ -439,7 +443,9 @@ public sealed class TagsControl : UserControl
 
     private void RightGrid_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
     {
-        EditTag(GetSelectedTagIds().First());
+        var ids = GetSelectedTagIds();
+        if (ids.Any())
+            TagActivated?.Invoke(this, new(ids.First()));
     }
 
     private void EditTag(TagId? id)

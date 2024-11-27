@@ -374,6 +374,7 @@ public sealed partial class MainForm : Form
             _tagsControl.Dock = DockStyle.Fill;
             _tagsControl.TagTypeChanged += EditTagsControl_TagTypeChanged;
             _tagsControl.TagChanged += EditTagsControl_TagChanged;
+            _tagsControl.TagActivated += TagsControl_TagActivated;
         }
 
         _searchDebounceTimer = new() { Interval = 500, Enabled = false };
@@ -433,6 +434,15 @@ public sealed partial class MainForm : Form
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;
+    }
+
+    private void TagsControl_TagActivated(object? sender, TagsControl.TagActivatedEventArgs e)
+    {
+        var query = HttpUtility.ParseQueryString("");
+        query["sessionPassword"] = _client.SessionPassword;
+        query["tagId"] = e.Id.Value;
+        SwitchTab(_browserTabButton);
+        Navigate($"/tag.html?{query}");
     }
 
     private void AboutButton_Click(object? sender, EventArgs e)
