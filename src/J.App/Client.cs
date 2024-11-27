@@ -98,4 +98,14 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
 
         return port;
     }
+
+    public async Task ReshuffleAsync(CancellationToken cancel)
+    {
+        var query = HttpUtility.ParseQueryString("");
+        query["sessionPassword"] = SessionPassword;
+        var response = await _httpClient
+            .PostAsync($"http://localhost:{Port}/reshuffle?{query}", null, cancel)
+            .ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
 }

@@ -27,6 +27,7 @@ var bucket = accountSettings.Bucket;
 var password = accountSettings.Password ?? throw new Exception("Encryption key not found.");
 
 var preferences = app.Services.GetRequiredService<Preferences>();
+var seed = Guid.NewGuid().GetHashCode();
 
 var staticFiles = Directory
     .GetFiles(Path.Combine(AppContext.BaseDirectory, "static"))
@@ -260,11 +261,13 @@ Html NewPageFromMovies(
     );
 }
 
-static void Shuffle<T>(List<T> list)
+void Shuffle<T>(List<T> list)
 {
+    Random random = new(seed);
+
     for (var i = 0; i < list.Count; i++)
     {
-        var j = Random.Shared.Next(i, list.Count);
+        var j = random.Next(i, list.Count);
         (list[i], list[j]) = (list[j], list[i]);
     }
 }
@@ -471,6 +474,15 @@ app.MapGet(
 
         response.ContentType = "text/html";
         return MoviePreviewPage.GenerateHtml(new(movieId), sessionPassword).Content;
+    }
+);
+
+app.MapPost(
+    "/reshuffle",
+    ([FromQuery, Required] string sessionPassword) =>
+    {
+        CheckSessionPassword(sessionPassword);
+        seed = Guid.NewGuid().GetHashCode();
     }
 );
 

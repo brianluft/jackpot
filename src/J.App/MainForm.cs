@@ -571,45 +571,56 @@ public sealed partial class MainForm : Form
         Navigate($"/list.html?{query}");
     }
 
-    private void ChangeSortOrder(Func<SortOrder, SortOrder> func)
+    private async Task ChangeSortOrderAsync(Func<SortOrder, SortOrder> func, CancellationToken cancel)
     {
         var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+
+        var wasShuffled = sortOrder.Shuffle;
         sortOrder = func(sortOrder);
+        var isShuffled = sortOrder.Shuffle;
+
         _preferences.SetJson(Preferences.Key.Shared_SortOrder, sortOrder);
+
+        if (!wasShuffled && isShuffled)
+        {
+            await _client.ReshuffleAsync(cancel).ConfigureAwait(true);
+        }
+
         UpdateFilterSortFromPreferences();
     }
 
-    private void ShuffleButton_Click(object? sender, EventArgs e)
+    private async void ShuffleButton_Click(object? sender, EventArgs e)
     {
         var shuffle = !_shuffleButton.Checked;
-        ChangeSortOrder(x => x with { Shuffle = shuffle });
+        await ChangeSortOrderAsync(x => x with { Shuffle = shuffle }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    private void SortAscendingButton_Click(object? sender, EventArgs e)
+    private async void SortAscendingButton_Click(object? sender, EventArgs e)
     {
-        ChangeSortOrder(x => x with { Ascending = true });
+        await ChangeSortOrderAsync(x => x with { Ascending = true }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    private void SortDescendingButton_Click(object? sender, EventArgs e)
+    private async void SortDescendingButton_Click(object? sender, EventArgs e)
     {
-        ChangeSortOrder(x => x with { Ascending = false });
+        await ChangeSortOrderAsync(x => x with { Ascending = false }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    private void SortByNameButton_Click(object? sender, EventArgs e)
+    private async void SortByNameButton_Click(object? sender, EventArgs e)
     {
-        ChangeSortOrder(x => x with { Field = "name" });
+        await ChangeSortOrderAsync(x => x with { Field = "name" }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    private void SortByDateAddedButton_Click(object? sender, EventArgs e)
+    private async void SortByDateAddedButton_Click(object? sender, EventArgs e)
     {
-        ChangeSortOrder(x => x with { Field = "date" });
+        await ChangeSortOrderAsync(x => x with { Field = "date" }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    private void SortItem_Click(object? sender, EventArgs e)
+    private async void SortItem_Click(object? sender, EventArgs e)
     {
         var menuItem = (ToolStripMenuItem)sender!;
         var tagTypeId = (TagTypeId)menuItem.Tag!;
-        ChangeSortOrder(x => x with { Field = tagTypeId.Value });
+        await ChangeSortOrderAsync(x => x with { Field = tagTypeId.Value }, CancellationToken.None)
+            .ConfigureAwait(true);
     }
 
     private void UpdateFilterSortFromPreferences(bool reload = true)
