@@ -168,13 +168,13 @@ public sealed partial class MainForm : Form
 
                 _filterButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _filterButton.DropDownItems.Add(_filterAndButton = ui.NewToolStripMenuItem("AND"));
+                _filterButton.DropDownItems.Add(_filterAndButton = ui.NewToolStripMenuItem("And"));
                 {
                     _filterAndButton.Checked = true;
                     _filterAndButton.Click += FilterAndButton_Click;
                 }
 
-                _filterButton.DropDownItems.Add(_filterOrButton = ui.NewToolStripMenuItem("OR"));
+                _filterButton.DropDownItems.Add(_filterOrButton = ui.NewToolStripMenuItem("Or"));
                 {
                     _filterOrButton.Click += FilterOrButton_Click;
                 }
