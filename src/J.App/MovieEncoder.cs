@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Windows;
 using J.Core;
 using J.Core.Data;
 
@@ -14,7 +15,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         string clipFilePath,
         string outZipFilePath,
         string outM3u8FilePath,
-        Action<string> updateMessage,
+        ImportProgress importProgress,
         out ZipIndex zipIndex,
         CancellationToken cancel
     )
@@ -30,9 +31,17 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         // So we'll do half that: 5 seconds per 45 minutes.
         var hlsTime = 5 * (1 + (int)(movieDuration.TotalMinutes / 45));
 
-        updateMessage("Segmenting");
+        importProgress.UpdateProgress(ImportProgress.Phase.Segmenting, 0);
         var (exitCode, log) = Ffmpeg.Run(
-            $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls \"{m3u8Path}\"",
+            $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls -hide_banner -loglevel error -progress pipe:1 \"{m3u8Path}\"",
+            output =>
+            {
+                if (output.StartsWith("out_time="))
+                {
+                    var time = TimeSpan.Parse(output.Split('=')[1].Trim());
+                    importProgress.UpdateProgress(ImportProgress.Phase.Segmenting, time / movieDuration);
+                }
+            },
             cancel
         );
         if (exitCode != 0)
@@ -65,7 +74,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
 
         // Make an archive file.
         cancel.ThrowIfCancellationRequested();
-        EncryptedZipFile.CreateMovieZip(outZipFilePath, tempDir.Path, password, updateMessage, out zipIndex, cancel);
+        EncryptedZipFile.CreateMovieZip(outZipFilePath, tempDir.Path, password, importProgress, out zipIndex, cancel);
     }
 
     private readonly record struct SourceFileMetadata(

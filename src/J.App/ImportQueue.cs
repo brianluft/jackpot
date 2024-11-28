@@ -287,6 +287,13 @@ public sealed class ImportQueue : IDisposable
             UpdateRow(row, FileState.Working, "Inspecting", 0d);
             var needsConversion = !Ffmpeg.IsCompatibleCodec(filePath);
 
+            ImportProgress importProgress =
+                new(
+                    needsConversion,
+                    progress => UpdateRowProgress(row, progress),
+                    message => UpdateRowMessage(row, message)
+                );
+
             cancel.ThrowIfCancellationRequested();
             if (needsConversion)
             {
@@ -297,11 +304,11 @@ public sealed class ImportQueue : IDisposable
                     );
                 }
 
-                UpdateRow(row, FileState.Working, "Waiting to convert", 0d);
+                importProgress.UpdateMessage("Waiting");
                 lock (GlobalLocks.BigCpu)
                 {
                     cancel.ThrowIfCancellationRequested();
-                    UpdateRow(row, FileState.Working, "Converting", 0d);
+                    importProgress.UpdateProgress(ImportProgress.Phase.Converting, 0);
 
                     MovieConverter.Convert(
                         filePath,
@@ -309,22 +316,14 @@ public sealed class ImportQueue : IDisposable
                         int.Parse(_preferences.GetText(Preferences.Key.ImportControl_VideoQuality).Split(' ')[0]),
                         _preferences.GetText(Preferences.Key.ImportControl_CompressionLevel).Split(' ')[0],
                         int.Parse(_preferences.GetText(Preferences.Key.ImportControl_AudioBitrate).Split(' ')[0]),
-                        progress =>
-                        {
-                            UpdateRow(row, FileState.Working, $"Converting ({progress * 100:0}%)", 0);
-                        },
+                        progress => importProgress.UpdateProgress(ImportProgress.Phase.Converting, progress),
                         cancel
                     );
                 }
             }
 
             cancel.ThrowIfCancellationRequested();
-            _importer.Import(
-                needsConversion ? convertedFilePath : filePath,
-                progress => UpdateRowProgress(row, progress),
-                message => UpdateRowMessage(row, message),
-                cancel
-            );
+            _importer.Import(needsConversion ? convertedFilePath : filePath, importProgress, cancel);
 
             UpdateRow(row, FileState.Success, "✔ Imported", 1d);
         }

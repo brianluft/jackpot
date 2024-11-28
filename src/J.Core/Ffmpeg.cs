@@ -116,7 +116,8 @@ public static class Ffmpeg
 
         try
         {
-            var arguments = $"-v error -select_streams v:0 -show_entries stream=codec_name -of json -i \"{filePath}\"";
+            var arguments =
+                $"-hide_banner -loglevel error -select_streams v:0 -show_entries stream=codec_name -of json -i \"{filePath}\"";
             var result = Probe(arguments, CancellationToken.None);
 
             if (result.ExitCode != 0)
@@ -129,8 +130,6 @@ public static class Ffmpeg
                 return false;
 
             var codecName = streams[0].GetProperty("codec_name").GetString()?.ToLowerInvariant();
-            if (codecName is not "h264" or "hevc")
-                Debugger.Break();
             return codecName is "h264" or "hevc";
         }
         catch
@@ -144,7 +143,7 @@ public static class Ffmpeg
         TimeSpan? duration = null;
 
         var (exitCode, log) = Run(
-            $"-i \"{filePath}\" -show_entries format=duration -v quiet -of csv=\"p=0\"",
+            $"-i \"{filePath}\" -hide_banner -loglevel error -show_entries format=duration -of csv=\"p=0\"",
             output =>
             {
                 if (double.TryParse(output.Trim(), out var seconds))

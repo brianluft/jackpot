@@ -18,7 +18,7 @@ public static class EncryptedZipFile
         string zipFilePath,
         string dir,
         Password password,
-        Action<string> updateMessage,
+        ImportProgress importProgress,
         out ZipIndex zipIndex,
         CancellationToken cancel
     )
@@ -38,23 +38,24 @@ public static class EncryptedZipFile
                     entryTime: new FileInfo(filePath).LastWriteTime
                 );
                 var progress = (double)(i + 1) / files.Length;
-                updateMessage($"Encrypting ({progress * 100:0}%)");
+                importProgress.UpdateProgress(ImportProgress.Phase.Encrypting, progress);
             }
         }
 
         cancel.ThrowIfCancellationRequested();
-        updateMessage("Waiting to verify");
+        importProgress.UpdateMessage("Waiting");
         lock (GlobalLocks.BigCpu)
         {
+            importProgress.UpdateProgress(ImportProgress.Phase.Verifying, 0);
             zipIndex = GetZipIndex(
                 zipFilePath,
                 password,
-                progress => updateMessage($"Verifying ({progress * 100:0}%)")
+                progress => importProgress.UpdateProgress(ImportProgress.Phase.Verifying, progress)
             );
         }
         cancel.ThrowIfCancellationRequested();
 
-        updateMessage("Verifying (100%)");
+        importProgress.UpdateProgress(ImportProgress.Phase.Verifying, 1);
         AppendZipIndex(zipFilePath, zipIndex);
     }
 

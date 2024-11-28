@@ -20,12 +20,7 @@ public sealed class Importer(
         _s3.Dispose();
     }
 
-    public void Import(
-        string sourceFilePath,
-        Action<double> updateProgress,
-        Action<string> updateMessage,
-        CancellationToken cancel
-    )
+    public void Import(string sourceFilePath, ImportProgress importProgress, CancellationToken cancel)
     {
         var password = accountSettingsProvider.Current.Password;
 
@@ -34,38 +29,37 @@ public sealed class Importer(
         var clipFilePath = Path.Combine(dir.Path, "clip.mp4");
         var m3u8FilePath = Path.Combine(dir.Path, "movie.m3u8");
 
-        updateMessage("Scanning");
+        importProgress.UpdateMessage("Scanning");
         var duration = Ffmpeg.GetMovieDuration(sourceFilePath, cancel);
         cancel.ThrowIfCancellationRequested();
 
-        updateMessage("Waiting to make thumbnails");
+        importProgress.UpdateMessage("Waiting");
         lock (GlobalLocks.BigCpu)
         {
-            updateMessage("Making thumbnails");
-            MakeClip(sourceFilePath, duration, clipFilePath, cancel);
+            importProgress.UpdateProgress(ImportProgress.Phase.MakingThumbnails, 0);
+            MakeClip(sourceFilePath, duration, clipFilePath, importProgress, cancel);
             cancel.ThrowIfCancellationRequested();
         }
 
-        updateMessage("Encrypting (0%)");
+        importProgress.UpdateProgress(ImportProgress.Phase.Encrypting, 0);
         movieEncoder.Encode(
             sourceFilePath,
             duration,
             clipFilePath,
             encodedFullMovieFilePath,
             m3u8FilePath,
-            updateMessage,
+            importProgress,
             out var zipIndex,
             cancel
         );
         cancel.ThrowIfCancellationRequested();
 
-        updateMessage("Uploading (0%)");
+        importProgress.UpdateProgress(ImportProgress.Phase.Uploading, 0);
         UploadEncodedFullMovie(
             encodedFullMovieFilePath,
             progress =>
             {
-                updateMessage($"Uploading ({progress * 100:0}%)");
-                updateProgress(progress);
+                importProgress.UpdateProgress(ImportProgress.Phase.Uploading, progress);
             },
             out var s3Key,
             cancel
@@ -129,8 +123,16 @@ public sealed class Importer(
         return ms.ToArray();
     }
 
-    private void MakeClip(string sourceFilePath, TimeSpan sourceDuration, string outFilePath, CancellationToken cancel)
+    private void MakeClip(
+        string sourceFilePath,
+        TimeSpan sourceDuration,
+        string outFilePath,
+        ImportProgress importProgress,
+        CancellationToken cancel
+    )
     {
+        importProgress.UpdateProgress(ImportProgress.Phase.MakingThumbnails, 0);
+
         List<TimeSpan> clipStartTimes = [];
 
         if (sourceDuration < TimeSpan.FromSeconds(10))
@@ -153,6 +155,10 @@ public sealed class Importer(
 
         using var dir = processTempDir.NewDir();
         var clipFilenames = new string[clipStartTimes.Count];
+
+        var count = clipStartTimes.Count + 1; // extra one for the final encoding
+        var soFar = 0; // interlocked
+
         Parallel.For(
             0,
             clipStartTimes.Count,
@@ -163,10 +169,14 @@ public sealed class Importer(
                 var clipFilePath = Path.Combine(dir.Path, clipFilename);
                 MakeSingleClip(sourceFilePath, clipFilePath, clipStartTimes[i], TimeSpan.FromSeconds(1), cancel);
                 clipFilenames[i] = clipFilename;
+
+                var progress = (double)Interlocked.Increment(ref soFar) / count;
+                importProgress.UpdateProgress(ImportProgress.Phase.MakingThumbnails, progress);
             }
         );
 
         ConcatenateClipsAndEncodeAsH264(dir.Path, clipFilenames, outFilePath, cancel);
+        importProgress.UpdateProgress(ImportProgress.Phase.MakingThumbnails, 1);
     }
 
     private static void MakeSingleClip(
