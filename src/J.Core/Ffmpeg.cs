@@ -138,4 +138,36 @@ public static class Ffmpeg
             return false;
         }
     }
+
+    public static TimeSpan GetMovieDuration(string filePath, CancellationToken cancel)
+    {
+        TimeSpan? duration = null;
+
+        var (exitCode, log) = Run(
+            $"-i \"{filePath}\" -show_entries format=duration -v quiet -of csv=\"p=0\"",
+            output =>
+            {
+                if (double.TryParse(output.Trim(), out var seconds))
+                    duration = TimeSpan.FromSeconds(seconds);
+            },
+            "ffprobe.exe",
+            cancel
+        );
+
+        if (exitCode != 0)
+        {
+            throw new Exception(
+                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe failed with exit code {exitCode}.\n\nFFprobe output:\n{log}"
+            );
+        }
+
+        if (duration is null)
+        {
+            throw new Exception(
+                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe returned successfully, but did not produce the movie duration.\n\nFFprobe output:\n{log}"
+            );
+        }
+
+        return duration.Value;
+    }
 }

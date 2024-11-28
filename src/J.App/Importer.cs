@@ -35,7 +35,7 @@ public sealed class Importer(
         var m3u8FilePath = Path.Combine(dir.Path, "movie.m3u8");
 
         updateMessage("Scanning");
-        var duration = GetMovieDuration(sourceFilePath, cancel);
+        var duration = Ffmpeg.GetMovieDuration(sourceFilePath, cancel);
         cancel.ThrowIfCancellationRequested();
 
         updateMessage("Waiting to make thumbnails");
@@ -127,38 +127,6 @@ public sealed class Importer(
         using MemoryStream ms = new();
         EncryptedZipFile.ReadEntry(fs, ms, entryName, password);
         return ms.ToArray();
-    }
-
-    private TimeSpan GetMovieDuration(string filePath, CancellationToken cancel)
-    {
-        TimeSpan? duration = null;
-
-        var (exitCode, log) = Ffmpeg.Run(
-            $"-i \"{filePath}\" -show_entries format=duration -v quiet -of csv=\"p=0\"",
-            output =>
-            {
-                if (double.TryParse(output.Trim(), out var seconds))
-                    duration = TimeSpan.FromSeconds(seconds);
-            },
-            "ffprobe.exe",
-            cancel
-        );
-
-        if (exitCode != 0)
-        {
-            throw new Exception(
-                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe failed with exit code {exitCode}.\n\nFFprobe output:\n{log}"
-            );
-        }
-
-        if (duration is null)
-        {
-            throw new Exception(
-                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe returned successfully, but did not produce the movie duration.\n\nFFprobe output:\n{log}"
-            );
-        }
-
-        return duration.Value;
     }
 
     private void MakeClip(string sourceFilePath, TimeSpan sourceDuration, string outFilePath, CancellationToken cancel)

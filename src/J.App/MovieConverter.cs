@@ -14,16 +14,8 @@ public static class MovieConverter
         CancellationToken cancel
     )
     {
-        var totalFrames = GetFrameCount(inFilePath, cancel);
-        var currentFrame = 0L;
+        var duration = Ffmpeg.GetMovieDuration(inFilePath, cancel);
         cancel.ThrowIfCancellationRequested();
-
-        void UpdateFrame(int frame)
-        {
-            currentFrame = frame - 1;
-            if (totalFrames.HasValue)
-                updateProgress((double)currentFrame / totalFrames.Value);
-        }
 
         var arguments =
             $"-i \"{inFilePath}\" -c:v libx264 -preset \"{videoPreset}\" -crf \"{videoCrf}\" -pix_fmt yuv420p -c:a aac -b:a {audioBitrate}k -threads {Environment.ProcessorCount - 1} -movflags +faststart -hide_banner -loglevel error -progress pipe:1 -y \"{outFilePath}\"";
@@ -32,10 +24,10 @@ public static class MovieConverter
             arguments,
             output =>
             {
-                if (output.StartsWith("frame="))
+                if (output.StartsWith("out_time="))
                 {
-                    var frame = int.Parse(output.Split('=')[1].Trim());
-                    UpdateFrame(frame);
+                    var time = TimeSpan.Parse(output.Split('=')[1].Trim());
+                    updateProgress(time / duration);
                 }
             },
             cancel
@@ -56,43 +48,5 @@ public static class MovieConverter
                 $"Failed to convert \"{Path.GetFileName(inFilePath)}\". FFmpeg did not produce the output file.\n\nFFmpeg output:\n{log}"
             );
         }
-    }
-
-    private static int? GetFrameCount(string filePath, CancellationToken cancel)
-    {
-        int? frameCount = null;
-        var na = false;
-
-        var (exitCode, log) = Ffmpeg.Run(
-            $"-v error -select_streams v:0 -show_entries stream=nb_frames -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"",
-            output =>
-            {
-                if (output.Trim().Equals("N/A", StringComparison.OrdinalIgnoreCase))
-                    na = true;
-                else if (int.TryParse(output.Trim(), out var frames))
-                    frameCount = frames;
-            },
-            "ffprobe.exe",
-            cancel
-        );
-
-        if (exitCode != 0)
-        {
-            throw new Exception(
-                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe failed with exit code {exitCode}.\n\nFFprobe output:\n{log}"
-            );
-        }
-
-        if (na)
-            return null;
-
-        if (!frameCount.HasValue)
-        {
-            throw new Exception(
-                $"Failed to inspect \"{Path.GetFileName(filePath)}\". FFprobe returned successfully, but did not produce the frame count.\n\nFFprobe output:\n{log}"
-            );
-        }
-
-        return frameCount.Value;
     }
 }
