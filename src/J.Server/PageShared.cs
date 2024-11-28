@@ -42,7 +42,7 @@ public static class PageShared
             <script src="/static/tabulator.min.js"></script>
             """;
 
-    public static string GetSharedJs(string sessionPassword, string cookieName) =>
+    public static string GetSharedJs(string sessionPassword, string cookieName, string filterSortHash) =>
         $$"""
             // Disable context menu page-wide
             document.addEventListener('contextmenu', e => e.preventDefault());
@@ -87,8 +87,9 @@ public static class PageShared
                 window.chrome.webview.postMessage(JSON.stringify({ Type: 'close-context-menu' }));
             }
 
-            const cookieName = '{{cookieName}}';
             function saveAndRestoreScrollPosition(target, options = {}) {
+                const cookieName = '{{cookieName}}';
+                const filterSortHash = '{{filterSortHash}}';
                 const isTabulator = target instanceof Tabulator;
 
                 if (!target) {
@@ -141,6 +142,7 @@ public static class PageShared
                     // For Tabulator, scrollTop is provided by the event
                     const offset = Math.round(isTabulator ? scrollTop : getScrollTop());
                     setCookie(cookieName + '_scroll', offset);
+                    setCookie(cookieName + '_filterSortHash', filterSortHash);
                 }
 
                 // Throttled scroll handler for non-Tabulator scenarios
@@ -174,12 +176,18 @@ public static class PageShared
 
                 // Restore scroll position when ready
                 function restoreScrollPosition() {
-                    const savedScrollY = getCookie(cookieName + '_scroll');
-                    if (savedScrollY !== null) {
-                        // Small delay to ensure content is laid out
-                        setTimeout(() => {
-                            setScrollTop(parseInt(savedScrollY, 10));
-                        }, 0);
+                    const savedFilterSortHash = getCookie(cookieName + '_filterSortHash');
+                    console.log('Saved filterSortHash:', savedFilterSortHash);
+                    console.log('Current filterSortHash:', filterSortHash);
+
+                    if (savedFilterSortHash === filterSortHash) {
+                        const savedScrollY = getCookie(cookieName + '_scroll');
+                        if (savedScrollY !== null) {
+                            // Small delay to ensure content is laid out
+                            setTimeout(() => {
+                                setScrollTop(parseInt(savedScrollY, 10));
+                            }, 0);
+                        }
                     }
                 }
 

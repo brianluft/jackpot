@@ -5,7 +5,7 @@ namespace J.Server;
 
 public static class MoviePreviewPage
 {
-    public static Html GenerateHtml(MovieId movieId, string sessionPassword)
+    public static Html GenerateHtml(MovieId movieId, string sessionPassword, string filterSortHash)
     {
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = sessionPassword;
@@ -55,7 +55,7 @@ public static class MoviePreviewPage
                     </video>
                 </div>
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword, nameof(MoviePreviewPage))}}
+                    {{PageShared.GetSharedJs(sessionPassword, nameof(MoviePreviewPage), filterSortHash)}}
                 </script>
             </body>
             </html>

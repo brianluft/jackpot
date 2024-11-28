@@ -1,10 +1,12 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
 using Amazon.S3;
 using J.Core;
 using J.Core.Data;
 using J.Server;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCore();
@@ -121,7 +123,8 @@ Html GetTagListPage(
     LibraryProvider libraryProvider,
     TagType tagType,
     SortOrder sortOrder,
-    LibraryMetadata libraryMetadata
+    LibraryMetadata libraryMetadata,
+    string filterSortHash
 )
 {
     var tags = libraryProvider.GetTags(tagType.Id);
@@ -135,7 +138,14 @@ Html GetTagListPage(
         PageBlock block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, [], []);
         blocks.Add(block);
     }
-    return NewPageFromBlocks(blocks, [], sortOrder, tagType.PluralName, $"TagListPage_{tagType.Id.Value}");
+    return NewPageFromBlocks(
+        blocks,
+        [],
+        sortOrder,
+        tagType.PluralName,
+        $"TagListPage_{tagType.Id.Value}",
+        filterSortHash
+    );
 }
 
 static string GetField(PageBlock block, string field)
@@ -157,7 +167,8 @@ Html NewPageFromBlocks(
     List<string> metadataKeys,
     SortOrder sortOrder,
     string title,
-    string cookieName
+    string cookieName,
+    string filterSortHash
 )
 {
     if (sortOrder.Shuffle)
@@ -203,14 +214,16 @@ Html NewPageFromBlocks(
             metadataKeys,
             title,
             configuredSessionPassword,
-            cookieName
+            cookieName,
+            filterSortHash
         ),
         LibraryViewStyle.Grid => WallPage.GenerateHtml(
             blocks,
             title,
             configuredSessionPassword,
             columnCount,
-            cookieName
+            cookieName,
+            filterSortHash
         ),
         _ => throw new Exception($"Unexpected LibraryViewStyle: {style}"),
     };
@@ -231,7 +244,8 @@ Html NewPageFromMovies(
     LibraryMetadata libraryMetadata,
     SortOrder sortOrder,
     string title,
-    string cookieName
+    string cookieName,
+    string filterSortHash
 )
 {
     var metadataKeys = libraryMetadata
@@ -257,7 +271,8 @@ Html NewPageFromMovies(
         metadataKeys,
         sortOrder,
         title,
-        cookieName
+        cookieName,
+        filterSortHash
     );
 }
 
@@ -313,6 +328,17 @@ LibraryMetadata GetLibraryMetadata()
         libraryProvider.GetTags().ToDictionary(x => x.Id),
         libraryProvider.GetTagTypes().ToDictionary(x => x.Id)
     );
+}
+
+string GetFilterSortHash()
+{
+    var filter = preferences.GetText(Preferences.Key.Shared_Filter);
+    var sortOrder = preferences.GetText(Preferences.Key.Shared_SortOrder);
+
+    var filterHash = SHA256.HashData(Encoding.UTF8.GetBytes(filter));
+    var sortOrderHash = SHA256.HashData(Encoding.UTF8.GetBytes(sortOrder));
+
+    return BitConverter.ToString(filterHash.Concat(sortOrderHash).ToArray());
 }
 
 // ---
@@ -421,15 +447,16 @@ app.MapGet(
         var libraryMetadata = GetLibraryMetadata();
 
         Html html;
+        var filterSortHash = GetFilterSortHash();
         if (listPageType == ListPageType.Movies)
         {
             var movies = GetFilteredMovies(libraryMetadata);
-            html = NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies", "movies");
+            html = NewPageFromMovies(movies, libraryMetadata, sortOrder, "Movies", "movies", filterSortHash);
         }
         else if (listPageType == ListPageType.TagType)
         {
             var tagType = libraryProvider.GetTagType(new(tagTypeId!));
-            html = GetTagListPage(libraryProvider, tagType, sortOrder, libraryMetadata);
+            html = GetTagListPage(libraryProvider, tagType, sortOrder, libraryMetadata, filterSortHash);
         }
         else
         {
@@ -458,7 +485,8 @@ app.MapGet(
             libraryMetadata,
             sortOrder,
             tag.Name,
-            $"tag_{tag.Id.Value}"
+            $"tag_{tag.Id.Value}",
+            GetFilterSortHash()
         );
 
         response.ContentType = "text/html";
@@ -473,7 +501,7 @@ app.MapGet(
         CheckSessionPassword(sessionPassword);
 
         response.ContentType = "text/html";
-        return MoviePreviewPage.GenerateHtml(new(movieId), sessionPassword).Content;
+        return MoviePreviewPage.GenerateHtml(new(movieId), sessionPassword, "").Content;
     }
 );
 
