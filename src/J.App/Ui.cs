@@ -794,6 +794,7 @@ public sealed partial class Ui
             };
         grid.AlternatingRowsDefaultCellStyle.BackColor = MyColors.DataGridAlternateRowBackground;
         grid.DefaultCellStyle.BackColor = MyColors.DataGridRowBackground;
+        grid.DefaultCellStyle.Padding += GetPadding(5, 0, 0, 0);
         grid.RowTemplate.Height = GetLength(32);
         FixRightClickSelection(grid);
         return grid;

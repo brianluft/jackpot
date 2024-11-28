@@ -109,7 +109,6 @@ public sealed class TagsControl : UserControl
                     _leftGrid.CellDoubleClick += LeftGrid_CellDoubleClick;
                     _leftGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
                     _leftGrid.ColumnHeadersVisible = false;
-                    _leftGrid.DefaultCellStyle.Padding += ui.GetPadding(5, 0, 0, 0);
 
                     var col = _leftGrid.Columns[_leftGrid.Columns.Add("name", "Group")];
                     {

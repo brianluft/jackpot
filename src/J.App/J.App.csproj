@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="AddTagToMoviesForm.cs">
+    <Compile Update="AddTagsToMoviesForm.cs">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>

@@ -51,7 +51,7 @@ public static class Program
         services.AddSingleton<M3u8FolderSync>();
         services.AddSingleton<MyApplicationContext>();
 
-        services.AddTransient<AddTagToMoviesForm>();
+        services.AddTransient<AddTagsToMoviesForm>();
         services.AddTransient<TagForm>();
         services.AddTransient<TagTypeForm>();
         services.AddTransient<FilterChooseTagForm>();

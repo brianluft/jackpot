@@ -1,12 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using Amazon.S3;
 using J.Core;
 using J.Core.Data;
 using J.Server;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCore();

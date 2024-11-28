@@ -24,29 +24,19 @@ public sealed class FilterChooseTagForm : Form
         _libraryProvider = libraryProvider;
         Ui ui = new(this);
 
-        Controls.Add(_table = ui.NewTable(2, 3));
+        Controls.Add(_table = ui.NewTable(1, 3));
         {
             _table.Padding = ui.DefaultPadding;
-            _table.ColumnStyles[1].SizeType = SizeType.Percent;
-            _table.ColumnStyles[1].Width = 100;
             _table.RowStyles[1].SizeType = SizeType.Percent;
             _table.RowStyles[1].Height = 100;
 
-            _table.Controls.Add(_searchLabel = ui.NewLabel("Search:"), 0, 0);
+            _table.Controls.Add(ui.NewLabeledPair("Search:", _searchText = ui.NewTextBox(200)), 0, 0);
             {
-                _searchLabel.Dock = DockStyle.Fill;
-                _searchLabel.TextAlign = ContentAlignment.MiddleCenter;
-            }
-
-            _table.Controls.Add(_searchText = ui.NewTextBox(0), 1, 0);
-            {
-                _searchText.Dock = DockStyle.Fill;
                 _searchText.TextChanged += SearchText_TextChanged;
             }
 
             _table.Controls.Add(_grid = ui.NewDataGridView(), 0, 1);
             {
-                _table.SetColumnSpan(_grid, 2);
                 _grid.Margin = ui.TopSpacing;
                 _grid.BorderStyle = BorderStyle.Fixed3D;
                 _grid.Columns.Add("name", "Name");
@@ -58,7 +48,6 @@ public sealed class FilterChooseTagForm : Form
 
             _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 0, 2);
             {
-                _table.SetColumnSpan(_buttonFlow, 2);
                 _buttonFlow.Margin = ui.TopSpacingBig;
                 _buttonFlow.Dock = DockStyle.Right;
 

@@ -1298,9 +1298,8 @@ public sealed partial class MainForm : Form
 
     private void AddTagToMovies(List<MovieId> movieContextMenuIds)
     {
-        using var f = _serviceProvider.GetRequiredService<AddTagToMoviesForm>();
+        using var f = _serviceProvider.GetRequiredService<AddTagsToMoviesForm>();
         f.Initialize(movieContextMenuIds);
-        f.Text = "Add Tag";
         if (f.ShowDialog(this) == DialogResult.OK)
             _browser.Reload();
     }
