@@ -213,6 +213,11 @@ public sealed class LoginForm : Form
 
             _toolsMenu.Items.Add(_pasteJsonItem = ui.NewToolStripMenuItem("Paste JSON"));
             _pasteJsonItem.Click += PasteSettingsButton_Click;
+
+            Disposed += delegate
+            {
+                _toolsMenu.Dispose();
+            };
         }
 
         Text = "Jackpot Media Library";
