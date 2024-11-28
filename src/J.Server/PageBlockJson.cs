@@ -9,7 +9,7 @@ public readonly record struct PageBlockJson(string id, string url, string title,
 {
     public PageBlockJson(PageBlock block, string sessionPassword)
         : this(
-            id: block.TagId?.Value ?? block.MovieId.Value,
+            id: block.UntaggedTagTypeId?.Value ?? block.TagId?.Value ?? block.MovieId.Value,
             url: $"/clip.mp4?{GetQuery(block, sessionPassword)}",
             title: block.Title,
             metadata: block.Metadata

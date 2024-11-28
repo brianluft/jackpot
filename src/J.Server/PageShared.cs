@@ -66,7 +66,11 @@ public static class PageShared
             }
 
             function openTag(id) {
-                location.href = '/tag.html?sessionPassword={{sessionPassword}}&tagId=' + encodeURIComponent(id) + '&pageIndex=0';
+                location.href = '/tag.html?sessionPassword={{sessionPassword}}&tagId=' + encodeURIComponent(id);
+            }
+
+            function openUntaggedTagType(id) {
+                location.href = '/untagged.html?sessionPassword={{sessionPassword}}&tagTypeId=' + encodeURIComponent(id);
             }
 
             function open(id) {
@@ -74,6 +78,8 @@ public static class PageShared
                     openMovie(id);
                 } else if (id.startsWith("tag-")) {
                     openTag(id);
+                } else if (id.startsWith("tagtype-")) {
+                    openUntaggedTagType(id);
                 } else {
                     alert('Invalid ID: ' + id);
                 }

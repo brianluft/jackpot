@@ -176,7 +176,7 @@ public static class WallPage
                         const titleBar = document.createElement('div');
                         const titleText = document.createElement('div');
 
-                        if (videoData.id.startsWith('tag-')) {
+                        if (!videoData.id.startsWith('movie-')) {
                             titleBar.className = 'title-bar title-bar-tag';
                             titleText.className = 'title-text title-text-tag';
                             titleText.textContent = '📁 ' + videoData.title;

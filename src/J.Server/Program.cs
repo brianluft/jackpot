@@ -135,9 +135,27 @@ Html GetTagListPage(
         if (!dict.TryGetValue(tag.Id, out var movieId))
             continue;
 
-        PageBlock block = new(movieId, tag.Id, tag.Name, DateTimeOffset.Now, [], []);
+        PageBlock block = new(movieId, tag.Id, null, tag.Name, DateTimeOffset.Now, [], []);
         blocks.Add(block);
     }
+
+    // One final block for any movie that doesn't have any tags of this type.
+    Movie? untaggedMovie = null;
+    foreach (var movie in libraryMetadata.Movies.Values)
+    {
+        if (!libraryMetadata.MovieTags[movie.Id].Any(x => libraryMetadata.Tags[x].TagTypeId == tagType.Id))
+        {
+            untaggedMovie = movie;
+            break;
+        }
+    }
+    if (untaggedMovie is not null)
+    {
+        PageBlock block =
+            new(untaggedMovie.Value.Id, null, tagType.Id, $"(No {tagType.SingularName})", DateTimeOffset.Now, [], []);
+        blocks.Add(block);
+    }
+
     return NewPageFromBlocks(
         blocks,
         [],
@@ -261,6 +279,7 @@ Html NewPageFromMovies(
             from x in movies
             select new PageBlock(
                 x.Id,
+                null,
                 null,
                 x.Filename,
                 x.DateAdded,
@@ -476,16 +495,40 @@ app.MapGet(
 
         var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
         var libraryMetadata = GetLibraryMetadata();
-        var movies = GetFilteredMovies(libraryMetadata);
-        var movieIds = movies.Select(x => x.Id).ToHashSet();
+        var movies = GetFilteredMovies(libraryMetadata).ToDictionary(x => x.Id);
         var tag = libraryProvider.GetTag(new(tagId));
 
         var html = NewPageFromMovies(
-            libraryProvider.GetMoviesWithTag(movieIds, tag.Id),
+            libraryProvider.GetMovieIdsWithTag(tag.Id).Select(x => movies[x]).ToList(),
             libraryMetadata,
             sortOrder,
             tag.Name,
             $"tag_{tag.Id.Value}",
+            GetFilterSortHash()
+        );
+
+        response.ContentType = "text/html";
+        return html.Content;
+    }
+);
+
+app.MapGet(
+    "/untagged.html",
+    ([FromQuery, Required] string tagTypeId, [FromQuery, Required] string sessionPassword, HttpResponse response) =>
+    {
+        CheckSessionPassword(sessionPassword);
+
+        var sortOrder = preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
+        var libraryMetadata = GetLibraryMetadata();
+        var movies = GetFilteredMovies(libraryMetadata).ToDictionary(x => x.Id);
+        var tagType = libraryProvider.GetTagType(new(tagTypeId));
+
+        var html = NewPageFromMovies(
+            libraryProvider.GetMovieIdsWithoutTagType(tagType.Id).Select(x => movies[x]).ToList(),
+            libraryMetadata,
+            sortOrder,
+            $"No {tagType.SingularName}",
+            $"untagged_{tagType.Id.Value}",
             GetFilterSortHash()
         );
 

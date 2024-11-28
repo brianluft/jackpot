@@ -142,7 +142,7 @@ public static class ListPage
                                 const value = cell.getValue();
                                 const row = cell.getRow();
                                 const data = row.getData();
-                                return data.id.startsWith('tag-') ? `📁 ${value}` : value;
+                                return data.id.startsWith('movie-') ? value : `📁 ${value}`;
                             }
                         },
                         ...metadataKeys.map(key => ({
@@ -164,7 +164,7 @@ public static class ListPage
                             const data = row.getData();
                             const element = row.getElement();
 
-                            if (data.id.startsWith('tag-')) {
+                            if (!data.id.startsWith('movie-')) {
                                 element.classList.add('tag-row');
                             }
                         },

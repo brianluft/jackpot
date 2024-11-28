@@ -498,27 +498,40 @@ INSERT INTO file_version VALUES (@n);
             r => new MovieTag(MovieId: new(r.GetString(0)), TagId: new(r.GetString(1)))
         );
 
-    public List<Movie> GetMoviesWithTag(HashSet<MovieId> filteredMovieIds, TagId tagId) =>
+    public List<MovieId> GetMovieIdsWithTag(TagId tagId) =>
         Query(
-                """
-                SELECT m.id, m.filename, m.s3_key, m.date_added
+            """
+            SELECT m.id
+            FROM movie_tags mt
+            INNER JOIN movies m ON mt.movie_id = m.id
+            WHERE mt.tag_id = @tag_id
+            """,
+            p =>
+            {
+                p.AddWithValue("@tag_id", tagId.Value);
+            },
+            r => new MovieId(r.GetString(0))
+        );
+
+    public List<MovieId> GetMovieIdsWithoutTagType(TagTypeId tagTypeId) =>
+        Query(
+            """
+            SELECT m.id
+            FROM movies m
+            WHERE m.id NOT IN (
+                SELECT m.id
                 FROM movie_tags mt
                 INNER JOIN movies m ON mt.movie_id = m.id
-                WHERE mt.tag_id = @tag_id
-                """,
-                p =>
-                {
-                    p.AddWithValue("@tag_id", tagId.Value);
-                },
-                r => new Movie(
-                    Id: new(r.GetString(0)),
-                    Filename: r.GetString(1),
-                    S3Key: r.GetString(2),
-                    DateAdded: DateTimeOffset.Parse(r.GetString(3))
-                )
+                INNER JOIN tags t ON mt.tag_id = t.id
+                WHERE t.tag_type_id = @tag_type_id
             )
-            .Where(x => filteredMovieIds.Contains(x.Id))
-            .ToList();
+            """,
+            p =>
+            {
+                p.AddWithValue("@tag_type_id", tagTypeId.Value);
+            },
+            r => new MovieId(r.GetString(0))
+        );
 
     public void AddMovieTag(MovieId movieId, TagId tagId) =>
         Execute(
