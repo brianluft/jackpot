@@ -753,9 +753,13 @@ public sealed partial class MainForm : Form
 
     private void UpdateFilterSortButtons(Filter filter, SortOrder sortOrder)
     {
-        _filterButton.BackColor = filter.Rules.Count > 0 ? MyColors.ToolStripActive : DefaultBackColor;
+        _filterButton.BackColor = filter.Rules.Count > 0 ? MyColors.ToolStripActiveBackground : DefaultBackColor;
+        _filterButton.ForeColor = filter.Rules.Count > 0 ? MyColors.ToolStripActiveForeground : DefaultForeColor;
+        _filterButton.Tag = filter.Rules.Count > 0;
 
-        _sortButton.BackColor = sortOrder.IsDefault ? DefaultBackColor : MyColors.ToolStripActive;
+        _sortButton.BackColor = sortOrder.IsDefault ? DefaultBackColor : MyColors.ToolStripActiveBackground;
+        _sortButton.ForeColor = sortOrder.IsDefault ? DefaultForeColor : MyColors.ToolStripActiveForeground;
+        _sortButton.Tag = !sortOrder.IsDefault;
 
         _filterClearButton.Enabled = !filter.IsDefault || !sortOrder.IsDefault;
     }

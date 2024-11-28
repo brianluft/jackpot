@@ -356,7 +356,7 @@ public sealed partial class Ui
             }
             else if (e.Item is ToolStripButton button && button.Checked)
             {
-                using SolidBrush brush = new(MyColors.ToolStripActive);
+                using SolidBrush brush = new(MyColors.ToolStripActiveBackground);
                 g.FillRectangle(brush, bounds);
             }
             else if (e.Item.Selected)
@@ -391,12 +391,17 @@ public sealed partial class Ui
                 // Determine colors based on button state
                 if (button.Checked)
                 {
-                    bgColor = MyColors.ToolStripTabButtonTabActiveBg;
+                    bgColor = MyColors.ToolStripActiveBackground;
                     textColor = MyColors.ToolStripTabButtonTextActive;
                 }
                 else if (button.Pressed)
                 {
-                    bgColor = MyColors.ToolStripTabButtonTabPressedBg;
+                    bgColor = MyColors.ToolStripPress;
+                    textColor = MyColors.ToolStripTabButtonTextActive;
+                }
+                else if (button.Selected)
+                {
+                    bgColor = MyColors.ToolStripHover;
                     textColor = MyColors.ToolStripTabButtonTextActive;
                 }
                 else
@@ -477,7 +482,13 @@ public sealed partial class Ui
 
             ToolStripItem? item = e.Item;
             Graphics g = e.Graphics;
-            Color textColor = MyColors.MenuItemText;
+            Color textColor;
+            if (e.Item is ToolStripButton b && b.Checked)
+                textColor = MyColors.ToolStripActiveForeground;
+            else if (e.Item is ToolStripDropDownButton)
+                textColor = e.Item.Selected || e.Item.Pressed ? Color.White : e.Item.ForeColor;
+            else
+                textColor = MyColors.MenuItemText;
             Font? textFont = e.TextFont;
             string? text = e.Text;
             Rectangle textRect = e.TextRectangle;
@@ -513,10 +524,22 @@ public sealed partial class Ui
             {
                 var disposeImage = false;
 
-                if (e.Item is not null && !e.Item.Enabled)
+                if (e.Item is not null)
                 {
-                    image = CreateDisabledImage(image);
-                    disposeImage = true;
+                    if (!e.Item.Enabled)
+                    {
+                        image = CreateDisabledImage(image);
+                        disposeImage = true;
+                    }
+                    else if (
+                        (e.Item.Tag is ToolStripButtonTabAppearanceTag && ((ToolStripButton)e.Item).Checked)
+                        || (e.Item is ToolStripDropDownButton b && !b.Selected && e.Item.Tag is bool t && t)
+                    )
+                    {
+                        Bitmap copy = new(image);
+                        image = ui.InvertColorsInPlace(copy);
+                        disposeImage = true;
+                    }
                 }
 
                 e.Graphics.DrawImage(image, imageRect, new Rectangle(Point.Empty, imageRect.Size), GraphicsUnit.Pixel);

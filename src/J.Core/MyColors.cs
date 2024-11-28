@@ -25,15 +25,14 @@ public static class MyColors
     public static readonly Color TabText = Color.FromArgb(240, 240, 240);
     public static readonly Color TabUnselected = Color.FromArgb(38, 38, 38);
     public static readonly Color TextBoxCueText = Color.FromArgb(0x90, 0x90, 0x90);
-    public static readonly Color ToolStripActive = Color.FromArgb(0xD2, 0x78, 0x00);
+    public static readonly Color ToolStripActiveBackground = Color.White;
+    public static readonly Color ToolStripActiveForeground = Color.Black;
     public static readonly Color ToolStripBackground = Color.FromArgb(50, 50, 50);
     public static readonly Color ToolStripForeground = Color.White;
     public static readonly Color ToolStripHover = Color.FromArgb(0x00, 0x7A, 0xD7);
     public static readonly Color ToolStripPress = Color.FromArgb(0x00, 0x4C, 0x87);
     public static readonly Color ToolStripTabButtonBackgroundDark = Color.FromArgb(45, 45, 45);
-    public static readonly Color ToolStripTabButtonTabActiveBg = Color.FromArgb(0x00, 0x7A, 0xD7);
     public static readonly Color ToolStripTabButtonTabInactiveBg = Color.FromArgb(65, 65, 65);
-    public static readonly Color ToolStripTabButtonTabPressedBg = Color.FromArgb(0x00, 0x4C, 0x87);
     public static readonly Color ToolStripTabButtonTextActive = Color.Black;
     public static readonly Color ToolStripTabButtonTextInactive = Color.FromArgb(210, 210, 210);
     public static readonly Color WebListSelection = Color.FromArgb(0x00, 0x7A, 0xD7);
