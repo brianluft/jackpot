@@ -30,6 +30,7 @@ public sealed class ImportControl : UserControl
     private readonly DataGridView _grid;
     private readonly DataGridViewColumn _colMessage;
     private string _title = "Import";
+    private bool _initializing = true;
 
     public string Title
     {
@@ -238,6 +239,7 @@ public sealed class ImportControl : UserControl
             UpdateTitle();
         };
 
+        _initializing = false;
         EnableDisableButtons();
     }
 
@@ -257,6 +259,9 @@ public sealed class ImportControl : UserControl
 
     private void ConvertCombo_SelectedValueChanged(object? sender, EventArgs e)
     {
+        if (_initializing)
+            return;
+
         var autoconvert = ((ConvertOption)_convertCombo.SelectedItem!).Convert;
         _preferences.SetBoolean(Preferences.Key.ImportControl_AutoConvert, autoconvert);
         EnableDisableButtons();
@@ -264,16 +269,25 @@ public sealed class ImportControl : UserControl
 
     private void QualityCombo_SelectedIndexChanged(object? sender, EventArgs e)
     {
+        if (_initializing)
+            return;
+
         _preferences.SetText(Preferences.Key.ImportControl_VideoQuality, (string)_qualityCombo.SelectedItem!);
     }
 
     private void SpeedCombo_SelectedIndexChanged(object? sender, EventArgs e)
     {
+        if (_initializing)
+            return;
+
         _preferences.SetText(Preferences.Key.ImportControl_CompressionLevel, (string)_speedCombo.SelectedItem!);
     }
 
     private void AudioCombo_SelectedIndexChanged(object? sender, EventArgs e)
     {
+        if (_initializing)
+            return;
+
         _preferences.SetText(Preferences.Key.ImportControl_AudioBitrate, (string)_audioCombo.SelectedItem!);
     }
 
