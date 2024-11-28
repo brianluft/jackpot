@@ -31,8 +31,11 @@ public sealed class TagsControl : UserControl
     public event EventHandler? TagTypeChanged;
     public event EventHandler? TagChanged;
 
+    public readonly record struct TagTypeActivatedEventArgs(TagTypeId Id);
+
     public readonly record struct TagActivatedEventArgs(TagId Id);
 
+    public event EventHandler<TagTypeActivatedEventArgs>? TagTypeActivated;
     public event EventHandler<TagActivatedEventArgs>? TagActivated;
 
     public TagsControl(LibraryProviderAdapter libraryProvider, IServiceProvider serviceProvider)
@@ -318,7 +321,9 @@ public sealed class TagsControl : UserControl
 
     private void LeftGrid_CellDoubleClick(object? sender, DataGridViewCellEventArgs e)
     {
-        RenameTagType();
+        var tagType = GetSelectedTagType();
+        if (tagType.HasValue)
+            TagTypeActivated?.Invoke(this, new(tagType.Value.Id));
     }
 
     private void LeftRenameGroupButton_Click(object? sender, EventArgs e)

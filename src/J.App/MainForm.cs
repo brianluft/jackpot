@@ -374,6 +374,7 @@ public sealed partial class MainForm : Form
             _tagsControl.Dock = DockStyle.Fill;
             _tagsControl.TagTypeChanged += EditTagsControl_TagTypeChanged;
             _tagsControl.TagChanged += EditTagsControl_TagChanged;
+            _tagsControl.TagTypeActivated += TagsControl_TagTypeActivated;
             _tagsControl.TagActivated += TagsControl_TagActivated;
         }
 
@@ -434,15 +435,6 @@ public sealed partial class MainForm : Form
         DoubleBuffered = true;
         ShowInTaskbar = true;
         KeyPreview = true;
-    }
-
-    private void TagsControl_TagActivated(object? sender, TagsControl.TagActivatedEventArgs e)
-    {
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = _client.SessionPassword;
-        query["tagId"] = e.Id.Value;
-        SwitchTab(_browserTabButton);
-        Navigate($"/tag.html?{query}");
     }
 
     private void AboutButton_Click(object? sender, EventArgs e)
@@ -1459,5 +1451,24 @@ public sealed partial class MainForm : Form
             _tagsControl.Focus();
         else if (isBrowser)
             _browser.Focus();
+    }
+
+    private void TagsControl_TagTypeActivated(object? sender, TagsControl.TagTypeActivatedEventArgs e)
+    {
+        var query = HttpUtility.ParseQueryString("");
+        query["sessionPassword"] = _client.SessionPassword;
+        query["type"] = "TagType";
+        query["tagTypeId"] = e.Id.Value;
+        SwitchTab(_browserTabButton);
+        Navigate($"/list.html?{query}");
+    }
+
+    private void TagsControl_TagActivated(object? sender, TagsControl.TagActivatedEventArgs e)
+    {
+        var query = HttpUtility.ParseQueryString("");
+        query["sessionPassword"] = _client.SessionPassword;
+        query["tagId"] = e.Id.Value;
+        SwitchTab(_browserTabButton);
+        Navigate($"/tag.html?{query}");
     }
 }
