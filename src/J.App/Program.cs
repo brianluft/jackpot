@@ -66,6 +66,7 @@ public static class Program
         services.AddTransient<MovieExporter>();
         services.AddTransient<MoviePropertiesForm>();
         services.AddTransient<OptionsForm>();
+        services.AddTransient<RecycleBinForm>();
         services.AddTransient<TagsControl>();
 
         using var serviceProvider = services.BuildServiceProvider();

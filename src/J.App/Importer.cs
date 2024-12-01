@@ -70,7 +70,8 @@ public sealed class Importer(
                 Id: new MovieId(),
                 Filename: Path.GetFileNameWithoutExtension(sourceFilePath),
                 S3Key: s3Key,
-                DateAdded: DateTimeOffset.Now
+                DateAdded: DateTimeOffset.Now,
+                Deleted: false
             );
 
         MovieFile zipHeaderFile =

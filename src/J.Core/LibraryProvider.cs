@@ -15,10 +15,16 @@ namespace J.Core;
 
 public sealed partial class LibraryProvider : IDisposable
 {
-    public const int CURRENT_VERSION = 1;
+    public const int CURRENT_VERSION = 2;
 
     private readonly AccountSettingsProvider _accountSettingsProvider;
     private readonly ProcessTempDir _processTempDir;
+
+    private readonly Lock _connectionLock = new();
+    private SqliteConnection? _connection;
+
+    private readonly Lock _movieFileChunkSqlLock = new();
+    private readonly Dictionary<int, string> _movieFileChunkSql = [];
 
     private readonly AsyncPolicyWrap _policy = Policy.WrapAsync(
         // Outer: retry
@@ -28,9 +34,6 @@ public sealed partial class LibraryProvider : IDisposable
         // Inner: timeout
         Policy.TimeoutAsync(TimeSpan.FromSeconds(15), TimeoutStrategy.Pessimistic)
     );
-
-    private readonly object _lock = new();
-    private SqliteConnection? _connection;
 
     public LibraryProvider(AccountSettingsProvider accountSettingsProvider, ProcessTempDir processTempDir)
     {
@@ -56,7 +59,7 @@ public sealed partial class LibraryProvider : IDisposable
 
     public void Connect()
     {
-        lock (_lock)
+        lock (_connectionLock)
         {
             _connection?.Dispose();
             _connection = null;
@@ -74,7 +77,7 @@ public sealed partial class LibraryProvider : IDisposable
 
     public void Disconnect()
     {
-        lock (_lock)
+        lock (_connectionLock)
         {
             _connection?.Dispose();
             _connection = null;
@@ -96,11 +99,11 @@ public sealed partial class LibraryProvider : IDisposable
     private int GetDatabaseVersion()
     {
         Execute(
-            @"
-CREATE TABLE IF NOT EXISTS file_version (
-    version_number INTEGER PRIMARY KEY
-) WITHOUT ROWID
-"
+            """
+            CREATE TABLE IF NOT EXISTS file_version (
+                version_number INTEGER PRIMARY KEY
+            ) WITHOUT ROWID
+            """
         );
 
         using var command = _connection!.CreateCommand();
@@ -113,36 +116,42 @@ CREATE TABLE IF NOT EXISTS file_version (
     {
         using var transaction = _connection!.BeginTransaction();
 
-        while (true)
+        for (var version = GetDatabaseVersion(); version < CURRENT_VERSION; version++)
         {
-            var version = GetDatabaseVersion();
-            if (version >= CURRENT_VERSION)
-                break;
-
             var nextVersion = version + 1;
 
-            Execute(
-                GetResourceText($"Migrate-{nextVersion}.sql"),
-                x =>
-                {
-                    x.AddWithValue("@new_tag_type_id1", new TagTypeId().Value);
-                    x.AddWithValue("@new_tag_type_id2", new TagTypeId().Value);
-                    x.AddWithValue("@new_tag_type_id3", new TagTypeId().Value);
-                    x.AddWithValue("@new_tag_type_id4", new TagTypeId().Value);
-                }
-            );
+            if (nextVersion == 1)
+            {
+                Execute(
+                    GetResourceText($"Migrate-1.sql"),
+                    x =>
+                    {
+                        x.AddWithValue("@new_tag_type_id1", new TagTypeId().Value);
+                        x.AddWithValue("@new_tag_type_id2", new TagTypeId().Value);
+                        x.AddWithValue("@new_tag_type_id3", new TagTypeId().Value);
+                        x.AddWithValue("@new_tag_type_id4", new TagTypeId().Value);
+                    }
+                );
+            }
+            else if (nextVersion == 2)
+            {
+                Execute(GetResourceText($"Migrate-2.sql"));
+            }
 
             Execute(
-                @"
-DELETE FROM file_version;
-INSERT INTO file_version VALUES (@n);
-",
+                """
+                DELETE FROM file_version;
+                INSERT INTO file_version VALUES (@n);
+                """,
                 p =>
                 {
                     p.AddWithValue("@n", nextVersion);
                 }
             );
         }
+
+        if (GetDatabaseVersion() != CURRENT_VERSION)
+            throw new Exception("Failed to upgrade the database schema to the current version.");
 
         transaction.Commit();
     }
@@ -153,7 +162,7 @@ INSERT INTO file_version VALUES (@n);
         Func<SqliteDataReader, T> generator
     )
     {
-        lock (_lock)
+        lock (_connectionLock)
         {
             using var command = _connection!.CreateCommand();
             command.CommandText = sql;
@@ -177,7 +186,7 @@ INSERT INTO file_version VALUES (@n);
 
     private void Execute(string sql, Action<SqliteParameterCollection>? configureParameters = null)
     {
-        lock (_lock)
+        lock (_connectionLock)
         {
             using var command = _connection!.CreateCommand();
             command.CommandText = sql;
@@ -294,19 +303,30 @@ INSERT INTO file_version VALUES (@n);
 
     public List<Movie> GetMovies() =>
         Query(
-            "SELECT id, filename, s3_key, date_added FROM movies",
+            """
+            SELECT id, filename, s3_key, date_added, deleted
+            FROM movies
+            """,
             p => { },
             r => new Movie(
                 Id: new(r.GetString(0)),
                 Filename: r.GetString(1),
                 S3Key: r.GetString(2),
-                DateAdded: DateTimeOffset.Parse(r.GetString(3))
+                DateAdded: DateTimeOffset.Parse(r.GetString(3)),
+                Deleted: r.GetInt64(4) != 0
             )
         );
 
+    public int GetDeletedMovieCount() =>
+        QuerySingle("SELECT COUNT(*) FROM movies WHERE deleted = 1", p => { }, r => r.GetInt32(0));
+
     public Movie GetMovie(MovieId id) =>
         QuerySingle(
-            "SELECT id, filename, s3_key, date_added FROM movies WHERE id = @id",
+            """
+            SELECT id, filename, s3_key, date_added, deleted
+            FROM movies
+            WHERE id = @id
+            """,
             p =>
             {
                 p.AddWithValue("@id", id.Value);
@@ -315,23 +335,55 @@ INSERT INTO file_version VALUES (@n);
                 Id: new(r.GetString(0)),
                 Filename: r.GetString(1),
                 S3Key: r.GetString(2),
-                DateAdded: DateTimeOffset.Parse(r.GetString(3))
+                DateAdded: DateTimeOffset.Parse(r.GetString(3)),
+                Deleted: r.GetInt64(4) != 0
             )
         );
 
     public void UpdateMovie(Movie movie) =>
         Execute(
-            "UPDATE movies SET filename = @filename WHERE id = @id",
+            "UPDATE movies SET filename = @filename, deleted = @deleted WHERE id = @id",
             p =>
             {
                 p.AddWithValue("@id", movie.Id.Value);
                 p.AddWithValue("@filename", movie.Filename);
+                p.AddWithValue("@deleted", movie.Deleted ? 1 : 0);
             }
         );
 
     public void DeleteMovie(MovieId id)
     {
+        Execute(
+            """
+            UPDATE movies SET deleted = 1 WHERE id = @id;
+            """,
+            p =>
+            {
+                p.AddWithValue("@id", id.Value);
+            }
+        );
+    }
+
+    public void RestoreMovie(MovieId id)
+    {
+        Execute(
+            """
+            UPDATE movies SET deleted = 0 WHERE id = @id;
+            """,
+            p =>
+            {
+                p.AddWithValue("@id", id.Value);
+            }
+        );
+    }
+
+    public void PermanentlyDeleteMovie(MovieId id)
+    {
         var movie = GetMovie(id);
+
+        // Let's double check that this was from the recycle bin.
+        if (!movie.Deleted)
+            throw new Exception("This movie is not in the Recycle Bin.");
 
         Execute(
             """
@@ -518,13 +570,15 @@ INSERT INTO file_version VALUES (@n);
             """
             SELECT m.id
             FROM movies m
-            WHERE m.id NOT IN (
-                SELECT m.id
-                FROM movie_tags mt
-                INNER JOIN movies m ON mt.movie_id = m.id
-                INNER JOIN tags t ON mt.tag_id = t.id
-                WHERE t.tag_type_id = @tag_type_id
-            )
+            WHERE
+                m.deleted = 0
+                AND m.id NOT IN (
+                    SELECT m.id
+                    FROM movie_tags mt
+                    INNER JOIN movies m ON mt.movie_id = m.id
+                    INNER JOIN tags t ON mt.tag_id = t.id
+                    WHERE t.tag_type_id = @tag_type_id
+                )
             """,
             p =>
             {
@@ -568,8 +622,8 @@ INSERT INTO file_version VALUES (@n);
     public void NewMovie(Movie movie) =>
         Execute(
             """
-            INSERT INTO movies (id, filename, s3_key, date_added)
-            VALUES (@id, @filename, @s3_key, @date_added)
+            INSERT INTO movies (id, filename, s3_key, date_added, deleted)
+            VALUES (@id, @filename, @s3_key, @date_added, @deleted)
             """,
             p =>
             {
@@ -577,6 +631,7 @@ INSERT INTO file_version VALUES (@n);
                 p.AddWithValue("@filename", movie.Filename);
                 p.AddWithValue("@s3_key", movie.S3Key);
                 p.AddWithValue("@date_added", movie.DateAdded.ToString("O"));
+                p.AddWithValue("@deleted", movie.Deleted ? 1 : 0);
             }
         );
 
@@ -595,9 +650,6 @@ INSERT INTO file_version VALUES (@n);
                 p.AddWithValue("@data", file.Data is null ? DBNull.Value : file.Data);
             }
         );
-
-    private readonly object _movieFileChunkSqlLock = new();
-    private readonly Dictionary<int, string> _movieFileChunkSql = [];
 
     public void NewMovieFiles(MovieFile[] files)
     {
@@ -664,7 +716,10 @@ INSERT INTO file_version VALUES (@n);
 
     public bool MovieExists(string filename) =>
         Query(
-            "SELECT 1 FROM movies WHERE filename = @filename COLLATE NOCASE",
+            """
+            SELECT 1 FROM movies
+            WHERE filename = @filename COLLATE NOCASE
+            """,
             p =>
             {
                 p.AddWithValue("@filename", filename);
@@ -674,7 +729,7 @@ INSERT INTO file_version VALUES (@n);
 
     public void WithTransaction(Action action)
     {
-        lock (_lock)
+        lock (_connectionLock)
         {
             using var transaction = _connection!.BeginTransaction();
             action();

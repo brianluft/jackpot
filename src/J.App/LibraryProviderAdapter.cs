@@ -56,6 +56,8 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
 
     public List<Movie> GetMovies() => libraryProvider.GetMovies();
 
+    public int GetDeletedMovieCount() => libraryProvider.GetDeletedMovieCount();
+
     public Movie GetMovie(MovieId id) => libraryProvider.GetMovie(id);
 
     public byte[] GetMovieClip(MovieId movieId) => libraryProvider.GetMovieClip(movieId);
@@ -199,6 +201,42 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
                 {
                     foreach (var id in movieIds)
                         libraryProvider.DeleteMovie(id);
+                },
+                updateProgress,
+                cancel
+            )
+            .ConfigureAwait(false);
+    }
+
+    public async Task RestoreMoviesAsync(
+        List<MovieId> movieIds,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
+    {
+        await MutateAsync(
+                () =>
+                {
+                    foreach (var id in movieIds)
+                        libraryProvider.RestoreMovie(id);
+                },
+                updateProgress,
+                cancel
+            )
+            .ConfigureAwait(false);
+    }
+
+    public async Task PermanentlyDeleteMoviesAsync(
+        List<MovieId> movieIds,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
+    {
+        await MutateAsync(
+                () =>
+                {
+                    foreach (var id in movieIds)
+                        libraryProvider.PermanentlyDeleteMovie(id);
                 },
                 updateProgress,
                 cancel

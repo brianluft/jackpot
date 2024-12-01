@@ -46,7 +46,8 @@ public sealed partial class MainForm : Form
         _movieContextExportButton,
         _movieContextPropertiesButton,
         _viewGridButton,
-        _viewListButton;
+        _viewListButton,
+        _recycleBinButton;
     private readonly ToolStripButton _browseBackButton,
         _browseForwardButton,
         _refreshButton,
@@ -250,6 +251,16 @@ public sealed partial class MainForm : Form
                 {
                     _moviesButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Movie.png", 16, 16));
                     _moviesButton.Click += MoviesButton_Click;
+                }
+
+                _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
+
+                _menuButton.DropDownItems.Add(_recycleBinButton = ui.NewToolStripMenuItem("Recycle bin"));
+                {
+                    _recycleBinButton.Image = ui.InvertColorsInPlace(
+                        ui.GetScaledBitmapResource("RecycleBin.png", 16, 16)
+                    );
+                    _recycleBinButton.Click += RecycleBinButton_Click;
                 }
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
@@ -487,6 +498,7 @@ public sealed partial class MainForm : Form
 
         UpdateViewFromPreferences(reload: false);
         UpdateFilterSortFromPreferences(reload: false);
+        UpdateRecycleBinCount();
         GoHome();
     }
 
@@ -1286,10 +1298,8 @@ public sealed partial class MainForm : Form
             }
         );
 
-        if (outcome == Outcome.Success)
-        {
-            _browser.Reload();
-        }
+        _browser.Reload();
+        UpdateRecycleBinCount();
     }
 
     private void AddTagToMovies(List<MovieId> movieContextMenuIds)
@@ -1470,5 +1480,19 @@ public sealed partial class MainForm : Form
         query["tagId"] = e.Id.Value;
         SwitchTab(_browserTabButton);
         Navigate($"/tag.html?{query}");
+    }
+
+    private void RecycleBinButton_Click(object? sender, EventArgs e)
+    {
+        using var f = _serviceProvider.GetRequiredService<RecycleBinForm>();
+        f.ShowDialog(this);
+        UpdateRecycleBinCount();
+        _browser.Reload();
+    }
+
+    private void UpdateRecycleBinCount()
+    {
+        var count = _libraryProvider.GetDeletedMovieCount();
+        _recycleBinButton.Text = count == 0 ? "Recycle Bin" : $"Recycle Bin ({count:#,##0})";
     }
 }

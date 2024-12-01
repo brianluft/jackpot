@@ -342,7 +342,7 @@ void CheckSessionPassword(string sessionPassword)
 LibraryMetadata GetLibraryMetadata()
 {
     return new(
-        libraryProvider.GetMovies().ToDictionary(x => x.Id),
+        libraryProvider.GetMovies().Where(x => !x.Deleted).ToDictionary(x => x.Id),
         libraryProvider.GetMovieTags().ToLookup(x => x.MovieId, x => x.TagId),
         libraryProvider.GetTags().ToDictionary(x => x.Id),
         libraryProvider.GetTagTypes().ToDictionary(x => x.Id)
