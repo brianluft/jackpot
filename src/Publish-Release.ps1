@@ -53,7 +53,7 @@ function Publish-App
 
 function Publish-Launcher
 {
-	dotnet publish "$root/src/J.Launcher/J.Launcher.csproj" --output "$buildDir" --self-contained --runtime "win-x64" --configuration Release --verbosity quiet
+	dotnet publish "$root/src/J.Launcher/J.Launcher.csproj" --output "$buildDir" --self-contained --runtime "win-x86" --configuration Release --verbosity quiet
 	Remove-Item -Path "$buildDir\*.pdb" -Force
 }
 
