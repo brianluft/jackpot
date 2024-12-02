@@ -8,9 +8,7 @@ public sealed class MoviePlayerForm : Form
     private readonly Client _client;
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly WebView2 _browser;
-    private FormWindowState previousWindowState;
-    private FormBorderStyle previousBorderStyle;
-    private Rectangle previousBounds;
+    private CompleteWindowState _lastWindowState;
     private bool isFullScreen = false;
 
     public MoviePlayerForm(Client client, LibraryProviderAdapter libraryProvider)
@@ -29,6 +27,8 @@ public sealed class MoviePlayerForm : Form
         }
 
         Size = ui.GetSize(1600, 900);
+        CenterToScreen();
+        FormBorderStyle = FormBorderStyle.Sizable;
         WindowState = FormWindowState.Maximized;
         Icon = ui.GetIconResource("App.ico");
         ShowIcon = true;
@@ -76,9 +76,7 @@ public sealed class MoviePlayerForm : Form
         if (enterFullScreen && !isFullScreen)
         {
             // Store current window state
-            previousWindowState = WindowState;
-            previousBorderStyle = FormBorderStyle;
-            previousBounds = Bounds;
+            _lastWindowState = CompleteWindowState.Save(this);
 
             // Enter full screen
             FormBorderStyle = FormBorderStyle.None;
@@ -89,9 +87,9 @@ public sealed class MoviePlayerForm : Form
         else if (!enterFullScreen && isFullScreen)
         {
             // Restore previous window state
-            FormBorderStyle = previousBorderStyle;
-            Bounds = previousBounds;
-            WindowState = previousWindowState;
+            FormBorderStyle = FormBorderStyle.Sizable;
+            WindowState = FormWindowState.Normal;
+            _lastWindowState.Restore(this);
             isFullScreen = false;
         }
     }
