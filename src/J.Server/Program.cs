@@ -7,17 +7,19 @@ using J.Core;
 using J.Core.Data;
 using J.Server;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCore();
-builder.Services.AddHttpLogging(o => { });
 builder.Services.AddTransient<ServerMovieFileReader>();
 builder.Services.AddSingleton<IAmazonS3>(services =>
     services.GetRequiredService<AccountSettingsProvider>().CreateAmazonS3Client()
 );
 
+builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+
 var app = builder.Build();
-app.UseHttpLogging();
+app.UseSerilogRequestLogging();
 
 var configuredPort = GetPortNumber();
 var configuredSessionPassword = Environment.GetEnvironmentVariable("JACKPOT_SESSION_PASSWORD") ?? "";

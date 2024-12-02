@@ -23,6 +23,7 @@ public sealed partial class MainForm : Form
     private readonly M3u8FolderSync _m3U8FolderSync;
     private readonly ImportControl _importControl;
     private readonly TagsControl _tagsControl;
+    private readonly ProcessTempDir _processTempDir;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
@@ -78,7 +79,8 @@ public sealed partial class MainForm : Form
         MovieExporter movieExporter,
         M3u8FolderSync m3U8FolderSync,
         ImportControl importControl,
-        TagsControl tagsControl
+        TagsControl tagsControl,
+        ProcessTempDir processTempDir
     )
     {
         _serviceProvider = serviceProvider;
@@ -90,6 +92,7 @@ public sealed partial class MainForm : Form
         _m3U8FolderSync = m3U8FolderSync;
         _importControl = importControl;
         _tagsControl = tagsControl;
+        _processTempDir = processTempDir;
         Ui ui = new(this);
         _ui = ui;
 
@@ -461,11 +464,18 @@ public sealed partial class MainForm : Form
                 Icon = TaskDialogIcon.Information,
                 Text = $"Version {version}",
             };
+        taskDialogPage.Buttons.Add("Server log");
         taskDialogPage.Buttons.Add("License info");
         taskDialogPage.Buttons.Add(TaskDialogButton.OK);
-        taskDialogPage.DefaultButton = taskDialogPage.Buttons[1];
+        taskDialogPage.DefaultButton = taskDialogPage.Buttons[2];
         var clicked = TaskDialog.ShowDialog(this, taskDialogPage);
         if (clicked == taskDialogPage.Buttons[0])
+        {
+            var filePath = Path.Combine(_processTempDir.Path, "server.log");
+            File.WriteAllLines(filePath, _client.GetLog());
+            Process.Start("notepad.exe", filePath);
+        }
+        else if (clicked == taskDialogPage.Buttons[1])
         {
             Process
                 .Start(

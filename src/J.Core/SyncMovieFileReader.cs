@@ -38,7 +38,7 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
         await Parallel
             .ForEachAsync(
                 keys,
-                new ParallelOptions { MaxDegreeOfParallelism = 32, CancellationToken = cancel },
+                new ParallelOptions { MaxDegreeOfParallelism = 64, CancellationToken = cancel },
                 async (key, cancel) =>
                 {
                     var zipIndex = await ReadZipIndexAsync(key, cancel).ConfigureAwait(false);
@@ -69,7 +69,7 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
         await Parallel
             .ForEachAsync(
                 entriesToDownload,
-                new ParallelOptions { MaxDegreeOfParallelism = 32, CancellationToken = cancel },
+                new ParallelOptions { MaxDegreeOfParallelism = 64, CancellationToken = cancel },
                 async (x, cancel) =>
                 {
                     var zipIndex = zipIndices[x.Key];

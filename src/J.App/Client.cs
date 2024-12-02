@@ -10,17 +10,21 @@ namespace J.App;
 
 public sealed class Client(IHttpClientFactory httpClientFactory, Preferences preferences) : IDisposable
 {
+    private const int MAX_LOG_LINES = 10_000;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
 
-    private readonly Lock _lock = new();
+    private readonly Lock _processLock = new();
     private Process? _process;
+
+    private readonly Lock _logLock = new();
+    private readonly Queue<string> _log = [];
 
     public int Port { get; private set; } = -1;
     public string SessionPassword { get; } = Guid.NewGuid().ToString();
 
     public void Start()
     {
-        lock (_lock)
+        lock (_processLock)
         {
             if (_process is not null)
                 throw new InvalidOperationException("The web server is already running.");
@@ -35,6 +39,8 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
                     WorkingDirectory = dir,
                     UseShellExecute = false,
                     CreateNoWindow = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
                 };
 
             Port = FindRandomUnusedPort();
@@ -46,7 +52,35 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
             psi.Environment["JACKPOT_SESSION_PASSWORD"] = SessionPassword;
 
             _process = Process.Start(psi)!;
+
+            _process.OutputDataReceived += Process_DataReceived;
+            _process.BeginOutputReadLine();
+            _process.ErrorDataReceived += Process_DataReceived;
+            _process.BeginErrorReadLine();
+
             ApplicationSubProcesses.Add(_process);
+        }
+    }
+
+    private void Process_DataReceived(object sender, DataReceivedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(e.Data))
+            return;
+
+        lock (_logLock)
+        {
+            while (_log.Count >= MAX_LOG_LINES)
+                _log.Dequeue();
+
+            _log.Enqueue(e.Data!);
+        }
+    }
+
+    public List<string> GetLog()
+    {
+        lock (_logLock)
+        {
+            return new(_log);
         }
     }
 
@@ -57,7 +91,7 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
 
     public void Stop()
     {
-        lock (_lock)
+        lock (_processLock)
         {
             if (_process is not null)
             {
@@ -70,7 +104,7 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
 
     public void Restart()
     {
-        lock (_lock)
+        lock (_processLock)
         {
             Stop();
             Start();
