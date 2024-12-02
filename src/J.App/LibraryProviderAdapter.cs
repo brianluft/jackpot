@@ -200,7 +200,7 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
                 () =>
                 {
                     foreach (var id in movieIds)
-                        libraryProvider.DeleteMovie(id);
+                        libraryProvider.MoveMovieToRecycleBin(id);
                 },
                 updateProgress,
                 cancel
@@ -218,7 +218,7 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
                 () =>
                 {
                     foreach (var id in movieIds)
-                        libraryProvider.RestoreMovie(id);
+                        libraryProvider.RestoreMovieFromRecycleBin(id);
                 },
                 updateProgress,
                 cancel
@@ -236,7 +236,7 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
                 () =>
                 {
                     foreach (var id in movieIds)
-                        libraryProvider.PermanentlyDeleteMovie(id);
+                        libraryProvider.PermanentlyDeleteMovieFromRecycleBin(id);
                 },
                 updateProgress,
                 cancel

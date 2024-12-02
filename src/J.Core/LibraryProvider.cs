@@ -351,7 +351,22 @@ public sealed partial class LibraryProvider : IDisposable
             }
         );
 
-    public void DeleteMovie(MovieId id)
+    public void DeleteMovieInDatabase(MovieId id)
+    {
+        Execute(
+            """
+            DELETE FROM movie_files WHERE movie_id = @id;
+            DELETE FROM movie_tags WHERE movie_id = @id;
+            DELETE FROM movies WHERE id = @id;
+            """,
+            p =>
+            {
+                p.AddWithValue("@id", id.Value);
+            }
+        );
+    }
+
+    public void MoveMovieToRecycleBin(MovieId id)
     {
         Execute(
             """
@@ -364,7 +379,7 @@ public sealed partial class LibraryProvider : IDisposable
         );
     }
 
-    public void RestoreMovie(MovieId id)
+    public void RestoreMovieFromRecycleBin(MovieId id)
     {
         Execute(
             """
@@ -377,7 +392,7 @@ public sealed partial class LibraryProvider : IDisposable
         );
     }
 
-    public void PermanentlyDeleteMovie(MovieId id)
+    public void PermanentlyDeleteMovieFromRecycleBin(MovieId id)
     {
         var movie = GetMovie(id);
 
@@ -385,17 +400,7 @@ public sealed partial class LibraryProvider : IDisposable
         if (!movie.Deleted)
             throw new Exception("This movie is not in the Recycle Bin.");
 
-        Execute(
-            """
-            DELETE FROM movie_files WHERE movie_id = @id;
-            DELETE FROM movie_tags WHERE movie_id = @id;
-            DELETE FROM movies WHERE id = @id;
-            """,
-            p =>
-            {
-                p.AddWithValue("@id", id.Value);
-            }
-        );
+        DeleteMovieInDatabase(id);
 
         using var s3 = _accountSettingsProvider.CreateAmazonS3Client();
         var bucket = _accountSettingsProvider.Current.Bucket;
@@ -960,7 +965,7 @@ public sealed partial class LibraryProvider : IDisposable
             cancel.ThrowIfCancellationRequested();
 
             foreach (var movieId in localMovies.Keys.Except(remoteMovies.Keys))
-                DeleteMovie(movieId);
+                DeleteMovieInDatabase(movieId);
             cancel.ThrowIfCancellationRequested();
 
             // Populate the movie_files table.
