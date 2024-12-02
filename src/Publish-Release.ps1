@@ -104,76 +104,6 @@ function Get-FfmpegArm64
 	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
 }
 
-function Get-Vlc
-{
-	$url = "https://get.videolan.org/vlc/last/win64/"
-	$htmlFilePath = "$downloadsDir\vlc.html"
-	if (-not (Test-Path $htmlFilePath))
-	{
-		Write-Host "Finding current release of vlc/x64."
-		& curl.exe -Lso "$htmlFilePath" "$url" | Out-Host
-		if ($LastExitCode -ne 0) {
-			throw "Failed to download vlc.html."
-		}
-	}
-
-	# Read the html file, find the first line that contains ".zip"
-	$line = Select-String -Path $htmlFilePath -Pattern "\.zip" | Select-Object -First 1
-
-	# $line is like: <a href="vlc-3.0.21-win64.zip">vlc-3.0.21-win64.zip</a>
-	# Parse out the .zip filename between the quotes.
-	$zipFilename = $line -replace '.*href="([^"]+)".*', '$1'
-
-	$url = "https://get.videolan.org/vlc/last/win64/$zipFilename"
-	$zipFilePath = "$downloadsDir\vlc.zip"
-	if (-not (Test-Path $zipFilePath))
-	{
-		Write-Host "Downloading vlc/x64."
-		& curl.exe -Lso "$zipFilePath" "$url" | Out-Host
-		if ($LastExitCode -ne 0) {
-			throw "Failed to download vlc/x64."
-		}
-	}
-
-	Write-Host "Extracting vlc/x64."
-	$dstDir = "$buildDir\vlc\"
-	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
-	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
-
-	# Get the only subdirectory of $dstDir.
-	$subdir = Get-ChildItem -Path $dstDir -Directory | Select-Object -First 1
-
-	# Confirm $subdir is the directory with vlc.exe in it.
-	if (-not (Test-Path "$($subdir.FullName)\vlc.exe")) {
-		throw "Failed to find vlc.exe in extracted directory."
-	}
-
-	# Move everything in $subdir to $dstDir.
-	Move-Item -Path "$($subdir.FullName)\*" -Destination $dstDir -Force
-
-	# Delete $subdir.
-	Remove-Item -Path $subdir.FullName -Recurse -Force
-
-	# Generate plugins\plugins.dat by running vlc-cache-gen.
-	if (Test-Path "$dstDir\plugins\plugins.dat") {
-		throw "plugins.dat already exists."
-	}
-
-	Push-Location $dstDir
-	try
-	{
-		& .\vlc-cache-gen.exe .\plugins | Out-Host
-	}
-	finally
-	{
-		Pop-Location
-	}
-
-	if (-not (Test-Path "$dstDir\plugins\plugins.dat")) {
-		throw "Failed to generate plugins.dat."
-	}
-}
-
 function Copy-MiscFiles
 {
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
@@ -235,5 +165,4 @@ Publish-App -Arch "x64"
 Publish-App -Arch "arm64"
 Get-FfmpegX64
 Get-FfmpegArm64
-Get-Vlc
 New-Msix

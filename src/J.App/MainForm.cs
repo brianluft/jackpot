@@ -1183,59 +1183,43 @@ public sealed partial class MainForm : Form
         query["sessionPassword"] = _client.SessionPassword;
         var url = $"http://localhost:{_client.Port}/movie.m3u8?{query}";
 
-        var which = _preferences.GetEnum<VlcInstallationToUse>(Preferences.Key.Shared_VlcInstallationToUse);
-        if (which == VlcInstallationToUse.Automatic)
-            which = IsVlcInstalled() ? VlcInstallationToUse.System : VlcInstallationToUse.Bundled;
+        var which = _preferences.GetEnum<MoviePlayerToUse>(Preferences.Key.Shared_MoviePlayerToUse);
+        if (which == MoviePlayerToUse.Automatic)
+            which = IsVlcInstalled() ? MoviePlayerToUse.Vlc : MoviePlayerToUse.Integrated;
 
-        var extraArgs = "";
-        if (which == VlcInstallationToUse.Bundled)
+        if (which == MoviePlayerToUse.Vlc)
         {
-            var configPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Jackpot",
-                "vlcrc"
-            );
-
-            if (!File.Exists(configPath))
-            {
-                File.WriteAllText(
-                    configPath,
-                    """
-                    metadata-network-access=0
-                    qt-updates-notif=0
-                    qt-privacy-ask=0
-                    """
-                );
-            }
-
-            extraArgs = $"--config \"{configPath}\"";
-        }
-
-        ProcessStartInfo psi =
-            new()
-            {
-                FileName =
-                    which == VlcInstallationToUse.System
-                        ? "vlc.exe"
-                        : Path.Combine(AppContext.BaseDirectory, "..", "vlc", "vlc.exe"),
-                Arguments = $"--fullscreen --loop --high-priority --no-video-title-show {extraArgs} -- \"{url}\"",
-                UseShellExecute = which == VlcInstallationToUse.System,
-            };
+            ProcessStartInfo psi =
+                new()
+                {
+                    FileName = "vlc.exe",
+                    Arguments = $"--fullscreen --loop --high-priority --no-video-title-show -- \"{url}\"",
+                    UseShellExecute = true,
+                };
 
 #if DEBUG
-        // When debugging, it can be annoying for VLC to actually appear every time.
-        if (
-            MessageBox.Show(
-                "Proceed?\n\n" + psi.FileName + " " + psi.Arguments,
-                "DEBUG - Open Movie",
-                MessageBoxButtons.OKCancel
-            ) != DialogResult.OK
-        )
-            return;
+            // When debugging, it can be annoying for VLC to actually appear every time.
+            if (
+                MessageBox.Show(
+                    "Proceed?\n\n" + psi.FileName + " " + psi.Arguments,
+                    "DEBUG - Open Movie",
+                    MessageBoxButtons.OKCancel
+                ) != DialogResult.OK
+            )
+            {
+                return;
+            }
 #endif
 
-        using VlcLaunchProgressForm f = new(psi);
-        f.ShowDialog(this);
+            using VlcLaunchProgressForm f = new(psi);
+            f.ShowDialog(this);
+        }
+        else if (which == MoviePlayerToUse.Integrated)
+        {
+            var f = _serviceProvider.GetRequiredService<MoviePlayerForm>();
+            f.Initialize(movie.Id);
+            f.Show();
+        }
 
         static bool IsVlcInstalled()
         {

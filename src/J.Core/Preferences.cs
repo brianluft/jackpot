@@ -15,7 +15,7 @@ public sealed class Preferences : IDisposable
     {
         Shared_SortOrder,
         Shared_Filter,
-        Shared_VlcInstallationToUse,
+        Shared_MoviePlayerToUse,
         ImportControl_AutoConvert,
         ImportControl_VideoQuality,
         ImportControl_CompressionLevel,
@@ -34,7 +34,7 @@ public sealed class Preferences : IDisposable
         {
             [Key.Shared_SortOrder] = JsonSerializer.Serialize(SortOrder.Default),
             [Key.Shared_Filter] = JsonSerializer.Serialize(Filter.Default),
-            [Key.Shared_VlcInstallationToUse] = VlcInstallationToUse.Automatic.ToString(),
+            [Key.Shared_MoviePlayerToUse] = MoviePlayerToUse.Automatic.ToString(),
             [Key.ImportControl_AutoConvert] = 1L,
             [Key.ImportControl_VideoQuality] = "17 (recommended)",
             [Key.ImportControl_CompressionLevel] = "slow (recommended)",

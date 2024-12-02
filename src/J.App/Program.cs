@@ -52,8 +52,6 @@ public static class Program
         services.AddSingleton<MyApplicationContext>();
 
         services.AddTransient<AddTagsToMoviesForm>();
-        services.AddTransient<TagForm>();
-        services.AddTransient<TagTypeForm>();
         services.AddTransient<FilterChooseTagForm>();
         services.AddTransient<FilterEnterStringForm>();
         services.AddTransient<ImportControl>();
@@ -64,10 +62,13 @@ public static class Program
         services.AddTransient<MainForm>();
         services.AddTransient<MovieEncoder>();
         services.AddTransient<MovieExporter>();
+        services.AddTransient<MoviePlayerForm>();
         services.AddTransient<MoviePropertiesForm>();
         services.AddTransient<OptionsForm>();
         services.AddTransient<RecycleBinForm>();
+        services.AddTransient<TagForm>();
         services.AddTransient<TagsControl>();
+        services.AddTransient<TagTypeForm>();
 
         using var serviceProvider = services.BuildServiceProvider();
 

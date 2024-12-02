@@ -548,6 +548,20 @@ app.MapGet(
     }
 );
 
+app.MapGet(
+    "/movie-play.html",
+    ([FromQuery, Required] string movieId, [FromQuery, Required] string sessionPassword, HttpResponse response) =>
+    {
+        CheckSessionPassword(sessionPassword);
+
+        var m3u8Url = $"/movie.m3u8?movieId={movieId}&sessionPassword={sessionPassword}";
+        var movie = libraryProvider.GetMovie(new(movieId));
+
+        response.ContentType = "text/html";
+        return MoviePlayerPage.GenerateHtml(movie.Filename, m3u8Url).Content;
+    }
+);
+
 app.MapPost(
     "/reshuffle",
     ([FromQuery, Required] string sessionPassword) =>

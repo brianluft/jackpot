@@ -8,12 +8,12 @@ public sealed class OptionsForm : Form
     private readonly Preferences _preferences;
     private readonly TableLayoutPanel _table;
     private readonly FlowLayoutPanel _buttonFlow,
-        _generalFlow,
+        _libraryFlow,
         _m3u8Flow;
     private readonly TabControl _tabControl;
-    private readonly TabPage _generalTab,
+    private readonly TabPage _libraryTab,
         _m3u8Page;
-    private readonly ComboBox _vlcCombo,
+    private readonly ComboBox _playerCombo,
         _windowMaximizeBehaviorCombo,
         _columnCountCombo;
     private readonly Button _okButton,
@@ -22,14 +22,14 @@ public sealed class OptionsForm : Form
     private readonly TextBox _m3u8FolderText,
         _m3u8HostnameText;
 
-    // VLC installation to use for playback
-    private readonly List<VlcInstallationToUse> _vlcValues =
+    // Movie player to use for playback
+    private readonly List<MoviePlayerToUse> _playerValues =
     [
-        VlcInstallationToUse.Automatic,
-        VlcInstallationToUse.Bundled,
-        VlcInstallationToUse.System,
+        MoviePlayerToUse.Automatic,
+        MoviePlayerToUse.Integrated,
+        MoviePlayerToUse.Vlc,
     ];
-    private readonly string[] _vlcNames = ["Automatic", "Bundled with Jackpot", "External install"];
+    private readonly string[] _playerNames = ["Automatic", "Integrated player", "VLC"];
 
     // Window maximize behavior
     private readonly List<WindowMaximizeBehavior> _windowMaximizeBehaviorValues =
@@ -51,14 +51,14 @@ public sealed class OptionsForm : Form
 
             _table.Controls.Add(_tabControl = ui.NewTabControl(200), 0, 0);
             {
-                _tabControl.TabPages.Add(_generalTab = ui.NewTabPage("General"));
+                _tabControl.TabPages.Add(_libraryTab = ui.NewTabPage("Library"));
                 {
-                    _generalTab.Controls.Add(_generalFlow = ui.NewFlowColumn());
+                    _libraryTab.Controls.Add(_libraryFlow = ui.NewFlowColumn());
                     {
-                        _generalFlow.Padding = ui.DefaultPadding;
+                        _libraryFlow.Padding = ui.DefaultPadding;
 
-                        _generalFlow.Controls.Add(
-                            ui.NewLabeledPair("Thumbnail columns:", _columnCountCombo = ui.NewDropDownList(200))
+                        _libraryFlow.Controls.Add(
+                            ui.NewLabeledPair("Thumbnail &columns:", _columnCountCombo = ui.NewDropDownList(200))
                         );
                         {
                             _columnCountCombo.Margin += ui.BottomSpacing;
@@ -69,21 +69,19 @@ public sealed class OptionsForm : Form
                                 (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount) - 1;
                         }
 
-                        _generalFlow.Controls.Add(
-                            ui.NewLabeledPair("&VLC installation to use:", _vlcCombo = ui.NewDropDownList(200))
+                        _libraryFlow.Controls.Add(
+                            ui.NewLabeledPair("Movie &player app:", _playerCombo = ui.NewDropDownList(200))
                         );
                         {
-                            _vlcCombo.Margin += ui.BottomSpacing;
-                            _vlcCombo.Items.AddRange(_vlcNames);
-                            var value = preferences.GetEnum<VlcInstallationToUse>(
-                                Preferences.Key.Shared_VlcInstallationToUse
-                            );
-                            _vlcCombo.SelectedIndex = _vlcValues.IndexOf(value);
+                            _playerCombo.Margin += ui.BottomSpacing;
+                            _playerCombo.Items.AddRange(_playerNames);
+                            var value = preferences.GetEnum<MoviePlayerToUse>(Preferences.Key.Shared_MoviePlayerToUse);
+                            _playerCombo.SelectedIndex = _playerValues.IndexOf(value);
                         }
 
-                        _generalFlow.Controls.Add(
+                        _libraryFlow.Controls.Add(
                             ui.NewLabeledPair(
-                                "Window &maximize behavior:",
+                                "&Maximized window style:",
                                 _windowMaximizeBehaviorCombo = ui.NewDropDownList(200)
                             )
                         );
@@ -108,7 +106,7 @@ public sealed class OptionsForm : Form
 
                         _m3u8Flow.Controls.Add(
                             ui.NewLabel(
-                                "Jackpot can maintain a folder of M3U8 files for non-Windows\ndevices to play via Windows file sharing."
+                                "Jackpot can maintain a folder of M3U8 playlist files for non-Windows\ndevices to play via Windows file sharing."
                             )
                         );
 
@@ -180,7 +178,10 @@ public sealed class OptionsForm : Form
 
             _preferences.WithTransaction(() =>
             {
-                _preferences.SetEnum(Preferences.Key.Shared_VlcInstallationToUse, _vlcValues[_vlcCombo.SelectedIndex]);
+                _preferences.SetEnum(
+                    Preferences.Key.Shared_MoviePlayerToUse,
+                    _playerValues[_playerCombo.SelectedIndex]
+                );
                 _preferences.SetEnum(
                     Preferences.Key.MainForm_WindowMaximizeBehavior,
                     _windowMaximizeBehaviorValues[_windowMaximizeBehaviorCombo.SelectedIndex]

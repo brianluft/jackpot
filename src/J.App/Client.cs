@@ -77,12 +77,12 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
         }
     }
 
-    public string GetMovieM3u8Url(Movie movie)
+    public string GetMoviePlayerUrl(MovieId movieId)
     {
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = SessionPassword;
-        query["movieId"] = movie.Id.Value;
-        return $"http://localhost:{Port}/movie.m3u8?{query}";
+        query["movieId"] = movieId.Value;
+        return $"http://localhost:{Port}/movie-play.html?{query}";
     }
 
     private static int FindRandomUnusedPort()
