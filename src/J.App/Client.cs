@@ -10,7 +10,7 @@ namespace J.App;
 
 public sealed class Client(IHttpClientFactory httpClientFactory, Preferences preferences) : IDisposable
 {
-    private const int MAX_LOG_LINES = 10_000;
+    private const int MAX_LOG_LINES = 1000;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
 
     private readonly Lock _processLock = new();

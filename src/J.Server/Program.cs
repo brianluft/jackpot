@@ -50,15 +50,6 @@ var staticFiles = Directory
     .GetFiles(Path.Combine(AppContext.BaseDirectory, "static"))
     .ToDictionary(x => Path.GetFileName(x), File.ReadAllBytes);
 
-string GetM3u8Hostname()
-{
-    var m3u8Hostname = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).M3u8Hostname;
-    if (string.IsNullOrWhiteSpace(m3u8Hostname))
-        m3u8Hostname = "localhost";
-
-    return m3u8Hostname;
-}
-
 List<Movie> GetFilteredMovies(LibraryMetadata libraryMetadata)
 {
     var filter = preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
@@ -372,7 +363,7 @@ string GetFilterSortHash()
     var filterHash = SHA256.HashData(Encoding.UTF8.GetBytes(filter));
     var sortOrderHash = SHA256.HashData(Encoding.UTF8.GetBytes(sortOrder));
 
-    return BitConverter.ToString(filterHash.Concat(sortOrderHash).ToArray());
+    return BitConverter.ToString([.. filterHash, .. sortOrderHash]);
 }
 
 // ---
@@ -411,7 +402,7 @@ app.MapGet(
     ) =>
     {
         CheckSessionPassword(sessionPassword);
-        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword, GetM3u8Hostname());
+        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword, "localhost");
         response.ContentType = "application/vnd.apple.mpegurl";
         await response.StartAsync(cancel);
         await response.Body.WriteAsync(m3u8, cancel);
