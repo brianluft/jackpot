@@ -44,12 +44,6 @@ public sealed class MoviePlayerForm : Form
         _browser.Source = new(url);
     }
 
-    protected override void OnLoad(EventArgs e)
-    {
-        base.OnLoad(e);
-        _browser.Focus();
-    }
-
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
