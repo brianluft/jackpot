@@ -20,12 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.1.0" />
-    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-  </ItemGroup>
-    
-  <ItemGroup>
     <ProjectReference Include="..\J.Core\J.Core.csproj" />
   </ItemGroup>
     

@@ -7,7 +7,7 @@ using J.Core;
 using J.Core.Data;
 using J.Server;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
+using Microsoft.Extensions.Logging.Console;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCore();
@@ -15,11 +15,24 @@ builder.Services.AddTransient<ServerMovieFileReader>();
 builder.Services.AddSingleton<IAmazonS3>(services =>
     services.GetRequiredService<AccountSettingsProvider>().CreateAmazonS3Client()
 );
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<RequestLoggingMiddleware>();
+builder.Services.AddScoped<RequestIdProvider>();
+builder.Services.AddScoped<RequestLogger>();
 
-builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(options =>
+{
+    options.FormatterName = "CustomConsole";
+});
+builder.Logging.Configure(options =>
+{
+    options.ActivityTrackingOptions = ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId;
+});
+builder.Services.AddSingleton<ConsoleFormatter, CustomConsoleFormatter>();
 
 var app = builder.Build();
-app.UseSerilogRequestLogging();
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 var configuredPort = GetPortNumber();
 var configuredSessionPassword = Environment.GetEnvironmentVariable("JACKPOT_SESSION_PASSWORD") ?? "";
@@ -413,11 +426,13 @@ app.MapGet(
         [FromQuery, Required] string sessionPassword,
         HttpResponse response,
         ServerMovieFileReader movieFileReader,
+        RequestLogger logger,
         CancellationToken cancel
     ) =>
     {
         CheckSessionPassword(sessionPassword);
         await using MemoryStream output = new();
+        logger.Log($"Requesting from S3.");
         await ServerPolicy.Policy.ExecuteAsync(
             delegate
             {
@@ -426,10 +441,14 @@ app.MapGet(
             }
         );
 
+        logger.Log($"Read {output.Length:#,##0} bytes from S3.");
+
         output.Position = 0;
         response.ContentType = "video/MP2T";
         await response.StartAsync(cancel);
         await output.CopyToAsync(response.Body, cancel);
+
+        logger.Log($"Sent {output.Length:#,##0} bytes in response.");
     }
 );
 
@@ -580,8 +599,6 @@ enum ListPageType
     Movies,
     TagType,
 }
-
-readonly record struct ListPageKey(ListPageType ListPageType, TagTypeId? TagTypeId);
 
 record class LibraryMetadata(
     Dictionary<MovieId, Movie> Movies,
