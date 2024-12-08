@@ -59,7 +59,7 @@ function Publish-Launcher
 
 function Get-FfmpegX64
 {
-	$url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+	$url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
 	$zipFilePath = "$downloadsDir\ffmpeg-x64.zip"
 	if (-not (Test-Path $zipFilePath))
 	{
@@ -83,6 +83,9 @@ function Get-FfmpegX64
 	Move-Item -Path "$ffmpegBinDir\*" -Destination $dstDir -Force
 
 	Remove-Item -Path $ffmpegDir.FullName -Recurse -Force
+
+	# Delete stuff we don't need
+	Remove-Item -Path "$dstDir\ffplay.exe" -Force
 }
 
 function Get-FfmpegArm64
@@ -102,6 +105,10 @@ function Get-FfmpegArm64
 	$dstDir = "$buildDir\arm64\ffmpeg\"
 	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
 	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
+
+	# Delete stuff we don't need
+	Remove-Item -Path "$dstDir\ffplay.exe" -Force
+	Remove-Item -Path "$dstDir\SDL2.dll" -Force
 }
 
 function Copy-MiscFiles
