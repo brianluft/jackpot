@@ -11,7 +11,8 @@ public static class WallPage
         string sessionPassword,
         int columnCount,
         string cookieName,
-        string filterSortHash
+        string filterSortHash,
+        bool inhibitScrollRestore
     )
     {
         var blockJsons = pageBlocks.Select(x => new PageBlockJson(x, sessionPassword)).ToList();
@@ -99,7 +100,7 @@ public static class WallPage
                 </div>
 
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword, cookieName, filterSortHash)}}
+                    {{PageShared.GetSharedJs(sessionPassword, cookieName, filterSortHash, inhibitScrollRestore)}}
 
                     const VIDEOS = {{JsonSerializer.Serialize(blockJsons)}};
 

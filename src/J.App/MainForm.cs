@@ -334,9 +334,9 @@ public sealed partial class MainForm : Form
                 _homeButton.ToolTipText = "Go home";
                 _homeButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
                 _homeButton.Image = ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Home.png", 16, 16));
-                _homeButton.Click += delegate
+                _homeButton.Click += async delegate
                 {
-                    GoHome();
+                    await GoHomeAsync().ConfigureAwait(true);
                 };
             }
 
@@ -502,14 +502,14 @@ public sealed partial class MainForm : Form
         UpdateTagTypes();
     }
 
-    protected override void OnShown(EventArgs e)
+    protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
 
         UpdateViewFromPreferences(reload: false);
         UpdateFilterSortFromPreferences(reload: false);
         UpdateRecycleBinCount();
-        GoHome();
+        await GoHomeAsync().ConfigureAwait(true);
     }
 
     private void DisconnectButton_Click(object? sender, EventArgs e)
@@ -552,9 +552,9 @@ public sealed partial class MainForm : Form
         _browser.Reload();
     }
 
-    private void MoviesButton_Click(object? sender, EventArgs e)
+    private async void MoviesButton_Click(object? sender, EventArgs e)
     {
-        GoHome();
+        await GoHomeAsync().ConfigureAwait(true);
     }
 
     private void Navigate(string path)
@@ -587,8 +587,10 @@ public sealed partial class MainForm : Form
         _browseForwardButton.Enabled = _browser.CanGoForward;
     }
 
-    private void GoHome()
+    private async Task GoHomeAsync()
     {
+        await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = _client.SessionPassword;
         query["type"] = "Movies";
@@ -838,8 +840,10 @@ public sealed partial class MainForm : Form
             // Add menu item to the main menu for viewing the list page.
             var menuItem = _ui.NewToolStripMenuItem($"Browse {tagType.PluralName.ToLower()}");
             _menuButton.DropDownItems.Insert(1, menuItem);
-            menuItem.Click += delegate
+            menuItem.Click += async delegate
             {
+                await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+
                 var query = HttpUtility.ParseQueryString("");
                 query["sessionPassword"] = _client.SessionPassword;
                 query["type"] = "TagType";
@@ -1463,8 +1467,10 @@ public sealed partial class MainForm : Form
             _browser.Focus();
     }
 
-    private void TagsControl_TagTypeActivated(object? sender, TagsControl.TagTypeActivatedEventArgs e)
+    private async void TagsControl_TagTypeActivated(object? sender, TagsControl.TagTypeActivatedEventArgs e)
     {
+        await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = _client.SessionPassword;
         query["type"] = "TagType";
@@ -1473,8 +1479,10 @@ public sealed partial class MainForm : Form
         Navigate($"/list.html?{query}");
     }
 
-    private void TagsControl_TagActivated(object? sender, TagsControl.TagActivatedEventArgs e)
+    private async void TagsControl_TagActivated(object? sender, TagsControl.TagActivatedEventArgs e)
     {
+        await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = _client.SessionPassword;
         query["tagId"] = e.Id.Value;

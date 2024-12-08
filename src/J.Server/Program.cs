@@ -47,6 +47,29 @@ var password = accountSettings.Password ?? throw new Exception("Encryption key n
 var preferences = app.Services.GetRequiredService<Preferences>();
 var seed = Guid.NewGuid().GetHashCode();
 
+// The app will set this flag when it wants the next page load NOT to restore the scroll position.
+Lock inhibitScrollRestoreLock = new();
+var inhibitScrollRestore = false;
+void SetInhibitScrollRestore()
+{
+    lock (inhibitScrollRestoreLock)
+    {
+        inhibitScrollRestore = true;
+    }
+}
+bool TakeInhibitScrollRestore()
+{
+    lock (inhibitScrollRestoreLock)
+    {
+        if (inhibitScrollRestore)
+        {
+            inhibitScrollRestore = false;
+            return true;
+        }
+        return false;
+    }
+}
+
 var staticFiles = Directory
     .GetFiles(Path.Combine(AppContext.BaseDirectory, "static"))
     .ToDictionary(x => Path.GetFileName(x), File.ReadAllBytes);
@@ -232,6 +255,7 @@ Html NewPageFromBlocks(
 
     var style = preferences.GetEnum<LibraryViewStyle>(Preferences.Key.Shared_LibraryViewStyle);
     var columnCount = (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount);
+    var thisInhibitScrollRestore = TakeInhibitScrollRestore();
     return style switch
     {
         LibraryViewStyle.List => ListPage.GenerateHtml(
@@ -240,7 +264,8 @@ Html NewPageFromBlocks(
             title,
             configuredSessionPassword,
             cookieName,
-            filterSortHash
+            filterSortHash,
+            thisInhibitScrollRestore
         ),
         LibraryViewStyle.Grid => WallPage.GenerateHtml(
             blocks,
@@ -248,7 +273,8 @@ Html NewPageFromBlocks(
             configuredSessionPassword,
             columnCount,
             cookieName,
-            filterSortHash
+            filterSortHash,
+            thisInhibitScrollRestore
         ),
         _ => throw new Exception($"Unexpected LibraryViewStyle: {style}"),
     };
@@ -596,6 +622,15 @@ app.MapPost(
     {
         CheckSessionPassword(sessionPassword);
         seed = Guid.NewGuid().GetHashCode();
+    }
+);
+
+app.MapPost(
+    "/inhibit-scroll-restore",
+    ([FromQuery, Required] string sessionPassword) =>
+    {
+        CheckSessionPassword(sessionPassword);
+        SetInhibitScrollRestore();
     }
 );
 

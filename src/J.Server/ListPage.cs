@@ -15,7 +15,8 @@ public static class ListPage
         string title,
         string sessionPassword,
         string cookieName,
-        string filterSortHash
+        string filterSortHash,
+        bool inhibitScrollRestore
     )
     {
         var blockJsons = pageBlocks.Select(x => new PageBlockJson(x, sessionPassword)).ToList();
@@ -127,7 +128,7 @@ public static class ListPage
                 <div id="table"></div>
 
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword, cookieName, filterSortHash)}}
+                    {{PageShared.GetSharedJs(sessionPassword, cookieName, filterSortHash, inhibitScrollRestore)}}
 
                     const items = {{JsonSerializer.Serialize(blockJsons)}};
                     const metadataKeys = {{JsonSerializer.Serialize(metadataKeys)}};

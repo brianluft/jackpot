@@ -42,7 +42,12 @@ public static class PageShared
             <script src="/static/tabulator.min.js"></script>
             """;
 
-    public static string GetSharedJs(string sessionPassword, string cookieName, string filterSortHash) =>
+    public static string GetSharedJs(
+        string sessionPassword,
+        string cookieName,
+        string filterSortHash,
+        bool inhibitScrollRestore
+    ) =>
         $$"""
             // Disable context menu page-wide
             document.addEventListener('contextmenu', e => e.preventDefault());
@@ -200,12 +205,14 @@ public static class PageShared
                 // Handle ready event based on context
                 const { target: readyTarget, eventName: readyEventName } = config.readyEvent;
 
-                if (document.readyState === 'complete') {
-                    restoreScrollPosition();
-                } else if (isTabulator) {
-                    readyTarget.on(readyEventName, restoreScrollPosition);
-                } else {
-                    readyTarget.addEventListener(readyEventName, restoreScrollPosition);
+                if (!{{inhibitScrollRestore.ToString().ToLowerInvariant()}}) {
+                    if (document.readyState === 'complete') {
+                        restoreScrollPosition();
+                    } else if (isTabulator) {
+                        readyTarget.on(readyEventName, restoreScrollPosition);
+                    } else {
+                        readyTarget.addEventListener(readyEventName, restoreScrollPosition);
+                    }
                 }
 
                 // Return cleanup function

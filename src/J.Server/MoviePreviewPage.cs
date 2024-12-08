@@ -55,7 +55,7 @@ public static class MoviePreviewPage
                     </video>
                 </div>
                 <script>
-                    {{PageShared.GetSharedJs(sessionPassword, nameof(MoviePreviewPage), filterSortHash)}}
+                    {{PageShared.GetSharedJs(sessionPassword, nameof(MoviePreviewPage), filterSortHash, true)}}
                 </script>
             </body>
             </html>
