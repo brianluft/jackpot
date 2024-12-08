@@ -32,6 +32,13 @@ public static class Program
             return -1;
         }
 
+        GC.Collect(
+            GC.MaxGeneration, // Collect all generations
+            GCCollectionMode.Forced, // Force immediate collection
+            blocking: true, // Wait for collection to finish
+            compacting: true // Compact the heap
+        );
+
         using (process)
         {
             process.WaitForExit();
