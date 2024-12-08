@@ -1008,9 +1008,9 @@ public sealed partial class Ui
         return new() { AutoSize = true, MinimumSize = GetSize(unscaledWidth, 0) };
     }
 
-    public WebView2 NewWebView2()
+    public MyWebView2 NewWebView2()
     {
-        WebView2 browser =
+        MyWebView2 browser =
             new()
             {
                 Dock = DockStyle.Fill,
@@ -1018,46 +1018,6 @@ public sealed partial class Ui
                 Margin = Padding.Empty,
                 BackColor = MyColors.MainFormBackground,
             };
-
-        browser.CoreWebView2InitializationCompleted += delegate
-        {
-            var settings = browser.CoreWebView2.Settings;
-            settings.AreBrowserAcceleratorKeysEnabled = true;
-            settings.AreDefaultContextMenusEnabled = true;
-            settings.AreDefaultScriptDialogsEnabled = false;
-            settings.AreHostObjectsAllowed = false;
-            settings.IsBuiltInErrorPageEnabled = false;
-            settings.IsGeneralAutofillEnabled = false;
-            settings.IsNonClientRegionSupportEnabled = false;
-            settings.IsPasswordAutosaveEnabled = false;
-            settings.IsPinchZoomEnabled = false;
-            settings.IsReputationCheckingRequired = false;
-            settings.IsScriptEnabled = true;
-            settings.IsStatusBarEnabled = false;
-            settings.IsSwipeNavigationEnabled = false;
-            settings.IsWebMessageEnabled = true;
-            settings.IsZoomControlEnabled = false;
-
-#if DEBUG
-            settings.AreDevToolsEnabled = true;
-#else
-            settings.AreDevToolsEnabled = false;
-#endif
-
-            browser.BeginInvoke(() =>
-            {
-                browser.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-                browser.CoreWebView2.WebResourceRequested += (sender, e) =>
-                {
-                    // Never cache anything.
-                    e.Request.Headers.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-                    e.Request.Headers.SetHeader("Pragma", "no-cache");
-                    e.Request.Headers.SetHeader("Expires", "0");
-                };
-            });
-        };
-
-        _ = browser.EnsureCoreWebView2Async(Program.SharedCoreWebView2Environment);
 
         return browser;
     }

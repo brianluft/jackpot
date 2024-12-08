@@ -62,13 +62,13 @@ public sealed partial class MainForm : Form
         _tagsTabButton;
     private readonly ToolStripSeparator _rightmostSeparator;
     private readonly MyToolStripTextBox _searchText;
-    private readonly WebView2 _browser;
+    private readonly MyWebView2 _browser;
     private readonly System.Windows.Forms.Timer _searchDebounceTimer;
     private readonly ContextMenuStrip _movieContextMenu;
     private readonly List<MovieId> _movieContextMenuIds = [];
+    private readonly Dictionary<ToolStripItem, bool> _previousToolStripItemEnabledStates = [];
     private FormWindowState _lastWindowState;
     private bool _inhibitSearchTextChangedEvent;
-    private readonly Dictionary<ToolStripItem, bool> _previousToolStripItemEnabledStates = [];
 
     public MainForm(
         IServiceProvider serviceProvider,
@@ -1508,6 +1508,9 @@ public sealed partial class MainForm : Form
     {
         base.OnActivated(e);
 
+        if (!_browser.IsCoreWebView2Initialized)
+            return;
+
         try
         {
             HostToPageMessageJson message = new() { Type = "resume-videos" };
@@ -1519,6 +1522,9 @@ public sealed partial class MainForm : Form
     protected override void OnDeactivate(EventArgs e)
     {
         base.OnDeactivate(e);
+
+        if (!_browser.IsCoreWebView2Initialized)
+            return;
 
         try
         {
