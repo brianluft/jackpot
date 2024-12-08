@@ -4,6 +4,6 @@ public sealed class RequestLogger(ILogger<RequestLogger> logger, RequestIdProvid
 {
     public void Log(string message)
     {
-        logger.LogInformation("[{RequestId}] {Message}", requestIdProvider.Id, message);
+        logger.LogInformation("[#{RequestId}] [{Time}] {Message}", requestIdProvider.Id, DateTimeOffset.Now, message);
     }
 }

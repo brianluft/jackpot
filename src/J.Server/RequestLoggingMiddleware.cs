@@ -5,10 +5,12 @@ namespace J.Server;
 
 public sealed class RequestLoggingMiddleware(ILogger<RequestLoggingMiddleware> logger) : IMiddleware
 {
+    private static int _requestId = 0; // interlocked
+
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         // Generate a unique ID for this request
-        var requestId = Guid.NewGuid().ToString();
+        var requestId = Interlocked.Increment(ref _requestId).ToString();
 
         // Add the request ID to the HttpContext items so it can be accessed throughout the request pipeline
         context.Items["RequestId"] = requestId;
@@ -19,7 +21,12 @@ public sealed class RequestLoggingMiddleware(ILogger<RequestLoggingMiddleware> l
         var sw = Stopwatch.StartNew();
 
         // Log the start of the request
-        logger.LogInformation("[{RequestId}] Starting {Path}", requestId, context.Request.GetEncodedPathAndQuery());
+        logger.LogInformation(
+            "[#{RequestId}] [{Time}] Starting {Path}",
+            requestId,
+            DateTimeOffset.Now,
+            context.Request.GetEncodedPathAndQuery()
+        );
 
         try
         {
@@ -32,8 +39,9 @@ public sealed class RequestLoggingMiddleware(ILogger<RequestLoggingMiddleware> l
 
             // Log the completion of the request
             logger.LogInformation(
-                "[{RequestId}] Completed {Path} | Status: {StatusCode} | Duration: {Duration}ms",
+                "[#{RequestId}] [{Time}] Completed {Path} | Status: {StatusCode} | Duration: {Duration}ms",
                 requestId,
+                DateTimeOffset.Now,
                 context.Request.GetEncodedPathAndQuery(),
                 context.Response.StatusCode,
                 sw.ElapsedMilliseconds

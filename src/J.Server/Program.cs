@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -422,6 +423,9 @@ app.MapGet(
     ) =>
     {
         CheckSessionPassword(sessionPassword);
+
+        var sw = Stopwatch.StartNew();
+
         await using MemoryStream output = new();
         logger.Log($"Requesting from S3.");
         await ServerPolicy.Policy.ExecuteAsync(
@@ -432,14 +436,16 @@ app.MapGet(
             }
         );
 
-        logger.Log($"Read {output.Length:#,##0} bytes from S3.");
+        logger.Log($"Read {output.Length:#,##0} bytes from S3 in {sw.Elapsed.TotalMilliseconds:#,##0} ms.");
+
+        sw.Restart();
 
         output.Position = 0;
         response.ContentType = "video/MP2T";
         await response.StartAsync(cancel);
         await output.CopyToAsync(response.Body, cancel);
 
-        logger.Log($"Sent {output.Length:#,##0} bytes in response.");
+        logger.Log($"Sent response in {sw.Elapsed.TotalMilliseconds:#,##0} ms.");
     }
 );
 
