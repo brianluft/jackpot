@@ -24,7 +24,10 @@ public sealed class ImportProgress(Action<double> updateProgress, Action<string>
             _ => phase.ToString(),
         };
 
-        updateMessage($"{text} ({progress * 100:0}%)");
+        if (phase == Phase.Uploading && progress == 0)
+            updateMessage("Waiting to upload");
+        else
+            updateMessage($"{text} ({progress * 100:0}%)");
 
         if (phase == Phase.Uploading)
             updateProgress(progress);

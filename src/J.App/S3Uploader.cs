@@ -80,56 +80,67 @@ public sealed class S3Uploader : IDisposable
         var parts = PlanParts(filePath).ToList();
 
         FileState fileState = new(filePath, bucket, key);
-        Task initiateTask,
-            completeTask;
         List<Task> partTasks = new(parts.Count);
 
-        lock (_enqueueLock)
+        InitiateMultipartUpload(fileState, cancel);
+        try
         {
-            initiateTask = Queue(() =>
-            {
-                InitiateMultipartUpload(fileState, cancel);
-            });
-
             var partsComplete = 0; // interlocked
 
-            foreach (var part in parts)
+            // If one part fails, then cancel every other part.
+            using var fileCts = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+            var fileCancel = fileCts.Token;
+
+            lock (_enqueueLock)
             {
-                partTasks.Add(
-                    Queue(() =>
-                    {
-                        initiateTask.Wait(cancel);
-                        if (initiateTask.IsFaulted)
-                            return;
+                foreach (var part in parts)
+                {
+                    partTasks.Add(
+                        Queue(() =>
+                        {
+                            try
+                            {
+                                if (!fileCancel.IsCancellationRequested)
+                                {
+                                    var etag = UploadPart(fileState, part, fileCancel);
+                                    fileState.PartETags.Add(new(part.PartNumber, etag));
 
-                        var etag = UploadPart(fileState, part, cancel);
-                        fileState.PartETags.Add(new(part.PartNumber, etag));
-
-                        var i = Interlocked.Increment(ref partsComplete);
-                        updateProgress(i / (double)parts.Count);
-                    })
-                );
+                                    var i = Interlocked.Increment(ref partsComplete);
+                                    updateProgress(i / (double)parts.Count);
+                                }
+                            }
+                            catch
+                            {
+                                fileCts.Cancel();
+                                throw;
+                            }
+                        })
+                    );
+                }
             }
 
-            completeTask = Queue(() =>
+            foreach (var t in partTasks)
             {
-                foreach (var t in partTasks)
-                {
-                    t.Wait(cancel);
-                    if (t.IsFaulted)
-                        return;
-                }
+                t.Wait(cancel);
+                cancel.ThrowIfCancellationRequested();
+                t.GetAwaiter().GetResult();
+            }
 
-                CompleteMultipartUpload(fileState, cancel);
-            });
+            CompleteMultipartUpload(fileState, cancel);
         }
+        catch
+        {
+            try
+            {
+                AbortMultipartUpload(fileState, cancel);
+            }
+            catch
+            {
+                // If the abort also fails, we want to throw the original exception.
+            }
 
-        completeTask.Wait(cancel);
-
-        initiateTask.GetAwaiter().GetResult();
-        foreach (var t in partTasks)
-            t.GetAwaiter().GetResult();
-        completeTask.GetAwaiter().GetResult();
+            throw;
+        }
     }
 
     private static IEnumerable<Part> PlanParts(string filePath)
@@ -210,6 +221,32 @@ public sealed class S3Uploader : IDisposable
                                 Key = fileState.Key,
                                 UploadId = fileState.UploadId,
                                 PartETags = [.. fileState.PartETags.OrderBy(x => x.PartNumber)],
+                            },
+                            cancel
+                        )
+                        .ConfigureAwait(false);
+                },
+                cancel
+            )
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    private void AbortMultipartUpload(FileState fileState, CancellationToken cancel)
+    {
+        if (fileState.UploadId is null)
+            return;
+
+        _policy
+            .ExecuteAsync(
+                async cancel =>
+                {
+                    await _s3.AbortMultipartUploadAsync(
+                            new()
+                            {
+                                BucketName = fileState.Bucket,
+                                Key = fileState.Key,
+                                UploadId = fileState.UploadId,
                             },
                             cancel
                         )
