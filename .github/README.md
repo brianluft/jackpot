@@ -4,6 +4,8 @@
 
 <p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif"></a></p>
 
+<h3 align="center"><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></h3>
+
 <br>
 
 ## Features
@@ -42,3 +44,5 @@ Prices are in U.S. dollars.
 <td>Free</td>
 </tr>
 </table>
+
+<br>
