@@ -4,6 +4,7 @@ namespace J.Core;
 
 public static class MyColors
 {
+    public static readonly Color BarberPoleStripe = Color.FromArgb(118, 122, 135);
     public static readonly Color ButtonBackgroundHover = Color.FromArgb(55, 55, 55);
     public static readonly Color ButtonBackgroundNormal = Color.FromArgb(45, 45, 45);
     public static readonly Color ButtonBackgroundPressed = Color.FromArgb(35, 35, 35);

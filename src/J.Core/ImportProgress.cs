@@ -16,7 +16,11 @@ public sealed class ImportProgress(Action<double> updateProgress, Action<string>
     {
         var text = phase switch
         {
+            Phase.Converting => "Re-encoding",
             Phase.MakingThumbnails => "Making thumbnails",
+            Phase.Segmenting => "Splitting into parts",
+            Phase.Encrypting => "Encrypting files",
+            Phase.Verifying => "Verifying files",
             _ => phase.ToString(),
         };
 

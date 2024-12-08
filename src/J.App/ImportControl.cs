@@ -1,10 +1,14 @@
 ﻿using System.Data;
+using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using J.Core;
 
 namespace J.App;
 
 public sealed class ImportControl : UserControl
 {
+    private const double FPS = 60;
+
     private readonly Preferences _preferences;
     private readonly ImportQueue _queue;
     private readonly Ui _ui;
@@ -27,8 +31,14 @@ public sealed class ImportControl : UserControl
         _clearButton;
     private readonly DataGridView _grid;
     private readonly DataGridViewColumn _colMessage;
+    private readonly System.Windows.Forms.Timer _animationTimer;
+    private readonly Stopwatch _animationStopwatch = Stopwatch.StartNew();
     private string _title = "Import";
+
+#pragma warning disable IDE0044 // Add readonly modifier
+    // Changes at the end of the constructor. Technically readonly, but that's confusing to read.
     private bool _initializing = true;
+#pragma warning restore IDE0044 // Add readonly modifier
 
     public string Title
     {
@@ -213,6 +223,7 @@ public sealed class ImportControl : UserControl
                     _grid.ColumnHeadersVisible = false;
                     _grid.CellPainting += Grid_CellPainting;
                     _grid.CellClick += Grid_CellClick;
+                    _grid.CellBorderStyle = DataGridViewCellBorderStyle.None;
 
                     _colMessage = _grid.Columns[_grid.Columns.Add("message", "Message")];
                     {
@@ -228,6 +239,9 @@ public sealed class ImportControl : UserControl
                 }
             }
         }
+
+        _animationTimer = new() { Interval = (int)(1000 / FPS), Enabled = true };
+        _animationTimer.Tick += (sender, e) => _grid.InvalidateColumn(_colMessage.Index);
 
         _queue.IsRunningChanged += Queue_IsRunningChanged;
         _queue.FileCompleted += Queue_FileCompleted;
@@ -350,8 +364,8 @@ public sealed class ImportControl : UserControl
         if (e.ColumnIndex == _colMessage.Index)
         {
             e.Handled = true;
-            e.Paint(e.ClipBounds, DataGridViewPaintParts.All ^ DataGridViewPaintParts.ContentForeground);
             var g = e.Graphics!;
+            e.Paint(e.ClipBounds, DataGridViewPaintParts.All ^ DataGridViewPaintParts.ContentForeground);
 
             var row = ((DataRowView)_grid.Rows[e.RowIndex].DataBoundItem!).Row;
             var message = (string)row["message"];
@@ -361,6 +375,7 @@ public sealed class ImportControl : UserControl
             // Draw the progress as a progressbar behind.
             var rect = e.CellBounds;
             rect.Inflate(_ui.GetSize(-4, -4));
+
             using Pen borderPen = new(MyColors.ProgressBarBorder, _ui.GetLength(1));
             var backgroundColor = state switch
             {
@@ -370,20 +385,29 @@ public sealed class ImportControl : UserControl
             };
             using SolidBrush backgroundBrush = new(backgroundColor);
             g.FillRectangle(backgroundBrush, rect);
-            g.DrawRectangle(borderPen, rect);
 
             if (state is ImportQueue.FileState.Working)
             {
-                using SolidBrush foregroundBrush = new(MyColors.ProgressBarForeground);
-                rect.Inflate(_ui.GetSize(-1, -1));
-                rect.Width = (int)(rect.Width * progress);
-                g.FillRectangle(foregroundBrush, rect);
+                if (progress == 0)
+                {
+                    DrawBarberPole(e, rect);
+                }
+                else if (progress > 0)
+                {
+                    using SolidBrush foregroundBrush = new(MyColors.ProgressBarForeground);
+                    var progressRect = rect;
+                    progressRect.Inflate(_ui.GetSize(-1, -1));
+                    progressRect.Width = (int)(rect.Width * progress);
+                    g.FillRectangle(foregroundBrush, progressRect);
+                }
             }
+
+            g.DrawRectangle(borderPen, rect);
 
             // Then, draw the message on top.
             var textBounds = e.CellBounds;
             textBounds.Inflate(_ui.GetSize(-2, -2));
-            textBounds.Height -= _ui.GetLength(1);
+            textBounds.Y -= _ui.GetLength(1);
             TextRenderer.DrawText(
                 g,
                 message,
@@ -394,6 +418,81 @@ public sealed class ImportControl : UserControl
                 TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter
             );
         }
+    }
+
+    private void DrawBarberPole(DataGridViewCellPaintingEventArgs e, Rectangle rect)
+    {
+        Debug.Assert(e.Graphics is not null);
+
+        // Get DPI scaling factor
+        float dpiScale = DeviceDpi / 96f;
+
+        // Define animation parameters with DPI scaling
+        float stripeWidth = 45 * dpiScale; // Width of each color stripe
+        float animationSpeed = 50f * dpiScale; // Pixels per second
+
+        // Calculate animation offset based on time
+        float timeOffset = (float)(_animationStopwatch.ElapsedMilliseconds / 1000.0);
+        float xOffset = (timeOffset * animationSpeed) % (2 * stripeWidth);
+
+        // Create path for clipping
+        using var path = new GraphicsPath();
+        path.AddRectangle(rect);
+        e.Graphics.SetClip(path);
+
+        // Paint cell background
+        using var backgroundBrush = new SolidBrush(MyColors.ProgressBarBackground);
+        e.Graphics.FillRectangle(backgroundBrush, rect);
+
+        // Calculate number of stripes needed to cover cell
+        int totalWidth = rect.Width + (int)(stripeWidth * 2);
+        int numStripes = (totalWidth / (int)stripeWidth) + 2;
+
+        // Draw each stripe as a filled polygon
+        var oldSmoothingMode = e.Graphics.SmoothingMode;
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var edgeCurvatureHeight = 3 * dpiScale;
+        var edgeCurvatureWidth = 10 * dpiScale;
+
+        for (int i = -1; i < numStripes; i += 2)
+        {
+            float x1 = rect.Left + (i * stripeWidth) - xOffset;
+            float x0 = x1 - edgeCurvatureWidth;
+            float x2 = x1 + edgeCurvatureWidth;
+
+            float x4 = x1 + stripeWidth;
+            float x3 = x4 - edgeCurvatureWidth;
+            float x5 = x4 + edgeCurvatureWidth;
+
+            float y0 = rect.Top;
+            float y1 = rect.Top + edgeCurvatureHeight;
+            float y2 = rect.Bottom - edgeCurvatureHeight;
+            float y3 = rect.Bottom;
+
+            Point TopPoint(float x, float y) => new((int)x, (int)y);
+            Point BottomPoint(float x, float y) => new((int)(x + stripeWidth / 2), (int)y);
+
+            // Create points for trapezoid
+            Point[] points =
+            [
+                TopPoint(x0, y0),
+                TopPoint(x3, y0),
+                TopPoint(x4, y1),
+                BottomPoint(x4, y2),
+                BottomPoint(x5, y3),
+                BottomPoint(x2, y3),
+                BottomPoint(x1, y2),
+                TopPoint(x1, y1),
+            ];
+
+            // Fill trapezoid with appropriate color
+            using var brush = new SolidBrush(MyColors.BarberPoleStripe);
+            e.Graphics.FillPolygon(brush, points);
+        }
+
+        e.Graphics.SmoothingMode = oldSmoothingMode;
+        e.Graphics.ResetClip();
     }
 
     private void Grid_DragEnter(object? sender, DragEventArgs e)

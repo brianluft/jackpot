@@ -50,7 +50,8 @@ public static class EncryptedZipFile
             zipIndex = GetZipIndex(
                 zipFilePath,
                 password,
-                progress => importProgress.UpdateProgress(ImportProgress.Phase.Verifying, progress)
+                progress => importProgress.UpdateProgress(ImportProgress.Phase.Verifying, progress),
+                cancel
             );
         }
         cancel.ThrowIfCancellationRequested();
@@ -124,7 +125,12 @@ public static class EncryptedZipFile
         }
     }
 
-    private static ZipIndex GetZipIndex(string zipFilePath, Password password, Action<double> updateProgress)
+    private static ZipIndex GetZipIndex(
+        string zipFilePath,
+        Password password,
+        Action<double> updateProgress,
+        CancellationToken cancel
+    )
     {
         List<string> zipEntryNames;
         long zipHeaderOffset;
@@ -133,13 +139,17 @@ public static class EncryptedZipFile
         {
             using ZipFile zipFile = new(fileStream);
             zipFile.Password = password.Value;
+            cancel.ThrowIfCancellationRequested();
 
             // Reading the TOC will ensure we capture the zip header.
             zipEntryNames = zipFile.Cast<ZipEntry>().Select(x => x.Name).ToList();
 
             // Call GetEntry() just in case that touches something that enumeration does not.
             foreach (var name in zipEntryNames)
+            {
+                cancel.ThrowIfCancellationRequested();
                 _ = zipFile.GetEntry(name);
+            }
 
             if (!fileStream.ReadRange.HasValue)
                 throw new Exception("Expected to see some reads but none were issued.");
@@ -156,7 +166,7 @@ public static class EncryptedZipFile
         var count = zipEntryNames.Count;
         Parallel.ForEach(
             zipEntryNames,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1, CancellationToken = cancel },
             entryName =>
             {
                 using TrackingFileStream fileStream = new(zipFilePath);
