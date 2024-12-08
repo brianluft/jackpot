@@ -108,7 +108,6 @@ function Get-FfmpegArm64
 
 	# Delete stuff we don't need
 	Remove-Item -Path "$dstDir\ffplay.exe" -Force
-	Remove-Item -Path "$dstDir\SDL2.dll" -Force
 }
 
 function Copy-MiscFiles
