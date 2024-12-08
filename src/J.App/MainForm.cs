@@ -267,7 +267,7 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Log out"));
+                _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Account settings"));
                 {
                     _logOutButton.Click += DisconnectButton_Click;
                 }
@@ -1576,7 +1576,7 @@ public sealed partial class MainForm : Form
     private void UpdateRecycleBinCount()
     {
         var count = _libraryProvider.GetDeletedMovieCount();
-        _recycleBinButton.Text = count == 0 ? "Recycle Bin" : $"Recycle Bin ({count:#,##0})";
+        _recycleBinButton.Text = count == 0 ? "Recycle bin" : $"Recycle bin ({count:#,##0})";
     }
 
     protected override void OnActivated(EventArgs e)

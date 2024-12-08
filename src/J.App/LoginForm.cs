@@ -220,7 +220,7 @@ public sealed class LoginForm : Form
             };
         }
 
-        Text = "Jackpot Media Library";
+        Text = "Account Settings - Jackpot Media Library";
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         StartPosition = FormStartPosition.CenterScreen;
