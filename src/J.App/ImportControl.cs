@@ -241,7 +241,17 @@ public sealed class ImportControl : UserControl
         }
 
         _animationTimer = new() { Interval = (int)(1000 / FPS), Enabled = true };
-        _animationTimer.Tick += (sender, e) => _grid.InvalidateColumn(_colMessage.Index);
+        _animationTimer.Tick += (sender, e) =>
+        {
+            if (Visible)
+            {
+                try
+                {
+                    _grid.InvalidateColumn(_colMessage.Index);
+                }
+                catch { }
+            }
+        };
 
         _queue.IsRunningChanged += Queue_IsRunningChanged;
         _queue.FileCompleted += Queue_FileCompleted;
