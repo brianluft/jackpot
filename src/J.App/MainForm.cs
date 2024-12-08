@@ -1503,4 +1503,28 @@ public sealed partial class MainForm : Form
         var count = _libraryProvider.GetDeletedMovieCount();
         _recycleBinButton.Text = count == 0 ? "Recycle Bin" : $"Recycle Bin ({count:#,##0})";
     }
+
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+
+        try
+        {
+            HostToPageMessageJson message = new() { Type = "resume-videos" };
+            _browser.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(message));
+        }
+        catch { }
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+
+        try
+        {
+            HostToPageMessageJson message = new() { Type = "pause-videos" };
+            _browser.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(message));
+        }
+        catch { }
+    }
 }

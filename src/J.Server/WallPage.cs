@@ -289,8 +289,17 @@ public static class WallPage
                             }
                         }
 
-                        window.addEventListener('blur', function() { adjustPlayback(false); });
-                        window.addEventListener('focus', function() { adjustPlayback(true); });
+                        window.chrome.webview.addEventListener('message', function(event) {
+                            const data = event.data;
+                            switch (data.Type) {
+                                case 'pause-videos':
+                                    adjustPlayback(false);
+                                    break;
+                                case 'resume-videos':
+                                    adjustPlayback(true);
+                                    break;
+                            }
+                        });
                     })();
 
                     // Initial setup
