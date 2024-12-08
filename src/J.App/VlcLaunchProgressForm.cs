@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using J.Base;
+using J.Core;
 
 namespace J.App;
 
@@ -54,6 +55,7 @@ public sealed partial class VlcLaunchProgressForm : Form
                 {
                     using var p = Process.Start(_psi)!;
                     ApplicationSubProcesses.Add(p);
+                    PowerThrottlingUtil.DisablePowerThrottling(p);
                     WaitForWindow(p, TimeSpan.FromSeconds(10));
                 })
                 .ConfigureAwait(true);

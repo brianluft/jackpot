@@ -56,13 +56,13 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
             psi.Environment["JACKPOT_SESSION_PASSWORD"] = SessionPassword;
 
             _process = Process.Start(psi)!;
+            ApplicationSubProcesses.Add(_process);
+            PowerThrottlingUtil.DisablePowerThrottling(_process);
 
             _process.OutputDataReceived += Process_DataReceived;
             _process.BeginOutputReadLine();
             _process.ErrorDataReceived += Process_DataReceived;
             _process.BeginErrorReadLine();
-
-            ApplicationSubProcesses.Add(_process);
         }
     }
 

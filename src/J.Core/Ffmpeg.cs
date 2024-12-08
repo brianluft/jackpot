@@ -58,6 +58,9 @@ public static class Ffmpeg
             };
 
         using var p = Process.Start(psi)!;
+        ApplicationSubProcesses.Add(p);
+        PowerThrottlingUtil.DisablePowerThrottling(p);
+
         object logLock = new();
         Queue<string> log = [];
 
@@ -98,8 +101,6 @@ public static class Ffmpeg
             }
         };
         p.BeginErrorReadLine();
-
-        ApplicationSubProcesses.Add(p);
 
         while (!p.WaitForExit(20))
         {
