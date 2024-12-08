@@ -559,6 +559,7 @@ public sealed class ImportControl : UserControl
 
             _queue.AddFiles(filePaths);
 
+            _grid.ClearSelection();
             EnableDisableButtons();
         });
     }

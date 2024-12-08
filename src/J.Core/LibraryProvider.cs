@@ -837,11 +837,11 @@ public sealed partial class LibraryProvider : IDisposable
         var localVersionId = Query(
                 "SELECT version_id FROM remote_version",
                 _ => { },
-                r => r.IsDBNull(0) ? null : (string?)r.GetString(0)
+                r => r.IsDBNull(0) ? "" : r.GetString(0)
             )
             .SingleOrDefault();
 
-        string? remoteVersionId;
+        string remoteVersionId;
         try
         {
             var metadataResponse = await _policy
@@ -855,8 +855,8 @@ public sealed partial class LibraryProvider : IDisposable
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            // The file isn't there.
-            remoteVersionId = null;
+            // The file isn't there, treat it as blank.
+            remoteVersionId = "";
         }
 
         return localVersionId != remoteVersionId;
