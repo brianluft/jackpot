@@ -1,5 +1,4 @@
-﻿using System.Collections.Frozen;
-using System.Data;
+﻿using System.Data;
 using J.Core;
 
 namespace J.App;
@@ -7,7 +6,6 @@ namespace J.App;
 public sealed class ImportControl : UserControl
 {
     private readonly Preferences _preferences;
-    private readonly LibraryProviderAdapter _libraryProvider;
     private readonly ImportQueue _queue;
     private readonly Ui _ui;
     private readonly TableLayoutPanel _table;
@@ -45,10 +43,9 @@ public sealed class ImportControl : UserControl
 
     public bool ImportInProgress => _queue.IsRunning;
 
-    public ImportControl(Preferences preferences, LibraryProviderAdapter libraryProvider, ImportQueue importQueue)
+    public ImportControl(Preferences preferences, ImportQueue importQueue)
     {
         _preferences = preferences;
-        _libraryProvider = libraryProvider;
         _queue = importQueue;
         Ui ui = new(this);
         _ui = ui;

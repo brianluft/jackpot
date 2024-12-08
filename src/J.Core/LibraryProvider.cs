@@ -542,14 +542,26 @@ public sealed partial class LibraryProvider : IDisposable
 
     public List<MovieTag> GetMovieTags() =>
         Query(
-            "SELECT movie_id, tag_id FROM movie_tags",
+            """
+            SELECT mt.movie_id, mt.tag_id
+            FROM movie_tags mt
+            INNER JOIN movies m ON mt.movie_id = m.id
+            WHERE m.deleted = 0
+            """,
             p => { },
             r => new MovieTag(MovieId: new(r.GetString(0)), TagId: new(r.GetString(1)))
         );
 
     public List<MovieTag> GetMovieTags(MovieId movieId) =>
         Query(
-            "SELECT movie_id, tag_id FROM movie_tags WHERE movie_id = @movie_id",
+            """
+            SELECT mt.movie_id, mt.tag_id
+            FROM movie_tags mt
+            INNER JOIN movies m ON mt.movie_id = m.id
+            WHERE
+                m.deleted = 0
+                AND movie_id = @movie_id
+            """,
             p =>
             {
                 p.AddWithValue("@movie_id", movieId.Value);
@@ -563,7 +575,9 @@ public sealed partial class LibraryProvider : IDisposable
             SELECT m.id
             FROM movie_tags mt
             INNER JOIN movies m ON mt.movie_id = m.id
-            WHERE mt.tag_id = @tag_id
+            WHERE
+                m.deleted = 0
+                AND mt.tag_id = @tag_id
             """,
             p =>
             {
@@ -702,11 +716,13 @@ public sealed partial class LibraryProvider : IDisposable
             SELECT mt.tag_id, m.id AS movie_id
             FROM movie_tags mt
             INNER JOIN movies m ON mt.movie_id = m.id
-            WHERE mt.tag_id IN (
-                SELECT id
-                FROM tags
-                WHERE tag_type_id = @tag_type_id
-            )
+            WHERE
+                m.deleted = 0
+                AND mt.tag_id IN (
+                    SELECT id
+                    FROM tags
+                    WHERE tag_type_id = @tag_type_id
+                )
             """,
             p =>
             {
@@ -725,7 +741,7 @@ public sealed partial class LibraryProvider : IDisposable
         Query(
             """
             SELECT 1 FROM movies
-            WHERE filename = @filename COLLATE NOCASE
+            WHERE deleted = 0 AND filename = @filename COLLATE NOCASE
             """,
             p =>
             {
