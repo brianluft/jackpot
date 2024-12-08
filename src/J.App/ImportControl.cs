@@ -247,7 +247,7 @@ public sealed class ImportControl : UserControl
         _queue.FileCompleted += Queue_FileCompleted;
         _queue.DataTable.RowChanged += delegate
         {
-            UpdateTitle();
+            ShowMessageBoxOnException(UpdateTitle);
         };
 
         _initializing = false;
@@ -256,16 +256,19 @@ public sealed class ImportControl : UserControl
 
     private void Grid_CellClick(object? sender, DataGridViewCellEventArgs e)
     {
-        if (e.RowIndex < 0 || e.RowIndex >= _grid.Rows.Count || e.ColumnIndex != 0)
-            return;
-
-        var row = ((DataRowView)_grid.Rows[e.RowIndex].DataBoundItem!).Row;
-        var state = (ImportQueue.FileState)row["state"];
-        if (state == ImportQueue.FileState.Failed)
+        ShowMessageBoxOnException(() =>
         {
-            var message = (string)row["error"];
-            MessageBox.Show(message, "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
+            if (e.RowIndex < 0 || e.RowIndex >= _grid.Rows.Count || e.ColumnIndex != 0)
+                return;
+
+            var row = ((DataRowView)_grid.Rows[e.RowIndex].DataBoundItem!).Row;
+            var state = (ImportQueue.FileState)row["state"];
+            if (state == ImportQueue.FileState.Failed)
+            {
+                var message = (string)row["error"];
+                MessageBox.Show(message, "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        });
     }
 
     private void ConvertCombo_SelectedValueChanged(object? sender, EventArgs e)
@@ -273,9 +276,12 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        var autoconvert = ((ConvertOption)_convertCombo.SelectedItem!).Convert;
-        _preferences.SetBoolean(Preferences.Key.ImportControl_AutoConvert, autoconvert);
-        EnableDisableButtons();
+        ShowMessageBoxOnException(() =>
+        {
+            var autoconvert = ((ConvertOption)_convertCombo.SelectedItem!).Convert;
+            _preferences.SetBoolean(Preferences.Key.ImportControl_AutoConvert, autoconvert);
+            EnableDisableButtons();
+        });
     }
 
     private void QualityCombo_SelectedIndexChanged(object? sender, EventArgs e)
@@ -283,7 +289,9 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        _preferences.SetText(Preferences.Key.ImportControl_VideoQuality, (string)_qualityCombo.SelectedItem!);
+        ShowMessageBoxOnException(
+            () => _preferences.SetText(Preferences.Key.ImportControl_VideoQuality, (string)_qualityCombo.SelectedItem!)
+        );
     }
 
     private void SpeedCombo_SelectedIndexChanged(object? sender, EventArgs e)
@@ -291,7 +299,10 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        _preferences.SetText(Preferences.Key.ImportControl_CompressionLevel, (string)_speedCombo.SelectedItem!);
+        ShowMessageBoxOnException(
+            () =>
+                _preferences.SetText(Preferences.Key.ImportControl_CompressionLevel, (string)_speedCombo.SelectedItem!)
+        );
     }
 
     private void AudioCombo_SelectedIndexChanged(object? sender, EventArgs e)
@@ -299,25 +310,31 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        _preferences.SetText(Preferences.Key.ImportControl_AudioBitrate, (string)_audioCombo.SelectedItem!);
+        ShowMessageBoxOnException(
+            () => _preferences.SetText(Preferences.Key.ImportControl_AudioBitrate, (string)_audioCombo.SelectedItem!)
+        );
     }
 
     private void Queue_IsRunningChanged(object? sender, EventArgs e)
     {
         BeginInvoke(() =>
         {
-            EnableDisableButtons();
+            try
+            {
+                EnableDisableButtons();
 
-            if (_queue.IsRunning)
-                Title = "Import (0%)";
-            else
-                Title = "Import";
+                if (_queue.IsRunning)
+                    Title = "Import (0%)";
+                else
+                    Title = "Import";
+            }
+            catch { }
         });
     }
 
     private void Queue_FileCompleted(object? sender, EventArgs e)
     {
-        UpdateTitle();
+        ShowMessageBoxOnException(UpdateTitle);
     }
 
     private void UpdateTitle()
@@ -361,63 +378,69 @@ public sealed class ImportControl : UserControl
 
     private void Grid_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
     {
-        if (e.ColumnIndex == _colMessage.Index)
+        try
         {
-            e.Handled = true;
-            var g = e.Graphics!;
-            e.Paint(e.ClipBounds, DataGridViewPaintParts.All ^ DataGridViewPaintParts.ContentForeground);
-
-            var row = ((DataRowView)_grid.Rows[e.RowIndex].DataBoundItem!).Row;
-            var message = (string)row["message"];
-            var progress = (double)row["progress"];
-            var state = (ImportQueue.FileState)row["state"];
-
-            // Draw the progress as a progressbar behind.
-            var rect = e.CellBounds;
-            rect.Inflate(_ui.GetSize(-4, -4));
-
-            using Pen borderPen = new(MyColors.ProgressBarBorder, _ui.GetLength(1));
-            var backgroundColor = state switch
-            {
-                ImportQueue.FileState.Failed => MyColors.ProgressBarFailedBackground,
-                ImportQueue.FileState.Success => MyColors.ProgressBarSuccessBackground,
-                _ => MyColors.ProgressBarBackground,
-            };
-            using SolidBrush backgroundBrush = new(backgroundColor);
-            g.FillRectangle(backgroundBrush, rect);
-
-            if (state is ImportQueue.FileState.Working)
-            {
-                if (progress == 0)
-                {
-                    DrawBarberPole(e, rect);
-                }
-                else if (progress > 0)
-                {
-                    using SolidBrush foregroundBrush = new(MyColors.ProgressBarForeground);
-                    var progressRect = rect;
-                    progressRect.Inflate(_ui.GetSize(-1, -1));
-                    progressRect.Width = (int)(rect.Width * progress);
-                    g.FillRectangle(foregroundBrush, progressRect);
-                }
-            }
-
-            g.DrawRectangle(borderPen, rect);
-
-            // Then, draw the message on top.
-            var textBounds = e.CellBounds;
-            textBounds.Inflate(_ui.GetSize(-2, -2));
-            textBounds.Y -= _ui.GetLength(1);
-            TextRenderer.DrawText(
-                g,
-                message,
-                Font,
-                textBounds,
-                Color.White,
-                Color.Transparent,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter
-            );
+            if (e.ColumnIndex == _colMessage.Index)
+                PaintMessageColumn(e);
         }
+        catch { }
+    }
+
+    private void PaintMessageColumn(DataGridViewCellPaintingEventArgs e)
+    {
+        e.Handled = true;
+        var g = e.Graphics!;
+        e.Paint(e.ClipBounds, DataGridViewPaintParts.All ^ DataGridViewPaintParts.ContentForeground);
+
+        var row = ((DataRowView)_grid.Rows[e.RowIndex].DataBoundItem!).Row;
+        var message = (string)row["message"];
+        var progress = (double)row["progress"];
+        var state = (ImportQueue.FileState)row["state"];
+
+        // Draw the progress as a progressbar behind.
+        var rect = e.CellBounds;
+        rect.Inflate(_ui.GetSize(-4, -4));
+        using Pen borderPen = new(MyColors.ProgressBarBorder, _ui.GetLength(1));
+        var backgroundColor = state switch
+        {
+            ImportQueue.FileState.Failed => MyColors.ProgressBarFailedBackground,
+            ImportQueue.FileState.Success => MyColors.ProgressBarSuccessBackground,
+            _ => MyColors.ProgressBarBackground,
+        };
+        using SolidBrush backgroundBrush = new(backgroundColor);
+        g.FillRectangle(backgroundBrush, rect);
+
+        if (state is ImportQueue.FileState.Working)
+        {
+            if (progress == 0)
+            {
+                DrawBarberPole(e, rect);
+            }
+            else if (progress > 0)
+            {
+                using SolidBrush foregroundBrush = new(MyColors.ProgressBarForeground);
+                var progressRect = rect;
+                progressRect.Inflate(_ui.GetSize(-1, -1));
+                progressRect.Width = (int)(rect.Width * progress);
+                g.FillRectangle(foregroundBrush, progressRect);
+            }
+        }
+
+        g.DrawRectangle(borderPen, rect);
+
+        // Then, draw the message on top.
+        var textBounds = e.CellBounds;
+        textBounds.Inflate(_ui.GetSize(-2, -2));
+        textBounds.Y -= _ui.GetLength(1);
+        TextRenderer.DrawText(
+            g,
+            message,
+            Font,
+            textBounds,
+            Color.White,
+            Color.Transparent,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter
+        );
     }
 
     private void DrawBarberPole(DataGridViewCellPaintingEventArgs e, Rectangle rect)
@@ -497,47 +520,71 @@ public sealed class ImportControl : UserControl
 
     private void Grid_DragEnter(object? sender, DragEventArgs e)
     {
-        if (e.Data!.GetDataPresent(DataFormats.FileDrop))
-            e.Effect = DragDropEffects.Copy;
+        try
+        {
+            if (e.Data!.GetDataPresent(DataFormats.FileDrop))
+                e.Effect = DragDropEffects.Copy;
+        }
+        catch { }
     }
 
     private void Grid_DragDrop(object? sender, DragEventArgs e)
     {
-        var files = (string[])e.Data!.GetData(DataFormats.FileDrop)!;
-
-        List<string> filePaths = [];
-        foreach (var path in files)
+        ShowMessageBoxOnException(() =>
         {
-            if (Directory.Exists(path))
-            {
-                filePaths.AddRange(Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories));
-            }
-            else if (File.Exists(path))
-            {
-                filePaths.Add(path);
-            }
-        }
+            var files = (string[])e.Data!.GetData(DataFormats.FileDrop)!;
 
-        _queue.AddFiles(filePaths);
+            List<string> filePaths = [];
+            foreach (var path in files)
+            {
+                if (Directory.Exists(path))
+                {
+                    filePaths.AddRange(Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories));
+                }
+                else if (File.Exists(path))
+                {
+                    filePaths.Add(path);
+                }
+            }
 
-        EnableDisableButtons();
+            _queue.AddFiles(filePaths);
+
+            EnableDisableButtons();
+        });
     }
 
     private void StartButton_Click(object? sender, EventArgs e)
     {
-        _queue.Start();
+        ShowMessageBoxOnException(() => _queue.Start());
     }
 
     private void StopButton_Click(object? sender, EventArgs e)
     {
-        _queue.Stop();
+        ShowMessageBoxOnException(_queue.Stop);
     }
 
     private void ClearButton_Click(object? sender, EventArgs e)
     {
-        _queue.Clear();
-        EnableDisableButtons();
+        ShowMessageBoxOnException(() =>
+        {
+            _queue.Clear();
+            EnableDisableButtons();
+        });
     }
 
     private readonly record struct ConvertOption(string Display, bool Convert);
+
+    private bool ShowMessageBoxOnException(Action action)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+    }
 }

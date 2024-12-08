@@ -1,12 +1,16 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
 using J.Base;
+using Polly;
+using Polly.Timeout;
 
 namespace J.Core;
 
 public static class Ffmpeg
 {
     private const int LOG_LINES = 15;
+
+    private static readonly TimeoutPolicy _isCompatibleCodecPolicy = Policy.Timeout(TimeSpan.FromMinutes(1));
 
     public readonly record struct Result(int ExitCode, string Log);
 
@@ -127,7 +131,16 @@ public static class Ffmpeg
         {
             var arguments =
                 $"-hide_banner -loglevel error -select_streams v:0 -show_entries stream=codec_name -of json -i \"{filePath}\"";
-            var result = Probe(arguments, CancellationToken.None);
+
+            Result result;
+            try
+            {
+                result = _isCompatibleCodecPolicy.Execute(cancel => Probe(arguments, cancel), default);
+            }
+            catch (TimeoutRejectedException)
+            {
+                throw new Exception($"Failed to inspect \"{Path.GetFileName(filePath)}\". The operation timed out.");
+            }
 
             if (result.ExitCode != 0)
                 return false;

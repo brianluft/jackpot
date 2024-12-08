@@ -6,7 +6,6 @@ using J.Core;
 using J.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Win32;
 using SortOrder = J.Core.Data.SortOrder;
 
@@ -453,63 +452,73 @@ public sealed partial class MainForm : Form
 
     private void AboutButton_Click(object? sender, EventArgs e)
     {
-        var assembly = typeof(MainForm).Assembly;
-        var version = assembly.GetName().Version;
+        ShowMessageBoxOnException(() =>
+        {
+            var assembly = typeof(MainForm).Assembly;
+            var version = assembly.GetName().Version;
 
-        TaskDialogPage taskDialogPage =
-            new()
+            TaskDialogPage taskDialogPage =
+                new()
+                {
+                    Heading = "Jackpot Media Library",
+                    Caption = "About Jackpot",
+                    Icon = TaskDialogIcon.Information,
+                    Text = $"Version {version}",
+                };
+            taskDialogPage.Buttons.Add("Server log");
+            taskDialogPage.Buttons.Add("License info");
+            taskDialogPage.Buttons.Add(TaskDialogButton.OK);
+            taskDialogPage.DefaultButton = taskDialogPage.Buttons[2];
+            var clicked = TaskDialog.ShowDialog(this, taskDialogPage);
+            if (clicked == taskDialogPage.Buttons[0])
             {
-                Heading = "Jackpot Media Library",
-                Caption = "About Jackpot",
-                Icon = TaskDialogIcon.Information,
-                Text = $"Version {version}",
-            };
-        taskDialogPage.Buttons.Add("Server log");
-        taskDialogPage.Buttons.Add("License info");
-        taskDialogPage.Buttons.Add(TaskDialogButton.OK);
-        taskDialogPage.DefaultButton = taskDialogPage.Buttons[2];
-        var clicked = TaskDialog.ShowDialog(this, taskDialogPage);
-        if (clicked == taskDialogPage.Buttons[0])
-        {
-            var filePath = Path.Combine(_processTempDir.Path, "server.log");
-            File.WriteAllLines(filePath, _client.GetLog());
-            Process.Start("notepad.exe", filePath);
-        }
-        else if (clicked == taskDialogPage.Buttons[1])
-        {
-            Process
-                .Start(
-                    new ProcessStartInfo(
-                        "msedge.exe",
-                        "\"" + Path.Combine(AppContext.BaseDirectory, "Resources", "License.html") + "\""
-                    )
-                    {
-                        UseShellExecute = true,
-                    }
-                )!
-                .Dispose();
-        }
+                var filePath = Path.Combine(_processTempDir.Path, "server.log");
+                File.WriteAllLines(filePath, _client.GetLog());
+                Process.Start("notepad.exe", filePath);
+            }
+            else if (clicked == taskDialogPage.Buttons[1])
+            {
+                Process
+                    .Start(
+                        new ProcessStartInfo(
+                            "msedge.exe",
+                            "\"" + Path.Combine(AppContext.BaseDirectory, "Resources", "License.html") + "\""
+                        )
+                        {
+                            UseShellExecute = true,
+                        }
+                    )!
+                    .Dispose();
+            }
+        });
     }
 
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
 
-        var state = _preferences.GetJson<CompleteWindowState>(Preferences.Key.MainForm_CompleteWindowState);
-        state.Restore(this);
-        ApplyFullscreenPreference();
+        ShowMessageBoxOnException(() =>
+        {
+            var state = _preferences.GetJson<CompleteWindowState>(Preferences.Key.MainForm_CompleteWindowState);
+            state.Restore(this);
+            ApplyFullscreenPreference();
 
-        UpdateTagTypes();
+            UpdateTagTypes();
+        });
     }
 
     protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
 
-        UpdateViewFromPreferences(reload: false);
-        UpdateFilterSortFromPreferences(reload: false);
-        UpdateRecycleBinCount();
-        await GoHomeAsync().ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                UpdateViewFromPreferences(reload: false);
+                UpdateFilterSortFromPreferences(reload: false);
+                UpdateRecycleBinCount();
+                await GoHomeAsync().ConfigureAwait(true);
+            })
+            .ConfigureAwait(true);
     }
 
     private void DisconnectButton_Click(object? sender, EventArgs e)
@@ -526,35 +535,37 @@ public sealed partial class MainForm : Form
             return;
         }
 
-        try
+        ShowMessageBoxOnException(() =>
         {
             _client.Stop();
             _libraryProvider.Disconnect();
             DialogResult = DialogResult.Retry;
             Close();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
+        });
     }
 
     private void EditTagsControl_TagTypeChanged(object? sender, EventArgs e)
     {
-        UpdateTagTypes();
-        ClearFilter();
-        _browser.Reload();
+        ShowMessageBoxOnException(() =>
+        {
+            UpdateTagTypes();
+            ClearFilter();
+            _browser.Reload();
+        });
     }
 
     private void EditTagsControl_TagChanged(object? sender, EventArgs e)
     {
-        ClearFilter();
-        _browser.Reload();
+        ShowMessageBoxOnException(() =>
+        {
+            ClearFilter();
+            _browser.Reload();
+        });
     }
 
     private async void MoviesButton_Click(object? sender, EventArgs e)
     {
-        await GoHomeAsync().ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(GoHomeAsync).ConfigureAwait(true);
     }
 
     private void Navigate(string path)
@@ -573,23 +584,27 @@ public sealed partial class MainForm : Form
 
     private void BrowseBackButton_Click(object? sender, EventArgs e)
     {
-        _browser.GoBack();
+        ShowMessageBoxOnException(_browser.GoBack);
     }
 
     private void Browser_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        var title = _browser.CoreWebView2.DocumentTitle;
-        if (title.Length > 100)
-            title = title[..100] + "...";
+        try
+        {
+            var title = _browser.CoreWebView2.DocumentTitle;
+            if (title.Length > 100)
+                title = title[..100] + "...";
 
-        _browserTabButton.Text = title?.Replace("&", "&&") ?? "";
-        _browseBackButton.Enabled = _browser.CanGoBack;
-        _browseForwardButton.Enabled = _browser.CanGoForward;
+            _browserTabButton.Text = title?.Replace("&", "&&") ?? "";
+            _browseBackButton.Enabled = _browser.CanGoBack;
+            _browseForwardButton.Enabled = _browser.CanGoForward;
+        }
+        catch { }
     }
 
     private async Task GoHomeAsync()
     {
-        await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+        await _client.InhibitScrollRestoreAsync().ConfigureAwait(true);
 
         var query = HttpUtility.ParseQueryString("");
         query["sessionPassword"] = _client.SessionPassword;
@@ -597,7 +612,7 @@ public sealed partial class MainForm : Form
         Navigate($"/list.html?{query}");
     }
 
-    private async Task ChangeSortOrderAsync(Func<SortOrder, SortOrder> func, CancellationToken cancel)
+    private async Task ChangeSortOrderAsync(Func<SortOrder, SortOrder> func)
     {
         var sortOrder = _preferences.GetJson<SortOrder>(Preferences.Key.Shared_SortOrder);
 
@@ -609,7 +624,7 @@ public sealed partial class MainForm : Form
 
         if (!wasShuffled && isShuffled)
         {
-            await _client.ReshuffleAsync(cancel).ConfigureAwait(true);
+            await _client.ReshuffleAsync().ConfigureAwait(true);
         }
 
         UpdateFilterSortFromPreferences();
@@ -617,35 +632,58 @@ public sealed partial class MainForm : Form
 
     private async void ShuffleButton_Click(object? sender, EventArgs e)
     {
-        var shuffle = !_shuffleButton.Checked;
-        await ChangeSortOrderAsync(x => x with { Shuffle = shuffle }, CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                var shuffle = !_shuffleButton.Checked;
+                await ChangeSortOrderAsync(x => x with { Shuffle = shuffle }).ConfigureAwait(true);
+            })
+            .ConfigureAwait(true);
     }
 
     private async void SortAscendingButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Ascending = true }, CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                await ChangeSortOrderAsync(x => x with { Ascending = true }).ConfigureAwait(true);
+            })
+            .ConfigureAwait(true);
     }
 
     private async void SortDescendingButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Ascending = false }, CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                await ChangeSortOrderAsync(x => x with { Ascending = false }).ConfigureAwait(true);
+            })
+            .ConfigureAwait(true);
     }
 
     private async void SortByNameButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Field = "name" }, CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                await ChangeSortOrderAsync(x => x with { Field = "name" }).ConfigureAwait(true);
+            })
+            .ConfigureAwait(true);
     }
 
     private async void SortByDateAddedButton_Click(object? sender, EventArgs e)
     {
-        await ChangeSortOrderAsync(x => x with { Field = "date" }, CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                await ChangeSortOrderAsync(x => x with { Field = "date" }).ConfigureAwait(true);
+            })
+            .ConfigureAwait(true);
     }
 
     private async void SortItem_Click(object? sender, EventArgs e)
     {
-        var menuItem = (ToolStripMenuItem)sender!;
-        var tagTypeId = (TagTypeId)menuItem.Tag!;
-        await ChangeSortOrderAsync(x => x with { Field = tagTypeId.Value }, CancellationToken.None)
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                var menuItem = (ToolStripMenuItem)sender!;
+                var tagTypeId = (TagTypeId)menuItem.Tag!;
+                await ChangeSortOrderAsync(x => x with { Field = tagTypeId.Value }).ConfigureAwait(true);
+            })
             .ConfigureAwait(true);
     }
 
@@ -738,33 +776,36 @@ public sealed partial class MainForm : Form
     {
         var filter = _preferences.GetJson<Filter>(Preferences.Key.Shared_Filter);
 
-        if (filterOperator.RequiresTagInput())
+        ShowMessageBoxOnException(() =>
         {
-            using var f = _serviceProvider.GetRequiredService<FilterChooseTagForm>();
-            var tagTypeId = filterField.TagTypeId!;
-            var tagType = _libraryProvider.GetTagType(tagTypeId);
-            f.Initialize(tagType, filterOperator);
-            if (f.ShowDialog(this) != DialogResult.OK)
-                return;
+            if (filterOperator.RequiresTagInput())
+            {
+                using var f = _serviceProvider.GetRequiredService<FilterChooseTagForm>();
+                var tagTypeId = filterField.TagTypeId!;
+                var tagType = _libraryProvider.GetTagType(tagTypeId);
+                f.Initialize(tagType, filterOperator);
+                if (f.ShowDialog(this) != DialogResult.OK)
+                    return;
 
-            filter.Rules.Add(new(filterField, filterOperator, f.SelectedTags, null));
-        }
-        else if (filterOperator.RequiresStringInput())
-        {
-            using var f = _serviceProvider.GetRequiredService<FilterEnterStringForm>();
-            f.Initialize(filterField, filterOperator);
-            if (f.ShowDialog(this) != DialogResult.OK)
-                return;
+                filter.Rules.Add(new(filterField, filterOperator, f.SelectedTags, null));
+            }
+            else if (filterOperator.RequiresStringInput())
+            {
+                using var f = _serviceProvider.GetRequiredService<FilterEnterStringForm>();
+                f.Initialize(filterField, filterOperator);
+                if (f.ShowDialog(this) != DialogResult.OK)
+                    return;
 
-            filter.Rules.Add(new(filterField, filterOperator, null, f.SelectedString));
-        }
-        else
-        {
-            filter.Rules.Add(new(filterField, filterOperator, null, null));
-        }
+                filter.Rules.Add(new(filterField, filterOperator, null, f.SelectedString));
+            }
+            else
+            {
+                filter.Rules.Add(new(filterField, filterOperator, null, null));
+            }
 
-        _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
-        UpdateFilterSortFromPreferences();
+            _preferences.SetJson(Preferences.Key.Shared_Filter, filter);
+            UpdateFilterSortFromPreferences();
+        });
     }
 
     private void UpdateFilterSortButtons(Filter filter, SortOrder sortOrder)
@@ -782,7 +823,7 @@ public sealed partial class MainForm : Form
 
     private void FilterClearButton_Click(object? sender, EventArgs e)
     {
-        ClearFilter();
+        ShowMessageBoxOnException(ClearFilter);
     }
 
     private void ClearFilter()
@@ -809,12 +850,12 @@ public sealed partial class MainForm : Form
 
     private void FilterOrButton_Click(object? sender, EventArgs e)
     {
-        ChangeFilter(x => x with { Or = true });
+        ShowMessageBoxOnException(() => ChangeFilter(x => x with { Or = true }));
     }
 
     private void FilterAndButton_Click(object? sender, EventArgs e)
     {
-        ChangeFilter(x => x with { Or = false });
+        ShowMessageBoxOnException(() => ChangeFilter(x => x with { Or = false }));
     }
 
     private void UpdateTagTypes()
@@ -842,7 +883,7 @@ public sealed partial class MainForm : Form
             _menuButton.DropDownItems.Insert(1, menuItem);
             menuItem.Click += async delegate
             {
-                await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+                await _client.InhibitScrollRestoreAsync().ConfigureAwait(true);
 
                 var query = HttpUtility.ParseQueryString("");
                 query["sessionPassword"] = _client.SessionPassword;
@@ -926,8 +967,12 @@ public sealed partial class MainForm : Form
             }
         }
 
-        var state = CompleteWindowState.Save(this);
-        _preferences.SetJson(Preferences.Key.MainForm_CompleteWindowState, state);
+        ShowMessageBoxOnException(() =>
+        {
+            var state = CompleteWindowState.Save(this);
+            _preferences.SetJson(Preferences.Key.MainForm_CompleteWindowState, state);
+        });
+
         base.OnFormClosing(e);
     }
 
@@ -973,7 +1018,7 @@ public sealed partial class MainForm : Form
     {
         _searchDebounceTimer.Stop();
 
-        ChangeFilter(x => x with { Search = _searchText.Text });
+        ShowMessageBoxOnException(() => ChangeFilter(x => x with { Search = _searchText.Text }));
     }
 
     private void OptionsButton_Click(object? sender, EventArgs e)
@@ -1047,11 +1092,15 @@ public sealed partial class MainForm : Form
     {
         base.OnResize(e);
 
-        if (WindowState != _lastWindowState)
+        try
         {
-            ApplyFullscreenPreference();
-            _lastWindowState = WindowState;
+            if (WindowState != _lastWindowState)
+            {
+                ApplyFullscreenPreference();
+                _lastWindowState = WindowState;
+            }
         }
+        catch { }
     }
 
     private void EnterFullscreen()
@@ -1080,54 +1129,62 @@ public sealed partial class MainForm : Form
 
     private void Browser_WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        var messageString = e.TryGetWebMessageAsString();
-        if (messageString is null)
-            return;
-
-        var message = JsonSerializer.Deserialize<PageToHostMessageJson>(messageString);
-
-        switch (message.Type)
+        try
         {
-            case "search":
-                _searchText.TextBox.Focus();
-                _searchText.TextBox.SelectAll();
-                break;
+            var messageString = e.TryGetWebMessageAsString();
+            if (messageString is null)
+                return;
 
-            case "context-menu":
-                if (message.Ids is null || message.Ids.Count == 0)
-                    return;
-                if (MovieId.HasPrefix(message.Ids[0]))
-                {
-                    ShowMovieContextMenu(message.Ids.Select(x => new MovieId(x)));
-                }
-                else if (TagId.HasPrefix(message.Ids[0]))
-                {
-                    ShowTagContextMenu(message.Ids.Select(x => new TagId(x)));
-                }
-                break;
+            var message = JsonSerializer.Deserialize<PageToHostMessageJson>(messageString);
 
-            case "close-context-menu":
-                _filterButton.DropDown.Close();
-                _sortButton.DropDown.Close();
-                _menuButton.DropDown.Close();
-                _movieContextMenu.Close();
-                break;
+            switch (message.Type)
+            {
+                case "search":
+                    _searchText.TextBox.Focus();
+                    _searchText.TextBox.SelectAll();
+                    break;
 
-            case "play":
-                OpenMovie(new MovieId(message.Ids!.First()));
-                break;
+                case "context-menu":
+                    if (message.Ids is null || message.Ids.Count == 0)
+                        return;
+                    if (MovieId.HasPrefix(message.Ids[0]))
+                    {
+                        ShowMovieContextMenu(message.Ids.Select(x => new MovieId(x)));
+                    }
+                    else if (TagId.HasPrefix(message.Ids[0]))
+                    {
+                        ShowTagContextMenu(message.Ids.Select(x => new TagId(x)));
+                    }
+                    break;
+
+                case "close-context-menu":
+                    _filterButton.DropDown.Close();
+                    _sortButton.DropDown.Close();
+                    _menuButton.DropDown.Close();
+                    _movieContextMenu.Close();
+                    break;
+
+                case "play":
+                    ShowMessageBoxOnException(() => OpenMovie(new MovieId(message.Ids!.First())));
+                    break;
+            }
         }
+        catch { }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
         // Ctrl+F or /
-        if ((e.Control && e.KeyCode == Keys.F) || e.KeyCode == Keys.OemQuestion)
+        try
         {
-            e.SuppressKeyPress = true;
-            _searchText.TextBox.Focus();
-            _searchText.TextBox.SelectAll();
+            if ((e.Control && e.KeyCode == Keys.F) || e.KeyCode == Keys.OemQuestion)
+            {
+                e.SuppressKeyPress = true;
+                _searchText.TextBox.Focus();
+                _searchText.TextBox.SelectAll();
+            }
         }
+        catch { }
 
         base.OnKeyDown(e);
     }
@@ -1157,17 +1214,17 @@ public sealed partial class MainForm : Form
         if (_movieContextMenuIds.Count != 1)
             return;
 
-        OpenMovie(_movieContextMenuIds.Single());
+        ShowMessageBoxOnException(() => OpenMovie(_movieContextMenuIds.Single()));
     }
 
     private void MovieContextDeleteButton_Click(object? sender, EventArgs e)
     {
-        DeleteMovies(_movieContextMenuIds);
+        ShowMessageBoxOnException(() => DeleteMovies(_movieContextMenuIds));
     }
 
     private void MovieContextAddTagButton_Click(object? sender, EventArgs e)
     {
-        AddTagToMovies(_movieContextMenuIds);
+        ShowMessageBoxOnException(() => AddTagToMovies(_movieContextMenuIds));
     }
 
     private void MovieContextPropertiesButton_Click(object? sender, EventArgs e)
@@ -1175,12 +1232,15 @@ public sealed partial class MainForm : Form
         if (_movieContextMenuIds.Count != 1)
             return;
 
-        using var f = _serviceProvider.GetRequiredService<MoviePropertiesForm>();
-        f.Initialize(_movieContextMenuIds.Single());
-        if (f.ShowDialog(this) != DialogResult.OK)
-            return;
+        ShowMessageBoxOnException(() =>
+        {
+            using var f = _serviceProvider.GetRequiredService<MoviePropertiesForm>();
+            f.Initialize(_movieContextMenuIds.Single());
+            if (f.ShowDialog(this) != DialogResult.OK)
+                return;
 
-        _browser.Reload();
+            _browser.Reload();
+        });
     }
 
     private void ShowTagContextMenu(IEnumerable<TagId> tagIds)
@@ -1316,12 +1376,12 @@ public sealed partial class MainForm : Form
 
     private void ViewListButton_Click(object? sender, EventArgs e)
     {
-        ChangeView(LibraryViewStyle.List);
+        ShowMessageBoxOnException(() => ChangeView(LibraryViewStyle.List));
     }
 
     private void ViewGridButton_Click(object? sender, EventArgs e)
     {
-        ChangeView(LibraryViewStyle.Grid);
+        ShowMessageBoxOnException(() => ChangeView(LibraryViewStyle.Grid));
     }
 
     private void ChangeView(LibraryViewStyle style)
@@ -1357,7 +1417,11 @@ public sealed partial class MainForm : Form
             return;
         var outDir = b.SelectedPath;
 
-        var movies = _libraryProvider.GetMovies().ToDictionary(x => x.Id);
+        Dictionary<MovieId, Movie>? movies = null;
+
+        ShowMessageBoxOnException(() => movies = _libraryProvider.GetMovies().ToDictionary(x => x.Id));
+
+        Debug.Assert(movies is not null);
 
         _ = ProgressForm.Do(
             this,
@@ -1393,17 +1457,17 @@ public sealed partial class MainForm : Form
 
     private void ImportTabButton_Click(object? sender, EventArgs e)
     {
-        SwitchTab(_importTabButton);
+        ShowMessageBoxOnException(() => SwitchTab(_importTabButton));
     }
 
     private void BrowserTabButton_Click(object? sender, EventArgs e)
     {
-        SwitchTab(_browserTabButton);
+        ShowMessageBoxOnException(() => SwitchTab(_browserTabButton));
     }
 
     private void TagsTabButton_Click(object? sender, EventArgs e)
     {
-        SwitchTab(_tagsTabButton);
+        ShowMessageBoxOnException(() => SwitchTab(_tagsTabButton));
     }
 
     private ToolStripButton GetTab()
@@ -1469,33 +1533,44 @@ public sealed partial class MainForm : Form
 
     private async void TagsControl_TagTypeActivated(object? sender, TagsControl.TagTypeActivatedEventArgs e)
     {
-        await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                await _client.InhibitScrollRestoreAsync().ConfigureAwait(true);
 
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = _client.SessionPassword;
-        query["type"] = "TagType";
-        query["tagTypeId"] = e.Id.Value;
-        SwitchTab(_browserTabButton);
-        Navigate($"/list.html?{query}");
+                var query = HttpUtility.ParseQueryString("");
+                query["sessionPassword"] = _client.SessionPassword;
+                query["type"] = "TagType";
+                query["tagTypeId"] = e.Id.Value;
+                SwitchTab(_browserTabButton);
+                Navigate($"/list.html?{query}");
+            })
+            .ConfigureAwait(true);
     }
 
     private async void TagsControl_TagActivated(object? sender, TagsControl.TagActivatedEventArgs e)
     {
-        await _client.InhibitScrollRestoreAsync(CancellationToken.None).ConfigureAwait(true);
+        await ShowMessageBoxOnExceptionAsync(async () =>
+            {
+                await _client.InhibitScrollRestoreAsync().ConfigureAwait(true);
 
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = _client.SessionPassword;
-        query["tagId"] = e.Id.Value;
-        SwitchTab(_browserTabButton);
-        Navigate($"/tag.html?{query}");
+                var query = HttpUtility.ParseQueryString("");
+                query["sessionPassword"] = _client.SessionPassword;
+                query["tagId"] = e.Id.Value;
+                SwitchTab(_browserTabButton);
+                Navigate($"/tag.html?{query}");
+            })
+            .ConfigureAwait(true);
     }
 
     private void RecycleBinButton_Click(object? sender, EventArgs e)
     {
-        using var f = _serviceProvider.GetRequiredService<RecycleBinForm>();
-        f.ShowDialog(this);
-        UpdateRecycleBinCount();
-        _browser.Reload();
+        ShowMessageBoxOnException(() =>
+        {
+            using var f = _serviceProvider.GetRequiredService<RecycleBinForm>();
+            f.ShowDialog(this);
+            UpdateRecycleBinCount();
+            _browser.Reload();
+        });
     }
 
     private void UpdateRecycleBinCount()
@@ -1508,11 +1583,11 @@ public sealed partial class MainForm : Form
     {
         base.OnActivated(e);
 
-        if (!_browser.IsCoreWebView2Initialized)
-            return;
-
         try
         {
+            if (!_browser.IsCoreWebView2Initialized)
+                return;
+
             HostToPageMessageJson message = new() { Type = "resume-videos" };
             _browser.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(message));
         }
@@ -1523,14 +1598,42 @@ public sealed partial class MainForm : Form
     {
         base.OnDeactivate(e);
 
-        if (!_browser.IsCoreWebView2Initialized)
-            return;
-
         try
         {
+            if (!_browser.IsCoreWebView2Initialized)
+                return;
+
             HostToPageMessageJson message = new() { Type = "pause-videos" };
             _browser.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(message));
         }
         catch { }
+    }
+
+    private bool ShowMessageBoxOnException(Action action)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
+    }
+
+    private async Task<bool> ShowMessageBoxOnExceptionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action().ConfigureAwait(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
+        }
     }
 }

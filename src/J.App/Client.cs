@@ -5,6 +5,8 @@ using System.Web;
 using J.Base;
 using J.Core;
 using J.Core.Data;
+using Polly;
+using Polly.Timeout;
 
 namespace J.App;
 
@@ -12,6 +14,8 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
 {
     private const int MAX_LOG_LINES = 1000;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(typeof(Client).FullName!);
+
+    private static readonly AsyncTimeoutPolicy _policy = Policy.TimeoutAsync(TimeSpan.FromSeconds(10));
 
     private readonly Lock _processLock = new();
     private Process? _process;
@@ -133,23 +137,43 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
         return port;
     }
 
-    public async Task ReshuffleAsync(CancellationToken cancel)
+    public async Task ReshuffleAsync()
     {
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = SessionPassword;
-        var response = await _httpClient
-            .PostAsync($"http://localhost:{Port}/reshuffle?{query}", null, cancel)
+        await DoAsync(async cancel =>
+            {
+                var query = HttpUtility.ParseQueryString("");
+                query["sessionPassword"] = SessionPassword;
+                var response = await _httpClient
+                    .PostAsync($"http://localhost:{Port}/reshuffle?{query}", null, cancel)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+            })
             .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
     }
 
-    public async Task InhibitScrollRestoreAsync(CancellationToken cancel)
+    public async Task InhibitScrollRestoreAsync()
     {
-        var query = HttpUtility.ParseQueryString("");
-        query["sessionPassword"] = SessionPassword;
-        var response = await _httpClient
-            .PostAsync($"http://localhost:{Port}/inhibit-scroll-restore?{query}", null, cancel)
+        await DoAsync(async cancel =>
+            {
+                var query = HttpUtility.ParseQueryString("");
+                query["sessionPassword"] = SessionPassword;
+                var response = await _httpClient
+                    .PostAsync($"http://localhost:{Port}/inhibit-scroll-restore?{query}", null, cancel)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+            })
             .ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task DoAsync(Func<CancellationToken, Task> func)
+    {
+        try
+        {
+            await _policy.ExecuteAsync(func, default).ConfigureAwait(false);
+        }
+        catch (TimeoutRejectedException)
+        {
+            throw new Exception("Jackpot's internal server is not responding. Please restart the application.");
+        }
     }
 }
