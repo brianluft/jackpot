@@ -189,7 +189,7 @@ public sealed class Importer(
     )
     {
         RunFfmpeg(
-            $"-ss {offset.TotalSeconds} -i \"{sourceFilePath}\" -t {length.TotalSeconds} -vf \"scale=-2:432\" -r 30 -c:v prores -profile:v 3 -pix_fmt yuv422p10le -an -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
+            $"-ss {offset.TotalSeconds} -i \"{sourceFilePath}\" -t {length.TotalSeconds} -sn -vf \"scale=-2:432\" -r 30 -c:v prores -profile:v 3 -pix_fmt yuv422p10le -an -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
             cancel
         );
     }
@@ -204,7 +204,7 @@ public sealed class Importer(
         File.WriteAllLines(Path.Combine(dir, "file_list.txt"), clipFilenames.Select(f => $"file '{f}'"));
 
         RunFfmpeg(
-            $"-f concat -safe 0 -i \"{Path.Combine(dir, "file_list.txt")}\" -c:v libx264 -crf 25 -pix_fmt yuv420p -preset veryslow -an -movflags +faststart -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
+            $"-f concat -safe 0 -i \"{Path.Combine(dir, "file_list.txt")}\" -sn -c:v libx264 -crf 25 -pix_fmt yuv420p -preset veryslow -an -movflags +faststart -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
             cancel
         );
     }

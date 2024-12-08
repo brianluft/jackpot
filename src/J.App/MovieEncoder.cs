@@ -33,7 +33,7 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
 
         importProgress.UpdateProgress(ImportProgress.Phase.Segmenting, 0);
         var (exitCode, log) = Ffmpeg.Run(
-            $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls -hide_banner -loglevel error -progress pipe:1 \"{m3u8Path}\"",
+            $"-i \"{movieFilePath}\" -sn -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls -hide_banner -loglevel error -progress pipe:1 \"{m3u8Path}\"",
             output =>
             {
                 if (output.StartsWith("out_time=") && TimeSpan.TryParse(output.Split('=')[1].Trim(), out var time))
