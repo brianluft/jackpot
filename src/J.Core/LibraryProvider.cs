@@ -873,36 +873,41 @@ public sealed partial class LibraryProvider : IDisposable
             return false;
 
         // Download from S3.
-        Amazon.S3.Model.GetObjectResponse response;
+        SyncLibrary remote;
+        string etag;
         try
         {
-            response = await _policy
+            var response = await _policy
                 .ExecuteAsync(
                     async cancel =>
                         await s3.GetObjectAsync(settings.Bucket, "library.zip", cancel).ConfigureAwait(false),
                     cancel
                 )
                 .ConfigureAwait(false);
+
+            using MemoryStream responseMemoryStream = new();
+            using var responseStream = response.ResponseStream;
+            await responseStream.CopyToAsync(responseMemoryStream, cancel).ConfigureAwait(false);
+            responseMemoryStream.Position = 0;
+
+            // Extract password protected Zip.
+            using MemoryStream jsonStream = new();
+            EncryptedZipFile.ExtractSingleFile(responseMemoryStream, "library.json", jsonStream, settings.Password);
+            jsonStream.Position = 0;
+            cancel.ThrowIfCancellationRequested();
+
+            // Parse the JSON.
+            remote = JsonSerializer.Deserialize<SyncLibrary>(jsonStream);
+            cancel.ThrowIfCancellationRequested();
+
+            etag = response.ETag;
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            // The file isn't there. Nothing to sync.
-            return false;
+            // The file isn't there. Treat it as an empty library.
+            remote = new([], [], [], []);
+            etag = "";
         }
-        using MemoryStream responseMemoryStream = new();
-        using var responseStream = response.ResponseStream;
-        await responseStream.CopyToAsync(responseMemoryStream, cancel).ConfigureAwait(false);
-        responseMemoryStream.Position = 0;
-
-        // Extract password protected Zip.
-        using MemoryStream jsonStream = new();
-        EncryptedZipFile.ExtractSingleFile(responseMemoryStream, "library.json", jsonStream, settings.Password);
-        jsonStream.Position = 0;
-        cancel.ThrowIfCancellationRequested();
-
-        // Parse the JSON.
-        var remote = JsonSerializer.Deserialize<SyncLibrary>(jsonStream);
-        cancel.ThrowIfCancellationRequested();
 
         // Prepare to compare local vs. remote.
         var remoteMovieTags = remote.MovieTags.ToDictionary(x => (x.MovieId, x.TagId));
@@ -1020,7 +1025,7 @@ public sealed partial class LibraryProvider : IDisposable
             updateProgress(1);
         });
 
-        UpdateRemoteVersion(response.ETag);
+        UpdateRemoteVersion(etag);
 
         return true;
     }
