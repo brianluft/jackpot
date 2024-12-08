@@ -219,6 +219,14 @@ Html NewPageFromBlocks(
     string filterSortHash
 )
 {
+    if (blocks.Count == 0)
+    {
+        var message = libraryProvider.HasMovies()
+            ? "No movies match the filter."
+            : "Click &ldquo;Import&rdquo; above to get started.";
+        return EmptyPage.GenerateHtml(title, message);
+    }
+
     if (sortOrder.Shuffle)
     {
         Shuffle(blocks);

@@ -317,6 +317,8 @@ public sealed partial class LibraryProvider : IDisposable
             )
         );
 
+    public bool HasMovies() => Query("SELECT 1 FROM movies WHERE deleted = 0 LIMIT 1", p => { }, r => true).Count > 0;
+
     public int GetDeletedMovieCount() =>
         QuerySingle("SELECT COUNT(*) FROM movies WHERE deleted = 1", p => { }, r => r.GetInt32(0));
 
