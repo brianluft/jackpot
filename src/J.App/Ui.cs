@@ -1023,7 +1023,7 @@ public sealed partial class Ui
         {
             var settings = browser.CoreWebView2.Settings;
             settings.AreBrowserAcceleratorKeysEnabled = false;
-            settings.AreDefaultContextMenusEnabled = false;
+            settings.AreDefaultContextMenusEnabled = true;
             settings.AreDefaultScriptDialogsEnabled = false;
             settings.AreHostObjectsAllowed = false;
             settings.IsBuiltInErrorPageEnabled = false;

@@ -28,10 +28,10 @@ public sealed class OptionsForm : Form
     [
         MoviePlayerToUse.Automatic,
         MoviePlayerToUse.Integrated,
-        MoviePlayerToUse.Vlc,
         MoviePlayerToUse.WebBrowser,
+        MoviePlayerToUse.Vlc,
     ];
-    private readonly string[] _playerNames = ["Automatic", "Integrated player", "VLC", "Web browser"];
+    private readonly string[] _playerNames = ["Automatic", "Integrated player", "Web browser", "VLC"];
 
     // Window maximize behavior
     private readonly List<WindowMaximizeBehavior> _windowMaximizeBehaviorValues =

@@ -12,8 +12,7 @@ public static class MoviePlayerPage
             <head>
                 <meta charset="utf-8">
                 <title>{{WebUtility.HtmlEncode(title)}}</title>
-                <link href="/static/video-js.min.css" rel="stylesheet">
-                <script src="/static/video.min.js"></script>
+                <script src="/static/hls.min.js"></script>
                 <style>
                     body { 
                         margin: 0;
@@ -25,80 +24,33 @@ public static class MoviePlayerPage
                         background: #000;
                     }
 
-                    .video-container, .video-js {
+                    .video-container {
                         width: 100vw;
                         height: 100vh;
+                    }
+
+                    video {
+                        width: 100%;
+                        height: 100%;
                     }
                 </style>
             </head>
             <body>
                 <div class="video-container">
-                    <video-js id="player" class="video-js vjs-default-skin vjs-big-play-centered" tabindex="0">
-                        <source src="{{WebUtility.HtmlEncode(m3u8Url)}}" type="application/x-mpegURL">
-                    </video-js>
+                    <video id="player" controls autoplay muted></video>
                 </div>
 
                 <script>
-                    const player = videojs('player', {
-                        controls: true,
-                        autoplay: true,
-                        muted: true,
-                        controlBar: {
-                            children: [
-                                'playToggle',
-                                'volumePanel',
-                                'currentTimeDisplay',
-                                'timeDivider',
-                                'durationDisplay',
-                                'progressControl',
-                                'remainingTimeDisplay',
-                                'fullscreenToggle'
-                            ]
-                        },
-                        html5: {
-                            hls: {
-                                overrideNative: true
-                            }
-                        }
-                    });
+                    const video = document.getElementById('player');
+                    const hls = new Hls();
+                    hls.loadSource('{{m3u8Url}}');
+                    hls.attachMedia(video);
 
-                    // Focus the player once it's ready
-                    player.ready(function() {
-                        this.el().focus();
-                    });
-
-                    // Optional: Add keyboard shortcuts for additional controls
-                    player.on('keydown', function(e) {
-                        switch(e.key) {
-                            case ' ':  // Space bar
-                                if (player.paused()) {
-                                    player.play();
-                                } else {
-                                    player.pause();
-                                }
-                                break;
-                            case 'ArrowLeft':  // Left arrow
-                                player.currentTime(player.currentTime() - 5);
-                                break;
-                            case 'ArrowRight':  // Right arrow
-                                player.currentTime(player.currentTime() + 5);
-                                break;
-                            case 'ArrowUp':  // Up arrow
-                                player.volume(Math.min(player.volume() + 0.1, 1));
-                                break;
-                            case 'ArrowDown':  // Down arrow
-                                player.volume(Math.max(player.volume() - 0.1, 0));
-                                break;
-                            case 'f':  // Fullscreen
-                                if (player.isFullscreen()) {
-                                    player.exitFullscreen();
-                                } else {
-                                    player.requestFullscreen();
-                                }
-                                break;
-                            case 'l':  // Loop toggle
-                                player.loop(!player.loop());
-                                break;
+                    // Only add keyboard shortcut for loop toggle since browsers 
+                    // handle other video shortcuts natively
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'l') {
+                            video.loop = !video.loop;
                         }
                     });
                 </script>

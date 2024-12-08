@@ -370,6 +370,16 @@ string GetFilterSortHash()
 // ---
 
 app.MapGet(
+    "/favicon.ico",
+    async (HttpResponse response, CancellationToken cancel) =>
+    {
+        response.ContentType = "image/x-icon";
+        await response.StartAsync(cancel);
+        await response.Body.WriteAsync(staticFiles["favicon.ico"], cancel);
+    }
+);
+
+app.MapGet(
     "/static/{filename}",
     async ([FromRoute] string filename, HttpResponse response, CancellationToken cancel) =>
     {
