@@ -250,15 +250,14 @@ public sealed partial class Ui
         return flow;
     }
 
-    public Button NewButton(string text, DialogResult? dialogResult = null)
+    public MyButton NewButton(string text, DialogResult? dialogResult = null)
     {
-        Button button =
+        MyButton button =
             new()
             {
                 Text = text,
                 AutoSize = true,
                 Padding = GetPadding(20, 5),
-                UseVisualStyleBackColor = true,
             };
         if (dialogResult.HasValue)
             button.DialogResult = dialogResult.Value;
