@@ -67,7 +67,12 @@ public static class Ffmpeg
                         log.Dequeue();
                     log.Enqueue(e.Data);
                 }
-                outputCallback?.Invoke(e.Data);
+
+                try
+                {
+                    outputCallback?.Invoke(e.Data);
+                }
+                catch { }
             }
         };
         p.BeginOutputReadLine();
