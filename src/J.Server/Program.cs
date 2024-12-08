@@ -552,8 +552,15 @@ app.MapGet(
         var movies = GetFilteredMovies(libraryMetadata).ToDictionary(x => x.Id);
         var tag = libraryProvider.GetTag(new(tagId));
 
+        List<Movie> taggedMovies = [];
+        foreach (var movieId in libraryProvider.GetMovieIdsWithTag(tag.Id))
+        {
+            if (movies.TryGetValue(movieId, out var movie))
+                taggedMovies.Add(movie);
+        }
+
         var html = NewPageFromMovies(
-            libraryProvider.GetMovieIdsWithTag(tag.Id).Select(x => movies[x]).ToList(),
+            taggedMovies,
             libraryMetadata,
             sortOrder,
             tag.Name,
@@ -577,8 +584,15 @@ app.MapGet(
         var movies = GetFilteredMovies(libraryMetadata).ToDictionary(x => x.Id);
         var tagType = libraryProvider.GetTagType(new(tagTypeId));
 
+        List<Movie> untaggedMovies = [];
+        foreach (var movieId in libraryProvider.GetMovieIdsWithoutTagType(tagType.Id))
+        {
+            if (movies.TryGetValue(movieId, out var movie))
+                untaggedMovies.Add(movie);
+        }
+
         var html = NewPageFromMovies(
-            libraryProvider.GetMovieIdsWithoutTagType(tagType.Id).Select(x => movies[x]).ToList(),
+            untaggedMovies,
             libraryMetadata,
             sortOrder,
             $"No {tagType.SingularName}",
