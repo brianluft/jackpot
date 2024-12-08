@@ -5,4 +5,5 @@ public enum MoviePlayerToUse
     Automatic,
     Vlc,
     Integrated,
+    WebBrowser,
 }

@@ -1231,6 +1231,12 @@ public sealed partial class MainForm : Form
             f.Initialize(movie.Id);
             f.Show();
         }
+        else if (which == MoviePlayerToUse.WebBrowser)
+        {
+            var playerUrl = _client.GetMoviePlayerUrl(movieId);
+            using var p = Process.Start(new ProcessStartInfo { FileName = playerUrl, UseShellExecute = true });
+            _ = p;
+        }
 
         static bool IsVlcInstalled()
         {
