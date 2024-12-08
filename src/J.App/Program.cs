@@ -192,7 +192,7 @@ public static class Program
 
                             updateMessage("Synchronizing network sharing folder...");
                             _m3u8FolderSync.InvalidateAll();
-                            _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x));
+                            _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x), cancel);
 
                             return Task.CompletedTask;
                         },

@@ -17,7 +17,7 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
             await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), cancel).ConfigureAwait(false);
             action();
             await libraryProvider.SyncUpAsync(x => updateProgress(0.4 + 0.4 * x), cancel).ConfigureAwait(false);
-            m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x));
+            m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x), cancel);
         }
         finally
         {

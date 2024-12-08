@@ -994,7 +994,7 @@ public sealed partial class MainForm : Form
                     "Synchronizing network sharing folder...",
                     (updateProgress, cancel) =>
                     {
-                        _m3U8FolderSync.Sync(updateProgress);
+                        _m3U8FolderSync.Sync(updateProgress, cancel);
                         return Task.CompletedTask;
                     }
                 );

@@ -8,7 +8,7 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
     private readonly string _filesystemInvalidChars =
         new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly HashSet<TagTypeId> _invalidatedTagTypes = [];
     private readonly HashSet<TagId> _invalidatedTags = [];
     private readonly HashSet<MovieId> _invalidatedMovies = [];
@@ -52,13 +52,15 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
         }
     }
 
-    public void Sync(Action<double> updateProgress)
+    public void Sync(Action<double> updateProgress, CancellationToken cancel)
     {
         if (!Enabled)
             return;
 
         lock (_lock)
         {
+            cancel.ThrowIfCancellationRequested();
+
             var portNumber = client.Port;
             var sessionPassword = client.SessionPassword;
             var dir = preferences
@@ -69,14 +71,26 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
             var movies = libraryProvider.GetMovies().ToDictionary(x => x.Id);
             HashSet<string> livingFiles = []; // locked, updated inside Sync calls below
 
+            cancel.ThrowIfCancellationRequested();
+
             var existingFiles = Directory
                 .GetFiles(dir, "*.m3u8", SearchOption.AllDirectories)
                 .Select(x => x.ToUpperInvariant())
                 .ToHashSet();
 
+            cancel.ThrowIfCancellationRequested();
+
             var moviesDir = Path.Combine(dir, "Movies");
             Directory.CreateDirectory(moviesDir);
-            SyncMovies(moviesDir, movies, livingFiles, portNumber, sessionPassword, x => updateProgress(0.5 * x));
+            SyncMovies(
+                moviesDir,
+                movies,
+                livingFiles,
+                portNumber,
+                sessionPassword,
+                x => updateProgress(0.5 * x),
+                cancel
+            );
 
             var tagTypes = libraryProvider.GetTagTypes();
             var progressPerTagType = 0.5d / tagTypes.Count;
@@ -93,20 +107,26 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
                     livingFiles,
                     portNumber,
                     sessionPassword,
-                    x => updateProgress(0.5 + progressPerTagType * i + x * progressPerTagType)
+                    x => updateProgress(0.5 + progressPerTagType * i + x * progressPerTagType),
+                    cancel
                 );
+                cancel.ThrowIfCancellationRequested();
             }
 
             updateProgress(1);
 
             lock (livingFiles)
             {
+                cancel.ThrowIfCancellationRequested();
+
                 existingFiles.ExceptWith(livingFiles);
                 foreach (var fp in existingFiles)
                     File.Delete(fp);
             }
 
             DeleteEmptyDirectories(dir);
+
+            cancel.ThrowIfCancellationRequested();
 
             _invalidatedTagTypes.Clear();
             _invalidatedTags.Clear();
@@ -133,7 +153,8 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
         HashSet<string> livingFiles,
         int portNumber,
         string sessionPassword,
-        Action<double> updateProgress
+        Action<double> updateProgress,
+        CancellationToken cancel
     )
     {
         var soFar = 0; // interlocked
@@ -142,7 +163,7 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
 
         Parallel.ForEach(
             movies,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1, CancellationToken = cancel },
             movie =>
             {
                 CopyM3u8(
@@ -169,13 +190,15 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
         HashSet<string> livingFiles,
         int portNumber,
         string sessionPassword,
-        Action<double> updateProgress
+        Action<double> updateProgress,
+        CancellationToken cancel
     )
     {
         List<(TagId TagId, string TagDir, Movie Movie)> files = [];
 
         foreach (var tag in libraryProvider.GetTags(tagType.Id))
         {
+            cancel.ThrowIfCancellationRequested();
             var tagDir = Path.Combine(dir, MakeFilesystemSafe(tag.Name));
             Directory.CreateDirectory(tagDir);
             foreach (var movieId in movieTags[tag.Id])
@@ -191,7 +214,7 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
 
         Parallel.ForEach(
             files,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1 },
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount - 1, CancellationToken = cancel },
             file =>
             {
                 CopyM3u8(
