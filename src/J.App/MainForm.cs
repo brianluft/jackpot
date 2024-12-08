@@ -899,13 +899,12 @@ public sealed partial class MainForm : Form
                 MessageBoxIcon.Error
             );
             e.Cancel = true;
+            base.OnFormClosing(e);
             return;
         }
 
-        if (!_preferences.GetBoolean(Preferences.Key.MainForm_ExitConfirmation))
-            return;
-
-        if (DialogResult != DialogResult.Retry)
+        var confirm = _preferences.GetBoolean(Preferences.Key.MainForm_ExitConfirmation);
+        if (confirm && DialogResult != DialogResult.Retry)
         {
             var response = MessageBox.Show(
                 this,
@@ -918,13 +917,13 @@ public sealed partial class MainForm : Form
             if (response != DialogResult.OK)
             {
                 e.Cancel = true;
+                base.OnFormClosing(e);
                 return;
             }
         }
 
         var state = CompleteWindowState.Save(this);
         _preferences.SetJson(Preferences.Key.MainForm_CompleteWindowState, state);
-
         base.OnFormClosing(e);
     }
 
