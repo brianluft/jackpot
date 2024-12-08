@@ -870,10 +870,7 @@ public sealed partial class LibraryProvider : IDisposable
         // Check object version to see if anything has changed.
         var changed = await HasRemoteVersionChangedAsync(s3, cancel).ConfigureAwait(false);
         if (!changed)
-        {
-            updateProgress(1);
             return false;
-        }
 
         // Download from S3.
         Amazon.S3.Model.GetObjectResponse response;
@@ -917,7 +914,6 @@ public sealed partial class LibraryProvider : IDisposable
         var localTagTypes = GetTagTypes().ToDictionary(x => x.Id);
         var localTags = GetTags().ToDictionary(x => x.Id);
         var localMovies = GetMovies().ToDictionary(x => x.Id);
-        updateProgress(0.15);
         cancel.ThrowIfCancellationRequested();
 
         // We have to issue S3 requests for parts of the movie files in order to populate the movie_files table, since
