@@ -12,7 +12,7 @@ namespace J.App;
 public sealed class S3Uploader : IDisposable
 {
     private const int PART_SIZE = 10_000_000; // B2's minimum part size is 5 MB, S3's is 5 MiB (!)
-    private const int MAX_THREADS = 16; // empirically determined
+    private const int MAX_THREADS = 8; // empirically determined
     private readonly IAmazonS3 _s3;
     private readonly AsyncRetryPolicy _policy = Policy
         .Handle<Exception>()
