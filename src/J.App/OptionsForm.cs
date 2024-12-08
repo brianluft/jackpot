@@ -18,7 +18,8 @@ public sealed class OptionsForm : Form
         _columnCountCombo;
     private readonly Button _okButton,
         _cancelButton;
-    private readonly CheckBox _enableM3u8FolderCheck;
+    private readonly CheckBox _enableM3u8FolderCheck,
+        _exitConfirmationCheck;
     private readonly TextBox _m3u8FolderText,
         _m3u8HostnameText;
 
@@ -93,6 +94,15 @@ public sealed class OptionsForm : Form
                             );
                             _windowMaximizeBehaviorCombo.SelectedIndex = _windowMaximizeBehaviorValues.IndexOf(value);
                         }
+
+                        _libraryFlow.Controls.Add(
+                            _exitConfirmationCheck = ui.NewCheckBox("Prompt to confirm when exiting the app")
+                        );
+                        {
+                            _exitConfirmationCheck.Margin += ui.BottomSpacing;
+                            _exitConfirmationCheck.Checked =
+                                preferences.GetInteger(Preferences.Key.MainForm_ExitConfirmation) != 0;
+                        }
                     }
                 }
 
@@ -152,7 +162,7 @@ public sealed class OptionsForm : Form
 
         Text = "Options";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(500, 400);
+        MinimumSize = Size = ui.GetSize(500, 450);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -188,6 +198,7 @@ public sealed class OptionsForm : Form
                 );
                 _preferences.SetInteger(Preferences.Key.Shared_ColumnCount, _columnCountCombo.SelectedIndex + 1);
                 _preferences.SetJson(Preferences.Key.M3u8FolderSync_Settings, m3u8SyncSettings);
+                _preferences.SetBoolean(Preferences.Key.MainForm_ExitConfirmation, _exitConfirmationCheck.Checked);
             });
 
             DialogResult = DialogResult.OK;

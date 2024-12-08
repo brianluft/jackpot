@@ -902,7 +902,9 @@ public sealed partial class MainForm : Form
             return;
         }
 
-#if !DEBUG
+        if (!_preferences.GetBoolean(Preferences.Key.MainForm_ExitConfirmation))
+            return;
+
         if (DialogResult != DialogResult.Retry)
         {
             var response = MessageBox.Show(
@@ -919,7 +921,6 @@ public sealed partial class MainForm : Form
                 return;
             }
         }
-#endif
 
         var state = CompleteWindowState.Save(this);
         _preferences.SetJson(Preferences.Key.MainForm_CompleteWindowState, state);

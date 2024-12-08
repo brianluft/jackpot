@@ -23,6 +23,7 @@ public sealed class Preferences : IDisposable
         ConvertMoviesForm_OutputDirectory,
         MainForm_WindowMaximizeBehavior,
         MainForm_CompleteWindowState,
+        MainForm_ExitConfirmation,
         Shared_LibraryViewStyle,
         Shared_ColumnCount,
         M3u8FolderSync_Settings,
@@ -49,6 +50,7 @@ public sealed class Preferences : IDisposable
                     "UnscaledSize": {}
                 }
                 """,
+            [Key.MainForm_ExitConfirmation] = 0L,
             [Key.Shared_LibraryViewStyle] = LibraryViewStyle.Grid.ToString(),
             [Key.Shared_ColumnCount] = 4L,
             [Key.M3u8FolderSync_Settings] = JsonSerializer.Serialize(M3u8SyncSettings.Default),
