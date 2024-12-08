@@ -179,20 +179,25 @@ public static class Program
                         (updateProgress, updateMessage, cancel) =>
                         {
                             _libraryProvider.Connect();
-                            updateProgress(0.05);
 
+                            // Most of the time we don't need to sync the library.
+                            // However, when we do, it can take a huge amount of time.
+                            // SyncDown won't call the progress callback if it doesn't need to sync.
                             updateMessage("Synchronizing library...");
-                            _libraryProvider
-                                .SyncDownAsync(x => updateProgress(0.05 + 0.75 * x), cancel)
+                            var didSyncLibrary = _libraryProvider
+                                .SyncDownAsync(x => updateProgress(0.80 * x), cancel)
                                 .GetAwaiter()
                                 .GetResult();
+
+                            var start = didSyncLibrary ? 0.80d : 0d;
+                            var left = 1 - start;
 
                             updateMessage("Starting background service...");
                             _client.Start();
 
                             updateMessage("Synchronizing network sharing folder...");
                             _m3u8FolderSync.InvalidateAll();
-                            _m3u8FolderSync.Sync(x => updateProgress(0.80 + 0.20 * x), cancel);
+                            _m3u8FolderSync.Sync(x => updateProgress(start + left * x), cancel);
 
                             return Task.CompletedTask;
                         },

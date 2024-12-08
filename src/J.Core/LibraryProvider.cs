@@ -844,7 +844,7 @@ public sealed partial class LibraryProvider : IDisposable
         return localVersionId != remoteVersionId;
     }
 
-    public async Task SyncDownAsync(Action<double> updateProgress, CancellationToken cancel)
+    public async Task<bool> SyncDownAsync(Action<double> updateProgress, CancellationToken cancel)
     {
         var settings = _accountSettingsProvider.Current;
         using var s3 = _accountSettingsProvider.CreateAmazonS3Client();
@@ -854,9 +854,8 @@ public sealed partial class LibraryProvider : IDisposable
         if (!changed)
         {
             updateProgress(1);
-            return;
+            return false;
         }
-        updateProgress(0.05);
 
         // Download from S3.
         Amazon.S3.Model.GetObjectResponse response;
@@ -873,13 +872,12 @@ public sealed partial class LibraryProvider : IDisposable
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             // The file isn't there. Nothing to sync.
-            return;
+            return false;
         }
         using MemoryStream responseMemoryStream = new();
         using var responseStream = response.ResponseStream;
         await responseStream.CopyToAsync(responseMemoryStream, cancel).ConfigureAwait(false);
         responseMemoryStream.Position = 0;
-        updateProgress(0.10);
 
         // Extract password protected Zip.
         using MemoryStream jsonStream = new();
@@ -913,7 +911,7 @@ public sealed partial class LibraryProvider : IDisposable
         var cachedFiles = await syncMovieFileReader
             .ReadZipEntriesToBeCachedLocallyAsync(
                 newMovieIds.Select(id => remoteMovies[id].S3Key).ToList(),
-                x => updateProgress(0.15 + 0.55 * x),
+                x => updateProgress(0.70 * x),
                 cancel
             )
             .ConfigureAwait(false);
@@ -1009,6 +1007,8 @@ public sealed partial class LibraryProvider : IDisposable
         });
 
         UpdateRemoteVersion(response.ETag);
+
+        return true;
     }
 
     private readonly record struct SyncLibrary(
