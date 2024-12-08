@@ -24,9 +24,8 @@ public static class MovieConverter
             arguments,
             output =>
             {
-                if (output.StartsWith("out_time="))
+                if (output.StartsWith("out_time=") && TimeSpan.TryParse(output.Split('=')[1].Trim(), out var time))
                 {
-                    var time = TimeSpan.Parse(output.Split('=')[1].Trim());
                     updateProgress(time / duration);
                 }
             },

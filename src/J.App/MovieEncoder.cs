@@ -36,9 +36,8 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
             $"-i \"{movieFilePath}\" -metadata title=\"{title}\" -codec copy -start_number 0 -hls_time {hlsTime} -hls_list_size 0 -hls_playlist_type vod -f hls -hide_banner -loglevel error -progress pipe:1 \"{m3u8Path}\"",
             output =>
             {
-                if (output.StartsWith("out_time="))
+                if (output.StartsWith("out_time=") && TimeSpan.TryParse(output.Split('=')[1].Trim(), out var time))
                 {
-                    var time = TimeSpan.Parse(output.Split('=')[1].Trim());
                     importProgress.UpdateProgress(ImportProgress.Phase.Segmenting, time / movieDuration);
                 }
             },

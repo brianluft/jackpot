@@ -61,15 +61,15 @@ public static class Ffmpeg
         {
             if (!string.IsNullOrWhiteSpace(e.Data))
             {
-                lock (logLock)
-                {
-                    while (log.Count >= LOG_LINES - 1)
-                        log.Dequeue();
-                    log.Enqueue(e.Data);
-                }
-
                 try
                 {
+                    lock (logLock)
+                    {
+                        while (log.Count >= LOG_LINES - 1)
+                            log.Dequeue();
+                        log.Enqueue(e.Data);
+                    }
+
                     outputCallback?.Invoke(e.Data);
                 }
                 catch { }
@@ -81,12 +81,16 @@ public static class Ffmpeg
         {
             if (!string.IsNullOrWhiteSpace(e.Data))
             {
-                lock (logLock)
+                try
                 {
-                    while (log.Count >= LOG_LINES - 1)
-                        log.Dequeue();
-                    log.Enqueue(e.Data);
+                    lock (logLock)
+                    {
+                        while (log.Count >= LOG_LINES - 1)
+                            log.Dequeue();
+                        log.Enqueue(e.Data);
+                    }
                 }
+                catch { }
             }
         };
         p.BeginErrorReadLine();
