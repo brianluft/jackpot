@@ -45,14 +45,6 @@ public static class MoviePlayerPage
                     const hls = new Hls();
                     hls.loadSource('{{m3u8Url}}');
                     hls.attachMedia(video);
-
-                    // Only add keyboard shortcut for loop toggle since browsers 
-                    // handle other video shortcuts natively
-                    document.addEventListener('keydown', function(e) {
-                        if (e.key === 'l') {
-                            video.loop = !video.loop;
-                        }
-                    });
                 </script>
             </body>
             </html>

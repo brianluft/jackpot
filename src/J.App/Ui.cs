@@ -1022,7 +1022,7 @@ public sealed partial class Ui
         browser.CoreWebView2InitializationCompleted += delegate
         {
             var settings = browser.CoreWebView2.Settings;
-            settings.AreBrowserAcceleratorKeysEnabled = false;
+            settings.AreBrowserAcceleratorKeysEnabled = true;
             settings.AreDefaultContextMenusEnabled = true;
             settings.AreDefaultScriptDialogsEnabled = false;
             settings.AreHostObjectsAllowed = false;
