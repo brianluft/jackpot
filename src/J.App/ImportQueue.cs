@@ -6,6 +6,7 @@ namespace J.App;
 
 public sealed class ImportQueue : IDisposable
 {
+    private const int NUM_TASKS = 2;
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly ProcessTempDir _processTempDir;
     private readonly Preferences _preferences;
@@ -213,8 +214,8 @@ public sealed class ImportQueue : IDisposable
         }
 
         _cts = new();
-        _tasks = new Task[3];
-        for (var i = 0; i < 3; i++)
+        _tasks = new Task[NUM_TASKS];
+        for (var i = 0; i < NUM_TASKS; i++)
             _tasks[i] = Task.Run(() => RunTask(_cts.Token));
 
         Task.WhenAll(_tasks).ContinueWith(_ => Stop());
@@ -288,11 +289,7 @@ public sealed class ImportQueue : IDisposable
             var needsConversion = !Ffmpeg.IsCompatibleCodec(filePath);
 
             ImportProgress importProgress =
-                new(
-                    needsConversion,
-                    progress => UpdateRowProgress(row, progress),
-                    message => UpdateRowMessage(row, message)
-                );
+                new(progress => UpdateRowProgress(row, progress), message => UpdateRowMessage(row, message));
 
             cancel.ThrowIfCancellationRequested();
             if (needsConversion)

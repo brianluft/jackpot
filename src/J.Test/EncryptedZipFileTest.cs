@@ -28,7 +28,7 @@ public sealed class EncryptedZipFileTest
 
         var zipFilePath = Path.Combine(TestDir.Path, "out.zip");
         Password password = new("foobar");
-        ImportProgress importProgress = new(false, _ => { }, _ => { });
+        ImportProgress importProgress = new(_ => { }, _ => { });
         EncryptedZipFile.CreateMovieZip(zipFilePath, dir1, password, importProgress, out _, default);
 
         var dir2 = Path.Combine(TestDir.Path, "dir2");
@@ -64,7 +64,7 @@ public sealed class EncryptedZipFileTest
         // Create a zip
         var zipFilePath = Path.Combine(TestDir.Path, "out.zip");
         Password password = new("foobar");
-        ImportProgress importProgress = new(false, _ => { }, _ => { });
+        ImportProgress importProgress = new(_ => { }, _ => { });
         EncryptedZipFile.CreateMovieZip(zipFilePath, dir, password, importProgress, out var zipIndex, default);
 
         // Try extracting file0.bin using a sparse stream.
