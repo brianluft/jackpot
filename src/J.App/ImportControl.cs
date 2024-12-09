@@ -236,6 +236,7 @@ public sealed class ImportControl : UserControl
                     _grid.CellPainting += Grid_CellPainting;
                     _grid.CellClick += Grid_CellClick;
                     _grid.CellBorderStyle = DataGridViewCellBorderStyle.None;
+                    _grid.AllowUserToResizeColumns = false;
 
                     _colMessage = _grid.Columns[_grid.Columns.Add("message", "Message")];
                     {

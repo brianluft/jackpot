@@ -6,7 +6,7 @@ public sealed class TagForm : Form
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly TableLayoutPanel _table;
-    private readonly TextBox _nameTextBox;
+    private readonly MyTextBox _nameTextBox;
     private readonly FlowLayoutPanel _rightButtonFlow;
     private readonly Button _saveButton,
         _cancelButton;

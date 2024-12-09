@@ -101,7 +101,7 @@ public sealed partial class MainForm : Form
             _toolStrip.GripStyle = ToolStripGripStyle.Hidden;
             _toolStrip.MouseUp += ToolStrip_MouseUp;
             _toolStrip.AutoSize = false;
-            _toolStrip.Height = ui.GetLength(32);
+            _toolStrip.Height = ui.GetLength(32.5f);
             _toolStrip.Font = ui.Font;
 
             _toolStrip.Items.Add(_exitButton = ui.NewToolStripButton("Exit", true));

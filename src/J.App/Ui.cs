@@ -67,6 +67,11 @@ public sealed partial class Ui
             };
             return font;
         });
+
+        if (parent is Form or UserControl)
+        {
+            parent.BackColor = MyColors.DialogBackground;
+        }
     }
 
     public Font Font { get; }
@@ -85,6 +90,12 @@ public sealed partial class Ui
     public int Unscale(int scaledLength)
     {
         return (int)(scaledLength / Scale);
+    }
+
+    public int GetLength(float unscaledLength)
+    {
+        var scale = Scale;
+        return (int)(unscaledLength * scale);
     }
 
     public int GetLength(int unscaledLength)
@@ -144,7 +155,7 @@ public sealed partial class Ui
 
     public Padding ButtonSpacing => new(0, 0, GetLength(DefaultUnscaledPadding / 2), 0);
 
-    public (Control Parent, TextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
+    public (Control Parent, MyTextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
         var label = NewLabel(text);
         label.Margin += GetPadding(0, 0, 0, 2);
@@ -155,7 +166,7 @@ public sealed partial class Ui
         return (flow, textBox);
     }
 
-    public (Control Parent, TextBox Child) NewLabeledOpenFileTextBox(
+    public (Control Parent, MyTextBox Child) NewLabeledOpenFileTextBox(
         string text,
         int unscaledWidth,
         Action<OpenFileDialog> configure_dialog
@@ -193,7 +204,7 @@ public sealed partial class Ui
         return (table, textBox);
     }
 
-    public (Control Parent, TextBox Child) NewLabeledOpenFolderTextBox(
+    public (Control Parent, MyTextBox Child) NewLabeledOpenFolderTextBox(
         string text,
         int unscaledWidth,
         Action<FolderBrowserDialog> configure_dialog
@@ -345,28 +356,25 @@ public sealed partial class Ui
             }
 
             var g = e.Graphics;
-            Rectangle bounds = new(Point.Empty, e.Item.Size);
+            RectangleF bounds = new(Point.Empty, e.Item.Size);
+            bounds.Inflate(ui.GetSize(-2, -2));
+            bounds.Offset(0.5f, -0.5f);
 
+            Color color;
             if (e.Item.Pressed)
-            {
-                using SolidBrush brush = new(MyColors.ToolStripPress);
-                g.FillRectangle(brush, bounds);
-            }
+                color = MyColors.ToolStripPress;
             else if (e.Item is ToolStripButton button && button.Checked)
-            {
-                using SolidBrush brush = new(MyColors.ToolStripActiveBackground);
-                g.FillRectangle(brush, bounds);
-            }
+                color = MyColors.ToolStripActiveBackground;
             else if (e.Item.Selected)
-            {
-                using SolidBrush brush = new(MyColors.ToolStripHover);
-                g.FillRectangle(brush, bounds);
-            }
-            else if (e.Item.BackColor != Control.DefaultBackColor)
-            {
-                using SolidBrush brush = new(e.Item.BackColor);
-                g.FillRectangle(brush, bounds);
-            }
+                color = MyColors.ToolStripHover;
+            else
+                return;
+
+            using SolidBrush brush = new(color);
+            var oldSmoothingMode = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.FillRoundedRectangle(brush, bounds, ui.GetSize(8, 8));
+            g.SmoothingMode = oldSmoothingMode;
         }
 
         private void OnRenderTabButtonBackground(ToolStripItemRenderEventArgs e)
@@ -449,23 +457,24 @@ public sealed partial class Ui
 
         protected override void OnRenderDropDownButtonBackground(ToolStripItemRenderEventArgs e)
         {
+            RectangleF bounds = new(Point.Empty, e.Item.Size);
+            bounds.Inflate(ui.GetSize(-2, -2));
+            bounds.Offset(0.5f, -0.5f);
+
             var g = e.Graphics;
-            Rectangle bounds = new(Point.Empty, e.Item.Size);
+            Color color;
             if (e.Item.Pressed)
-            {
-                using SolidBrush brush = new(MyColors.ToolStripPress);
-                g.FillRectangle(brush, bounds);
-            }
+                color = MyColors.ToolStripPress;
             else if (e.Item.Selected)
-            {
-                using SolidBrush brush = new(MyColors.ToolStripHover);
-                g.FillRectangle(brush, bounds);
-            }
-            else if (e.Item.BackColor != Control.DefaultBackColor)
-            {
-                using SolidBrush brush = new(e.Item.BackColor);
-                g.FillRectangle(brush, bounds);
-            }
+                color = MyColors.ToolStripHover;
+            else
+                color = MyColors.ToolStripBackground;
+
+            using SolidBrush brush = new(color);
+            var oldSmoothingMode = g.SmoothingMode;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.FillRoundedRectangle(brush, bounds, ui.GetSize(8, 8));
+            g.SmoothingMode = oldSmoothingMode;
         }
 
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
@@ -547,6 +556,12 @@ public sealed partial class Ui
             }
         }
 
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            base.OnRenderToolStripBackground(e);
+            e.Graphics.Clear(MyColors.ToolStripBackground);
+        }
+
         protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e) { }
 
         protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e) { }
@@ -558,17 +573,23 @@ public sealed partial class Ui
             if (e.Item is not ToolStripMenuItem item)
                 return;
 
-            Rectangle fillRect = new(Point.Empty, item.Size);
-            if (item.IsOnDropDown)
-            {
-                fillRect.X += 2;
-                fillRect.Width -= 3;
-            }
-
             if ((item.Selected || item.Pressed) && item.Enabled)
             {
+                RectangleF fillRect = new(Point.Empty, item.Size);
+                if (item.IsOnDropDown)
+                {
+                    fillRect.X += 2;
+                    fillRect.Width -= 3;
+                }
+
+                fillRect.Inflate(ui.GetSize(-2, -2));
+                fillRect.Offset(0.5f, -0.5f);
+
                 using SolidBrush brush = new(MyColors.ToolStripHover);
-                g.FillRectangle(brush, fillRect);
+                var oldSmoothingMode = g.SmoothingMode;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.FillRoundedRectangle(brush, fillRect, ui.GetSize(8, 8));
+                g.SmoothingMode = oldSmoothingMode;
             }
 
             if (e.Item is ToolStripMenuItem mi && mi.Checked)

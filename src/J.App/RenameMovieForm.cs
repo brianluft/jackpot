@@ -5,7 +5,7 @@ namespace J.App;
 public sealed class RenameMovieForm : Form
 {
     private readonly TableLayoutPanel _table;
-    private readonly TextBox _oldText,
+    private readonly MyTextBox _oldText,
         _newText;
     private readonly FlowLayoutPanel _buttonFlow;
     private readonly Button _okButton,

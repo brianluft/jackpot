@@ -8,7 +8,7 @@ public sealed class FilterChooseTagForm : Form
 {
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly TableLayoutPanel _table;
-    private readonly TextBox _searchText;
+    private readonly MyTextBox _searchText;
     private readonly DataGridView _grid;
     private readonly FlowLayoutPanel _buttonFlow;
     private readonly Button _okButton,

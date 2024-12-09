@@ -41,7 +41,7 @@ public sealed partial class MyTabControl : TabControl
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(MyColors.TabBackground);
+        g.Clear(MyColors.DialogBackground);
 
         // Draw tab headers, in reverse order so we are painting back to front.
 

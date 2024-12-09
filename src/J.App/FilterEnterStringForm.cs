@@ -7,7 +7,7 @@ namespace J.App;
 public sealed class FilterEnterStringForm : Form
 {
     private readonly TableLayoutPanel _table;
-    private readonly TextBox _textBox;
+    private readonly MyTextBox _textBox;
     private readonly FlowLayoutPanel _buttonFlow;
     private readonly Button _okButton,
         _cancelButton;

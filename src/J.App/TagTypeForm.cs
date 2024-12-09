@@ -6,7 +6,7 @@ public sealed class TagTypeForm : Form
 {
     private readonly FlowLayoutPanel _verticalFlow,
         _buttonFlow;
-    private readonly TextBox _singularNameText,
+    private readonly MyTextBox _singularNameText,
         _pluralNameText;
     private readonly Button _okButton,
         _cancelButton;

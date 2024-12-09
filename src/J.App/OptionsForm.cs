@@ -20,7 +20,7 @@ public sealed class OptionsForm : Form
         _cancelButton;
     private readonly CheckBox _enableM3u8FolderCheck,
         _exitConfirmationCheck;
-    private readonly TextBox _m3u8FolderText,
+    private readonly MyTextBox _m3u8FolderText,
         _m3u8HostnameText;
 
     // Movie player to use for playback

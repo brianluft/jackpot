@@ -13,7 +13,7 @@ public sealed class MoviePropertiesForm : Form
     private readonly FlowLayoutPanel _addRemoveTagFlow,
         _okCancelFlow;
     private readonly WebView2 _webView;
-    private readonly TextBox _nameText;
+    private readonly MyTextBox _nameText;
     private readonly ComboBox _addTagCombo;
     private readonly DataGridView _tagsGrid;
     private readonly Button _addTagButton,

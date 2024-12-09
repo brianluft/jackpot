@@ -10,7 +10,7 @@ public sealed class LoginForm : Form
     private readonly AccountSettingsProvider _accountSettingsProvider;
     private readonly TableLayoutPanel _formTable,
         _b2Table;
-    private readonly TextBox _endpointText,
+    private readonly MyTextBox _endpointText,
         _accessKeyIdText,
         _secretAccessKeyText,
         _bucketText,

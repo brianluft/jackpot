@@ -95,6 +95,10 @@ public class MyButton : Button
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        var form = FindForm();
+        if (form is null)
+            return;
+
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Parent?.BackColor ?? Color.Transparent);
@@ -111,22 +115,25 @@ public class MyButton : Button
 
         // Determine background color based on state
         Color backgroundColor;
-        if (!Enabled)
+        var isAcceptButton = Enabled && ReferenceEquals(form.AcceptButton, this);
+
+        if (isAcceptButton)
         {
+            if (_isPressed)
+                backgroundColor = MyColors.ButtonAcceptBackgroundPressed;
+            else if (_isHovered)
+                backgroundColor = MyColors.ButtonAcceptBackgroundHover;
+            else
+                backgroundColor = MyColors.ButtonAcceptBackgroundNormal;
+        }
+        else if (!Enabled)
             backgroundColor = MyColors.ButtonDisabledBack;
-        }
         else if (_isPressed)
-        {
             backgroundColor = MyColors.ButtonBackgroundPressed;
-        }
         else if (_isHovered)
-        {
             backgroundColor = MyColors.ButtonBackgroundHover;
-        }
         else
-        {
             backgroundColor = MyColors.ButtonBackgroundNormal;
-        }
 
         // Draw background
         using (var brush = new SolidBrush(backgroundColor))
@@ -135,7 +142,20 @@ public class MyButton : Button
         }
 
         // Draw border
-        if (Focused && Enabled && !_isPressed)
+        if (isAcceptButton)
+        {
+            Color borderColor;
+            if (_isPressed)
+                borderColor = MyColors.ButtonAcceptBackgroundPressed;
+            else if (_isHovered)
+                borderColor = MyColors.ButtonAcceptBorderHover;
+            else
+                borderColor = MyColors.ButtonAcceptBorderNormal;
+
+            using var pen = new Pen(borderColor, dpiScale);
+            g.DrawPath(pen, path);
+        }
+        else if (Focused && Enabled && !_isPressed)
         {
             using var pen = new Pen(Color.Black, dpiScale);
             g.DrawPath(pen, path);
@@ -146,8 +166,8 @@ public class MyButton : Button
             g.DrawPath(pen, path);
         }
 
-        // Draw focus rectangle when the button has keyboard focus, unless we're also pressed
-        if (Focused && Enabled && !_isPressed)
+        // Draw focus rectangle when the button has keyboard focus
+        if (Focused && Enabled && !_isPressed && !isAcceptButton)
         {
             var focusRect = rect;
 
@@ -159,9 +179,16 @@ public class MyButton : Button
         // Draw text
         Color textColor;
 
-        if (_isPressed)
+        if (isAcceptButton)
+        {
+            if (_isPressed)
+                textColor = MyColors.ButtonAcceptForegroundPressed;
+            else
+                textColor = MyColors.ButtonAcceptForegroundNormal;
+        }
+        else if (_isPressed)
             textColor = MyColors.ButtonForegroundPressed;
-        if (Enabled)
+        else if (Enabled)
             textColor = MyColors.ButtonText;
         else
             textColor = MyColors.ButtonDisabledText;
