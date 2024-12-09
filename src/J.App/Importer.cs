@@ -32,7 +32,7 @@ public sealed class Importer(
         var duration = Ffmpeg.GetMovieDuration(sourceFilePath, cancel);
         cancel.ThrowIfCancellationRequested();
 
-        importProgress.UpdateMessage("Waiting");
+        importProgress.UpdateMessage("Waiting to make thumbnails");
         lock (GlobalLocks.BigCpu)
         {
             importProgress.UpdateProgress(ImportProgress.Phase.MakingThumbnails, 0);
@@ -185,7 +185,7 @@ public sealed class Importer(
     )
     {
         RunFfmpeg(
-            $"-ss {offset.TotalSeconds} -i \"{sourceFilePath}\" -t {length.TotalSeconds} -sn -vf \"scale=-2:432\" -r 30 -c:v prores -profile:v 3 -pix_fmt yuv422p10le -an -threads {Math.Max(1, Environment.ProcessorCount - 1)} \"{outFilePath}\"",
+            $"-ss {offset.TotalSeconds} -i \"{sourceFilePath}\" -t {length.TotalSeconds} -sn -vf \"scale=-2:432\" -r 30 -c:v prores -profile:v 3 -pix_fmt yuv422p10le -an -threads 1 \"{outFilePath}\"",
             cancel
         );
     }

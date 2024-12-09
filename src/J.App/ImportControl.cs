@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using Humanizer;
 using J.Core;
 
 namespace J.App;
@@ -8,9 +9,10 @@ namespace J.App;
 public sealed class ImportControl : UserControl
 {
     private const double FPS = 60;
-
+    private const string DEFAULT_STATS_TEXT = "Uploaded:\nElapsed:\nRemaining:";
     private readonly Preferences _preferences;
     private readonly ImportQueue _queue;
+    private readonly S3Uploader _s3Uploader;
     private readonly Ui _ui;
     private readonly TableLayoutPanel _table;
     private readonly FlowLayoutPanel _inputFlow,
@@ -19,9 +21,10 @@ public sealed class ImportControl : UserControl
         _rightButtonsFlow;
     private readonly Label _dragonDropLabel,
         _convertLabel,
-        _qualityLabel,
-        _speedLabel,
-        _audioLabel;
+        _convertQualityLabel,
+        _convertSpeedLabel,
+        _convertAudioLabel,
+        _statsLabel;
     private readonly ComboBox _convertCombo,
         _qualityCombo,
         _speedCombo,
@@ -30,10 +33,16 @@ public sealed class ImportControl : UserControl
         _stopButton,
         _clearButton;
     private readonly DataGridView _grid;
-    private readonly DataGridViewColumn _colMessage;
-    private readonly System.Windows.Forms.Timer _animationTimer;
+    private readonly DataGridViewColumn _colMessage,
+        _colSize;
+    private readonly System.Windows.Forms.Timer _animationTimer,
+        _statsTimer;
     private readonly Stopwatch _animationStopwatch = Stopwatch.StartNew();
+    private Stopwatch? _startStopwatch;
     private string _title = "Import";
+
+    private readonly Stopwatch _uploadedBytesMonotonicStopwatch = Stopwatch.StartNew();
+    private long _uploadedBytesMonotonic;
 
 #pragma warning disable IDE0044 // Add readonly modifier
     // Changes at the end of the constructor. Technically readonly, but that's confusing to read.
@@ -53,24 +62,21 @@ public sealed class ImportControl : UserControl
 
     public bool ImportInProgress => _queue.IsRunning;
 
-    public ImportControl(Preferences preferences, ImportQueue importQueue)
+    public ImportControl(Preferences preferences, ImportQueue importQueue, S3Uploader s3Uploader)
     {
         _preferences = preferences;
         _queue = importQueue;
+        _s3Uploader = s3Uploader;
         Ui ui = new(this);
         _ui = ui;
 
-        Controls.Add(_table = ui.NewTable(3, 3));
+        Controls.Add(_table = ui.NewTable(3, 4));
         {
             _table.Padding = ui.DefaultPadding;
             _table.RowStyles[2].SizeType = SizeType.Percent;
             _table.RowStyles[2].Height = 100;
-            _table.ColumnStyles[0].SizeType = SizeType.Absolute;
-            _table.ColumnStyles[0].Width = ui.GetLength(300);
             _table.ColumnStyles[1].SizeType = SizeType.Percent;
             _table.ColumnStyles[1].Width = 100;
-            _table.ColumnStyles[2].SizeType = SizeType.Absolute;
-            _table.ColumnStyles[2].Width = ui.GetLength(300);
 
             _table.Controls.Add(_inputFlow = ui.NewFlowColumn(), 0, 0);
             {
@@ -101,7 +107,11 @@ public sealed class ImportControl : UserControl
                     }
 
                     _convertFlow.Controls.Add(
-                        ui.NewLabeledPair("Video quality:", _qualityCombo = ui.NewDropDownList(200), out _qualityLabel)
+                        ui.NewLabeledPair(
+                            "Video quality:",
+                            _qualityCombo = ui.NewDropDownList(200),
+                            out _convertQualityLabel
+                        )
                     );
                     {
                         _qualityCombo.Margin += ui.RightSpacing;
@@ -128,7 +138,7 @@ public sealed class ImportControl : UserControl
                         ui.NewLabeledPair(
                             "Video compression level:",
                             _speedCombo = ui.NewDropDownList(200),
-                            out _speedLabel
+                            out _convertSpeedLabel
                         )
                     );
                     {
@@ -156,7 +166,11 @@ public sealed class ImportControl : UserControl
                     }
 
                     _convertFlow.Controls.Add(
-                        ui.NewLabeledPair("Audio bitrate:", _audioCombo = ui.NewDropDownList(200), out _audioLabel)
+                        ui.NewLabeledPair(
+                            "Audio bitrate:",
+                            _audioCombo = ui.NewDropDownList(200),
+                            out _convertAudioLabel
+                        )
                     );
                     {
                         _audioCombo.SelectedIndexChanged += AudioCombo_SelectedIndexChanged;
@@ -196,10 +210,8 @@ public sealed class ImportControl : UserControl
 
                 _table.Controls.Add(_dragonDropLabel = ui.NewLabel("Drag-and-drop movie files below."), 1, 1);
                 {
-                    _dragonDropLabel.AutoSize = false;
                     _dragonDropLabel.Dock = DockStyle.Fill;
-                    _dragonDropLabel.TextAlign = ContentAlignment.BottomCenter;
-                    _dragonDropLabel.Margin += ui.BottomSpacing;
+                    _dragonDropLabel.TextAlign = ContentAlignment.MiddleLeft;
                 }
 
                 _table.Controls.Add(_rightButtonsFlow = ui.NewFlowRow(), 2, 1);
@@ -236,22 +248,31 @@ public sealed class ImportControl : UserControl
                         colFilePath.DataPropertyName = "filename";
                         colFilePath.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
                     }
+
+                    _colSize = _grid.Columns[_grid.Columns.Add("size_mb", "Size")];
+                    {
+                        _colSize.DataPropertyName = "size_mb";
+                        _colSize.Width = ui.GetLength(100);
+                        _colSize.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+
+                        DataGridViewCellStyle style = new(_colSize.DefaultCellStyle) { Format = "#,##0 MB" };
+                        _colSize.DefaultCellStyle = style;
+                    }
+                }
+
+                _table.Controls.Add(_statsLabel = ui.NewLabel(DEFAULT_STATS_TEXT), 0, 3);
+                {
+                    _table.SetColumnSpan(_statsLabel, 3);
+                    _statsLabel.Margin += ui.TopSpacing;
                 }
             }
         }
 
         _animationTimer = new() { Interval = (int)(1000 / FPS), Enabled = true };
-        _animationTimer.Tick += (sender, e) =>
-        {
-            if (Visible)
-            {
-                try
-                {
-                    _grid.InvalidateColumn(_colMessage.Index);
-                }
-                catch { }
-            }
-        };
+        _animationTimer.Tick += AnimationTimer_Tick;
+
+        _statsTimer = new() { Interval = 1000, Enabled = true };
+        _statsTimer.Tick += StatsTimer_Tick;
 
         _queue.IsRunningChanged += Queue_IsRunningChanged;
         _queue.FileCompleted += Queue_FileCompleted;
@@ -262,6 +283,70 @@ public sealed class ImportControl : UserControl
 
         _initializing = false;
         EnableDisableButtons();
+    }
+
+    private void AnimationTimer_Tick(object? sender, EventArgs e)
+    {
+        try
+        {
+            _grid.InvalidateColumn(_colMessage.Index);
+        }
+        catch { }
+    }
+
+    private void StatsTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_startStopwatch is null)
+        {
+            if (_statsLabel.Text != DEFAULT_STATS_TEXT)
+                _statsLabel.Text = DEFAULT_STATS_TEXT;
+
+            if (_statsLabel.Enabled)
+                _statsLabel.Enabled = false;
+
+            return;
+        }
+
+        var lastBytes = _uploadedBytesMonotonic;
+        var duration = _uploadedBytesMonotonicStopwatch.Elapsed;
+
+        var currentBytes = _s3Uploader.UploadedBytesMonotonic;
+        _uploadedBytesMonotonicStopwatch.Restart();
+        _uploadedBytesMonotonic = currentBytes;
+
+        var bytes = currentBytes - lastBytes;
+        var bytesPerSecond = duration.TotalSeconds == 0 ? double.NaN : (bytes / duration.TotalSeconds);
+        var megabitsPerSecond = bytesPerSecond * 8 / 1_000_000;
+        var mbpsText = double.IsNaN(megabitsPerSecond) ? "" : $" ({megabitsPerSecond:#,##0} Mbps)";
+        var elapsed = _startStopwatch.Elapsed;
+
+        var mibWithRollback = (double)_s3Uploader.UploadedBytesWithRollbacks / 1024 / 1024;
+        double mibTotal = 0;
+        foreach (DataRow x in _queue.DataTable.Rows)
+            mibTotal += (double)x["size_mb"];
+
+        string remainingStr = "\u2014";
+        var mibRemaining = mibTotal - mibWithRollback;
+        if (mibRemaining > 0 && elapsed.TotalSeconds > 0)
+        {
+            var averageMibPerSecond = mibWithRollback / elapsed.TotalSeconds;
+            if (averageMibPerSecond > 0)
+            {
+                var remaining = TimeSpan.FromSeconds(mibRemaining / averageMibPerSecond);
+                remainingStr = remaining.Humanize(2, minUnit: Humanizer.Localisation.TimeUnit.Second);
+            }
+        }
+
+        if (!_statsLabel.Enabled)
+            _statsLabel.Enabled = true;
+
+        var uploadedTotalStr = mibWithRollback < mibTotal ? $" of {mibTotal:#,##0} MB" : "";
+
+        _statsLabel.Text = $"""
+            Uploaded: {mibWithRollback:#,##0} MB{uploadedTotalStr}{mbpsText}
+            Elapsed: {elapsed.Humanize(2, minUnit: Humanizer.Localisation.TimeUnit.Second)}
+            Remaining: {remainingStr}
+            """;
     }
 
     private void Grid_CellClick(object? sender, DataGridViewCellEventArgs e)
@@ -334,9 +419,15 @@ public sealed class ImportControl : UserControl
                 EnableDisableButtons();
 
                 if (_queue.IsRunning)
+                {
                     Title = "Import (0%)";
+                    _startStopwatch = Stopwatch.StartNew();
+                }
                 else
+                {
                     Title = "Import";
+                    _startStopwatch = null;
+                }
             }
             catch { }
         });
@@ -378,11 +469,11 @@ public sealed class ImportControl : UserControl
         var option = (ConvertOption)_convertCombo.SelectedItem!;
         _convertLabel.Enabled = !running;
         _convertCombo.Enabled = !running;
-        _qualityLabel.Enabled = !running && option.Convert;
+        _convertQualityLabel.Enabled = !running && option.Convert;
         _qualityCombo.Enabled = !running && option.Convert;
-        _speedLabel.Enabled = !running && option.Convert;
+        _convertSpeedLabel.Enabled = !running && option.Convert;
         _speedCombo.Enabled = !running && option.Convert;
-        _audioLabel.Enabled = !running && option.Convert;
+        _convertAudioLabel.Enabled = !running && option.Convert;
         _audioCombo.Enabled = !running && option.Convert;
     }
 
@@ -431,7 +522,7 @@ public sealed class ImportControl : UserControl
                 using SolidBrush foregroundBrush = new(MyColors.ProgressBarForeground);
                 var progressRect = rect;
                 progressRect.Inflate(_ui.GetSize(-1, -1));
-                progressRect.Width = (int)(rect.Width * progress);
+                progressRect.Width = (int)(rect.Width * Math.Clamp(progress, 0, 1));
                 g.FillRectangle(foregroundBrush, progressRect);
             }
         }
@@ -451,6 +542,16 @@ public sealed class ImportControl : UserControl
             Color.Transparent,
             TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter
         );
+    }
+
+    protected override void OnVisibleChanged(EventArgs e)
+    {
+        base.OnVisibleChanged(e);
+
+        if (Visible)
+            _animationTimer.Start();
+        else
+            _animationTimer.Stop();
     }
 
     private void DrawBarberPole(DataGridViewCellPaintingEventArgs e, Rectangle rect)
@@ -566,7 +667,7 @@ public sealed class ImportControl : UserControl
 
     private void StartButton_Click(object? sender, EventArgs e)
     {
-        ShowMessageBoxOnException(() => _queue.Start());
+        ShowMessageBoxOnException(_queue.Start);
     }
 
     private void StopButton_Click(object? sender, EventArgs e)

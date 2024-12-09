@@ -43,7 +43,7 @@ public static class EncryptedZipFile
         }
 
         cancel.ThrowIfCancellationRequested();
-        importProgress.UpdateMessage("Waiting");
+        importProgress.UpdateMessage("Waiting to verify files");
         lock (GlobalLocks.BigCpu)
         {
             importProgress.UpdateProgress(ImportProgress.Phase.Verifying, 0);

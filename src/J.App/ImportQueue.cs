@@ -76,6 +76,7 @@ public sealed class ImportQueue : IDisposable
             DataTable.Columns.Add("progress", typeof(double));
             DataTable.Columns.Add("state", typeof(FileState));
             DataTable.Columns.Add("error", typeof(string));
+            DataTable.Columns.Add("size_mb", typeof(double));
         }
     }
 
@@ -183,6 +184,7 @@ public sealed class ImportQueue : IDisposable
                     row["progress"] = 0d;
                     row["state"] = FileState.Pending;
                     row["error"] = DBNull.Value;
+                    row["size_mb"] = new FileInfo(filePath).Length / 1024d / 1024d;
                     DataTable.Rows.Add(row);
 
                     queuedFilenames.Add(filename);
@@ -301,7 +303,7 @@ public sealed class ImportQueue : IDisposable
                     );
                 }
 
-                importProgress.UpdateMessage("Waiting");
+                importProgress.UpdateMessage("Waiting to re-encode");
                 lock (GlobalLocks.BigCpu)
                 {
                     cancel.ThrowIfCancellationRequested();

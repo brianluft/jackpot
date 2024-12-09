@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
 using J.Core;
@@ -21,6 +22,14 @@ public sealed class S3Uploader : IDisposable
     private readonly BlockingCollection<Action> _queue = [];
     private readonly Lock _enqueueLock = new(); // let each file queue all of its tasks together
     private bool _disposedValue;
+
+    // interlocked, on retry we subtract the bytes that were uploaded but are now thrown out.
+    private long _uploadedBytesWithRollbacks = 0;
+    public long UploadedBytesWithRollbacks => Interlocked.Read(ref _uploadedBytesWithRollbacks);
+
+    // interlocked, on retry we leave it alone and add even more on for subsequent attempts.
+    private long _uploadedBytesMonotonic = 0;
+    public long UploadedBytesMonotonic => Interlocked.Read(ref _uploadedBytesMonotonic);
 
     public S3Uploader(AccountSettingsProvider accountSettingsProvider)
     {
@@ -83,9 +92,10 @@ public sealed class S3Uploader : IDisposable
         List<Task> partTasks = new(parts.Count);
 
         InitiateMultipartUpload(fileState, cancel);
+        var completePartsBytes = 0L; // interlocked
         try
         {
-            var partsComplete = 0; // interlocked
+            var completeParts = 0; // interlocked
 
             // If one part fails, then cancel every other part.
             using var fileCts = CancellationTokenSource.CreateLinkedTokenSource(cancel);
@@ -105,7 +115,8 @@ public sealed class S3Uploader : IDisposable
                                     var etag = UploadPart(fileState, part, fileCancel);
                                     fileState.PartETags.Add(new(part.PartNumber, etag));
 
-                                    var i = Interlocked.Increment(ref partsComplete);
+                                    Interlocked.Add(ref completePartsBytes, part.OffsetLength.Length);
+                                    var i = Interlocked.Increment(ref completeParts);
                                     updateProgress(i / (double)parts.Count);
                                 }
                             }
@@ -130,6 +141,8 @@ public sealed class S3Uploader : IDisposable
         }
         catch
         {
+            Interlocked.Add(ref _uploadedBytesWithRollbacks, -completePartsBytes);
+
             try
             {
                 AbortMultipartUpload(fileState, cancel);
@@ -185,22 +198,42 @@ public sealed class S3Uploader : IDisposable
             .ExecuteAsync(
                 async cancel =>
                 {
-                    var response = await _s3.UploadPartAsync(
-                            new()
-                            {
-                                BucketName = fileState.Bucket,
-                                FilePath = fileState.FilePath,
-                                FilePosition = part.OffsetLength.Offset,
-                                Key = fileState.Key,
-                                PartSize = part.OffsetLength.Length,
-                                PartNumber = part.PartNumber,
-                                UploadId = fileState.UploadId,
-                            },
-                            cancel
-                        )
-                        .ConfigureAwait(false);
+                    long uploadedThisAttempt = 0;
+                    try
+                    {
+                        var response = await _s3.UploadPartAsync(
+                                new()
+                                {
+                                    BucketName = fileState.Bucket,
+                                    FilePath = fileState.FilePath,
+                                    FilePosition = part.OffsetLength.Offset,
+                                    Key = fileState.Key,
+                                    PartSize = part.OffsetLength.Length,
+                                    PartNumber = part.PartNumber,
+                                    UploadId = fileState.UploadId,
+                                    StreamTransferProgress = (sender, e) =>
+                                    {
+                                        uploadedThisAttempt += e.IncrementTransferred;
+                                        Interlocked.Add(ref _uploadedBytesMonotonic, e.IncrementTransferred);
+                                        Interlocked.Add(ref _uploadedBytesWithRollbacks, e.IncrementTransferred);
+                                    },
+                                },
+                                cancel
+                            )
+                            .ConfigureAwait(false);
 
-                    return response.ETag;
+                        // This should be zero, right? Just in case.
+                        var slack = part.OffsetLength.Length - uploadedThisAttempt;
+                        Interlocked.Add(ref _uploadedBytesMonotonic, slack);
+                        Interlocked.Add(ref _uploadedBytesWithRollbacks, slack);
+
+                        return response.ETag;
+                    }
+                    catch
+                    {
+                        Interlocked.Add(ref _uploadedBytesWithRollbacks, -uploadedThisAttempt);
+                        throw;
+                    }
                 },
                 cancel
             )
