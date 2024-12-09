@@ -255,7 +255,8 @@ public sealed partial class Ui
             {
                 Text = text,
                 AutoSize = true,
-                Padding = GetPadding(20, 5),
+                Padding = GetPadding(24, 8),
+                MinimumSize = GetSize(88, 0),
             };
         if (dialogResult.HasValue)
             button.DialogResult = dialogResult.Value;

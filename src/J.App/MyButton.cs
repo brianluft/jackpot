@@ -105,7 +105,8 @@ public class MyButton : Button
         // Scale corner radius
         float cornerRadius = 4 * dpiScale;
 
-        var rect = new RectangleF(0, 0, Width - 1, Height - 1);
+        var rect = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        rect.Inflate(-3 * dpiScale, -3 * dpiScale);
         using var path = GetRoundedRectPath(rect, cornerRadius);
 
         // Determine background color based on state
@@ -134,32 +135,37 @@ public class MyButton : Button
         }
 
         // Draw border
-        if (Enabled)
+        if (Focused && Enabled && !_isPressed)
+        {
+            using var pen = new Pen(Color.Black, dpiScale);
+            g.DrawPath(pen, path);
+        }
+        else if (Enabled)
         {
             using var pen = new Pen(MyColors.ButtonBorder, dpiScale);
             g.DrawPath(pen, path);
         }
 
-        // Draw focus rectangle when the button has keyboard focus
-        if (Focused && Enabled)
+        // Draw focus rectangle when the button has keyboard focus, unless we're also pressed
+        if (Focused && Enabled && !_isPressed)
         {
-            // Inset the focus rectangle slightly
-            var intentionallyUnscaledOnePixel = 1;
-            var focusRect = new RectangleF(
-                3f * dpiScale,
-                3f * dpiScale,
-                Width - 6f * dpiScale - intentionallyUnscaledOnePixel,
-                Height - 6f * dpiScale - intentionallyUnscaledOnePixel
-            );
-            using Pen focusPen =
-                new(MyColors.ButtonFocusOutline, intentionallyUnscaledOnePixel) { DashStyle = DashStyle.Dot };
-            g.SmoothingMode = SmoothingMode.Default;
-            g.DrawRectangle(focusPen, focusRect);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var focusRect = rect;
+
+            focusRect.Inflate(1.5f * dpiScale, 1.5f * dpiScale);
+            using var focusPen = new Pen(MyColors.ButtonFocusOutline, 2 * dpiScale);
+            g.DrawPath(focusPen, GetRoundedRectPath(focusRect, cornerRadius + 1.5f * dpiScale));
         }
 
         // Draw text
-        var textColor = Enabled ? MyColors.ButtonText : MyColors.ButtonDisabledText;
+        Color textColor;
+
+        if (_isPressed)
+            textColor = MyColors.ButtonForegroundPressed;
+        if (Enabled)
+            textColor = MyColors.ButtonText;
+        else
+            textColor = MyColors.ButtonDisabledText;
+
         TextRenderer.DrawText(
             g,
             Text,

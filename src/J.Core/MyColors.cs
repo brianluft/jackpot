@@ -5,13 +5,14 @@ namespace J.Core;
 public static class MyColors
 {
     public static readonly Color BarberPoleStripe = Color.FromArgb(118, 122, 135);
-    public static readonly Color ButtonBackgroundHover = Color.FromArgb(55, 55, 55);
-    public static readonly Color ButtonBackgroundNormal = Color.FromArgb(45, 45, 45);
-    public static readonly Color ButtonBackgroundPressed = Color.FromArgb(35, 35, 35);
-    public static readonly Color ButtonBorder = Color.FromArgb(80, 80, 80);
+    public static readonly Color ButtonBackgroundHover = Color.FromArgb(60, 60, 60);
+    public static readonly Color ButtonBackgroundNormal = Color.FromArgb(55, 55, 55);
+    public static readonly Color ButtonBackgroundPressed = Color.FromArgb(50, 50, 50);
+    public static readonly Color ButtonForegroundPressed = Color.FromArgb(208, 208, 208);
+    public static readonly Color ButtonBorder = Color.FromArgb(63, 63, 63);
     public static readonly Color ButtonDisabledBack = Color.FromArgb(35, 35, 35);
     public static readonly Color ButtonDisabledText = Color.FromArgb(160, 160, 160);
-    public static readonly Color ButtonFocusOutline = Color.FromArgb(210, 210, 210);
+    public static readonly Color ButtonFocusOutline = Color.FromArgb(255, 255, 255);
     public static readonly Color ButtonText = Color.FromArgb(240, 240, 240);
     public static readonly Color DataGridAlternateRowBackground = Color.FromArgb(45, 45, 45);
     public static readonly Color DataGridBackground = Color.Black;
