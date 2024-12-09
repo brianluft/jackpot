@@ -41,7 +41,13 @@ public static class MyColors
     public static readonly Color TabSelected = Color.FromArgb(45, 45, 45);
     public static readonly Color TabText = Color.FromArgb(240, 240, 240);
     public static readonly Color TabUnselected = Color.FromArgb(38, 38, 38);
+    public static readonly Color TextBoxBackground = Color.FromArgb(51, 51, 51);
+    public static readonly Color TextBoxBorder = Color.FromArgb(53, 53, 53);
+    public static readonly Color TextBoxBottomBorder = Color.FromArgb(156, 156, 156);
     public static readonly Color TextBoxCueText = Color.FromArgb(0x90, 0x90, 0x90);
+    public static readonly Color TextBoxFocusedBackground = Color.FromArgb(32, 32, 32);
+    public static readonly Color TextBoxFocusedBottomBorder = Color.FromArgb(76, 194, 255);
+    public static readonly Color TextBoxText = Color.FromArgb(255, 255, 255);
     public static readonly Color ToolStripActiveBackground = Color.White;
     public static readonly Color ToolStripActiveForeground = Color.Black;
     public static readonly Color ToolStripBackground = Color.FromArgb(44, 44, 44);

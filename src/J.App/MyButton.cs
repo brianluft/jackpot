@@ -105,11 +105,12 @@ public class MyButton : Button
 
         // Calculate DPI scale factor
         float dpiScale = DeviceDpi / 96f;
+        var hidpi = dpiScale > 1;
 
         // Scale corner radius
         float cornerRadius = 4 * dpiScale;
 
-        var rect = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
+        var rect = new RectangleF(hidpi ? 0.5f : 0, hidpi ? 0.5f : 0, Width - 1f, Height - 1f);
         rect.Inflate(-3 * dpiScale, -3 * dpiScale);
         using var path = GetRoundedRectPath(rect, cornerRadius);
 

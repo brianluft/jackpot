@@ -6,16 +6,9 @@ namespace J.App;
 
 public sealed class MyTextBox : UserControl
 {
-    private const int WM_PAINT = 0x000F;
     private readonly TextBox _textBox;
     private readonly Ui _ui;
     private bool _focused;
-    private readonly Color _borderColor = Color.FromArgb(53, 53, 53);
-    private readonly Color _bottomBorderColor = Color.FromArgb(156, 156, 156);
-    private readonly Color _focusedBottomBorderColor = Color.FromArgb(76, 194, 255);
-    private readonly Color _backgroundColor = Color.FromArgb(51, 51, 51);
-    private readonly Color _focusedBackgroundColor = Color.FromArgb(32, 32, 32);
-    private readonly Color _textColor = Color.FromArgb(255, 255, 255);
 
     public MyTextBox(Ui ui)
     {
@@ -31,8 +24,8 @@ public sealed class MyTextBox : UserControl
         _textBox = new TextBox
         {
             BorderStyle = BorderStyle.None,
-            BackColor = _backgroundColor,
-            ForeColor = _textColor,
+            BackColor = MyColors.TextBoxBackground,
+            ForeColor = MyColors.TextBoxText,
             Location = new Point(_ui.GetLength(4), _ui.GetLength(4)),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
         };
@@ -41,14 +34,14 @@ public sealed class MyTextBox : UserControl
 
         _textBox.GotFocus += (s, e) =>
         {
-            _textBox.BackColor = _focusedBackgroundColor;
+            _textBox.BackColor = MyColors.TextBoxFocusedBackground;
             _focused = true;
             Invalidate();
         };
 
         _textBox.LostFocus += (s, e) =>
         {
-            _textBox.BackColor = _backgroundColor;
+            _textBox.BackColor = MyColors.TextBoxBackground;
             _focused = false;
             Invalidate();
         };
@@ -86,44 +79,51 @@ public sealed class MyTextBox : UserControl
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         var scale = DeviceDpi / 96f;
+        var hidpi = scale > 1;
         var cornerRadius = 4 * scale;
 
-        // Inset bounds by 0.5px for pixel-perfect borders and 1 scaled pixel for focus border
         RectangleF bounds = new(scale, scale, Width - (scale * 2) - 1, Height - (scale * 2) - 1);
 
         using var path = new GraphicsPath();
         path.AddRoundedRectangle(bounds, cornerRadius);
 
         // Fill with our background color
-        using var bgBrush = new SolidBrush(Color.FromArgb(245, _focused ? _focusedBackgroundColor : _backgroundColor));
+        using var bgBrush = new SolidBrush(
+            Color.FromArgb(245, _focused ? MyColors.TextBoxFocusedBackground : MyColors.TextBoxBackground)
+        );
         g.FillPath(bgBrush, path);
 
-        // Draw normal border with 0.5px offset
-        using var borderPen = new Pen(_borderColor, scale);
-        g.TranslateTransform(0.5f, 0.5f);
+        using var borderPen = new Pen(MyColors.TextBoxBorder, scale);
+        if (hidpi)
+            g.TranslateTransform(0.5f, 0.5f);
         g.DrawPath(borderPen, path);
         g.ResetTransform();
 
         // Draw bottom border
         var bottomHeight = 2 * scale;
-        RectangleF bottomRect = new(bounds.Left, bounds.Bottom - bottomHeight, bounds.Width, bottomHeight + 1);
+        RectangleF bottomRect =
+            new(bounds.Left, bounds.Bottom - bottomHeight, bounds.Width, bottomHeight + (hidpi ? 1 : 0));
         var originalClip = g.Clip;
         var bottomPath = new GraphicsPath();
         bottomPath.AddRoundedRectangle(bounds, cornerRadius);
 
         if (_focused)
         {
-            g.TranslateTransform(0.5f, 1.5f);
+            if (hidpi)
+                g.TranslateTransform(0.5f, 1.5f);
+            else
+                g.TranslateTransform(0, 1);
             g.SetClip(bottomRect);
-            using SolidBrush bottomPen = new(_focusedBottomBorderColor);
+            using SolidBrush bottomPen = new(MyColors.TextBoxFocusedBottomBorder);
             g.FillPath(bottomPen, path);
         }
         else
         {
-            g.TranslateTransform(0.5f, 0.5f);
+            if (hidpi)
+                g.TranslateTransform(0.5f, 0.5f);
             bottomRect.Y++;
             g.SetClip(bottomRect);
-            using Pen bottomPen = new(_bottomBorderColor, 1 * scale);
+            using Pen bottomPen = new(MyColors.TextBoxBottomBorder, 1 * scale);
             g.DrawPath(bottomPen, path);
         }
 
@@ -146,7 +146,7 @@ public sealed class MyTextBox : UserControl
                     font,
                     new Point(_ui.GetLength(10), yPos),
                     MyColors.TextBoxCueText,
-                    _backgroundColor,
+                    MyColors.TextBoxBackground,
                     TextFormatFlags.NoPadding | TextFormatFlags.SingleLine
                 );
             }
@@ -158,7 +158,9 @@ public sealed class MyTextBox : UserControl
     public override string Text
     {
         get => _textBox.Text;
+#pragma warning disable CS8765 // Nullability of type of parameter doesn't match overridden member (possibly because of nullability attributes).
         set => _textBox.Text = value;
+#pragma warning restore CS8765 // Nullability of type of parameter doesn't match overridden member (possibly because of nullability attributes).
     }
 
     public char PasswordChar

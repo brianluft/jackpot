@@ -419,7 +419,9 @@ public sealed partial class Ui
                 // Fill background
                 using (var brush = new SolidBrush(bgColor))
                 {
+                    g.TranslateTransform(0.5f, 0.5f);
                     g.FillPath(brush, path);
+                    g.ResetTransform();
                 }
 
                 // Update text color
@@ -435,9 +437,9 @@ public sealed partial class Ui
                 path.StartFigure();
                 path.AddLine(bounds.Left, bounds.Bottom, bounds.Left, bounds.Top + radius);
                 path.AddArc(bounds.Left, bounds.Top, radius * 2, radius * 2, 180, 90);
-                path.AddLine(bounds.Left + radius, bounds.Top, bounds.Right - radius, bounds.Top);
-                path.AddArc(bounds.Right - radius * 2, bounds.Top, radius * 2, radius * 2, 270, 90);
-                path.AddLine(bounds.Right, bounds.Top + radius, bounds.Right, bounds.Bottom);
+                path.AddLine(bounds.Left + radius, bounds.Top, bounds.Right - 1 - radius, bounds.Top);
+                path.AddArc(bounds.Right - 1 - radius * 2, bounds.Top, radius * 2, radius * 2, 270, 90);
+                path.AddLine(bounds.Right - 1, bounds.Top + radius, bounds.Right - 1, bounds.Bottom);
                 path.CloseFigure();
 
                 return path;
