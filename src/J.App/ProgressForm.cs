@@ -144,7 +144,10 @@ public sealed class ProgressForm : Form
                 _buttonFlow.Dock = DockStyle.Right;
 
                 _buttonFlow.Controls.Add(_cancelButton = ui.NewButton("Cancel"));
-                _cancelButton.Click += CancelButton_Click;
+                {
+                    _cancelButton.Click += CancelButton_Click;
+                    _cancelButton.TabStop = false;
+                }
             }
         }
 
@@ -157,7 +160,6 @@ public sealed class ProgressForm : Form
         FormBorderStyle = FormBorderStyle.Fixed3D;
         MinimizeBox = false;
         MaximizeBox = false;
-        CancelButton = _cancelButton;
         Icon = ui.GetIconResource("App.ico");
         ShowIcon = true;
         ShowInTaskbar = false;
