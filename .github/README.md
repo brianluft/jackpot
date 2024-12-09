@@ -1,10 +1,9 @@
 <h1 align="center"><img src="../src/J.App/Resources/App.png" width=64 height=64><br>Jackpot Media Library</h1>
 
-<h3 align="center"><i>Personal streaming video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</i></h3>
-
 <p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif"></a></p>
 
-<h3 align="center"><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></h3>
+<h3 align="center">Personal streaming video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage<br><br>
+<b><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></b></h3>
 
 <br>
 
