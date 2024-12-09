@@ -36,10 +36,14 @@ public sealed class MyWebView2 : WebView2
 
             BeginInvoke(() =>
             {
-                CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+                // Don't cache documents.
+                CoreWebView2.AddWebResourceRequestedFilter(
+                    "*",
+                    CoreWebView2WebResourceContext.Document,
+                    CoreWebView2WebResourceRequestSourceKinds.All
+                );
                 CoreWebView2.WebResourceRequested += (sender, e) =>
                 {
-                    // Never cache anything.
                     e.Request.Headers.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
                     e.Request.Headers.SetHeader("Pragma", "no-cache");
                     e.Request.Headers.SetHeader("Expires", "0");
