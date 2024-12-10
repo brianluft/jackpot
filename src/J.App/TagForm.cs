@@ -85,7 +85,7 @@ public sealed class TagForm : Form
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

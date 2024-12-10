@@ -23,7 +23,6 @@ public class MyButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         ForeColor = MyColors.ButtonText;
-        Cursor = Cursors.Hand;
     }
 
     protected override void OnMouseEnter(EventArgs e)

@@ -64,7 +64,8 @@ public sealed partial class VlcLaunchProgressForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            MessageForm.Show(
+                this,
                 "Unable to launch VLC.\n\n" + ex.Message,
                 "Error",
                 MessageBoxButtons.OK,

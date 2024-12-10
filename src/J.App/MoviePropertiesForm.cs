@@ -44,14 +44,14 @@ public sealed class MoviePropertiesForm : Form
                 _webView.Margin += ui.BottomSpacing;
             }
 
-            _table.Controls.Add(ui.NewLabeledPair("&Name:", _nameText = ui.NewWordWrapTextbox(450, 50)), 0, 1);
+            _table.Controls.Add(ui.NewLabeledPair("&Name:", _nameText = ui.NewWordWrapTextbox(450, 75)), 0, 1);
             {
                 _nameText.Margin += ui.BottomSpacing;
             }
 
             _addRemoveTagFlow = ui.NewFlowRow();
             {
-                _addRemoveTagFlow.Controls.Add(_addTagCombo = ui.NewAutoCompleteDropDown(300));
+                _addRemoveTagFlow.Controls.Add(_addTagCombo = ui.NewAutoCompleteDropDown(250));
                 {
                     _addTagCombo.PreviewKeyDown += AddTagCombo_PreviewKeyDown;
                     _addTagCombo.KeyDown += AddTagCombo_KeyDown;
@@ -61,16 +61,14 @@ public sealed class MoviePropertiesForm : Form
 
                 _addRemoveTagFlow.Controls.Add(_addTagButton = ui.NewButton("➕"));
                 {
-                    _addTagButton.AutoSize = false;
-                    _addTagButton.Width = ui.GetLength(60);
+                    _addTagButton.MinimumSize = ui.GetSize(60, 0);
                     _addTagButton.Padding = Padding.Empty;
                     _addTagButton.Click += AddTagButton_Click;
                 }
 
                 _addRemoveTagFlow.Controls.Add(_removeTagButton = ui.NewButton("➖"));
                 {
-                    _removeTagButton.AutoSize = false;
-                    _removeTagButton.Width = ui.GetLength(60);
+                    _addTagButton.MinimumSize = ui.GetSize(60, 0);
                     _removeTagButton.Padding = Padding.Empty;
                     _removeTagButton.Enabled = false;
                     _removeTagButton.Click += RemoveTagButton_Click;
@@ -118,8 +116,8 @@ public sealed class MoviePropertiesForm : Form
 
         Text = "Movie Properties";
         StartPosition = FormStartPosition.CenterParent;
-        MinimumSize = Size = ui.GetSize(500, 700);
-        FormBorderStyle = FormBorderStyle.Sizable;
+        Size = ui.GetSize(500, 700);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
         ShowIcon = false;
@@ -226,7 +224,7 @@ public sealed class MoviePropertiesForm : Form
         }
         else
         {
-            MessageBox.Show(
+            MessageForm.Show(
                 this,
                 "Please select a tag from the list.",
                 "Error",
@@ -304,7 +302,7 @@ public sealed class MoviePropertiesForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

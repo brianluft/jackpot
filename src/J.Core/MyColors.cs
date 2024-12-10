@@ -26,7 +26,7 @@ public static class MyColors
     public static readonly Color DataGridLines = Color.LightGray;
     public static readonly Color DataGridRowBackground = Color.Black;
     public static readonly Color DataGridSelectionForeground = Color.White;
-    public static readonly Color DialogBackground = Color.FromArgb(38, 38, 38);
+    public static readonly Color DialogBackground = Color.FromArgb(31, 31, 31);
     public static readonly Color Link = Color.FromArgb(0x92, 0xB1, 0xE2);
     public static readonly Color MainFormBackground = Color.FromArgb(38, 38, 38);
     public static readonly Color MenuItemText = Color.White;
@@ -37,8 +37,8 @@ public static class MyColors
     public static readonly Color ProgressBarSuccessBackground = Color.DarkGreen;
     public static readonly Color TabBorder = Color.FromArgb(60, 60, 60);
     public static readonly Color TabInactiveText = Color.FromArgb(180, 180, 180);
-    public static readonly Color TabPageBackground = Color.FromArgb(45, 45, 45);
-    public static readonly Color TabSelected = Color.FromArgb(45, 45, 45);
+    public static readonly Color TabPageBackground = Color.FromArgb(43, 43, 43);
+    public static readonly Color TabSelected = Color.FromArgb(43, 43, 43);
     public static readonly Color TabText = Color.FromArgb(240, 240, 240);
     public static readonly Color TabUnselected = Color.FromArgb(38, 38, 38);
     public static readonly Color TextBoxBackground = Color.FromArgb(51, 51, 51);

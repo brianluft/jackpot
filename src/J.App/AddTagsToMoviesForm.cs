@@ -132,7 +132,7 @@ public sealed class AddTagsToMoviesForm : Form
     {
         if (_grid.SelectedRows.Count == 0)
         {
-            MessageBox.Show("Please select a tag.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, "Please select a tag.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 

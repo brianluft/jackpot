@@ -1,4 +1,5 @@
-﻿using System.Drawing.Drawing2D;
+﻿using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using J.Core;
 
@@ -157,13 +158,9 @@ public sealed partial class Ui
 
     public (Control Parent, MyTextBox Child) NewLabeledTextBox(string text, int unscaledWidth)
     {
-        var label = NewLabel(text);
-        label.Margin += GetPadding(0, 0, 0, 2);
         var textBox = NewTextBox(unscaledWidth);
-        var flow = NewFlowColumn();
-        flow.Controls.Add(label);
-        flow.Controls.Add(textBox);
-        return (flow, textBox);
+        var parent = NewLabeledPair(text, textBox);
+        return (parent, textBox);
     }
 
     public (Control Parent, MyTextBox Child) NewLabeledOpenFileTextBox(
@@ -173,7 +170,7 @@ public sealed partial class Ui
     )
     {
         var label = NewLabel(text);
-        label.Margin += GetPadding(0, 0, 0, 2);
+        label.Margin += GetPadding(0, 0, 0, 4);
         var textBox = NewTextBox(100);
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
@@ -211,7 +208,7 @@ public sealed partial class Ui
     )
     {
         var label = NewLabel(text);
-        label.Margin += GetPadding(0, 0, 0, 2);
+        label.Margin += GetPadding(0, 0, 0, 4);
         var textBox = NewTextBox(100);
         var flow = NewFlowColumn();
         flow.Dock = DockStyle.Fill;
@@ -252,7 +249,7 @@ public sealed partial class Ui
         where T : Control
     {
         label = NewLabel(text);
-        label.Margin += GetPadding(0, 0, 0, 2);
+        label.Margin += GetPadding(0, 0, 0, 4);
         var flow = NewFlowColumn();
         flow.Controls.Add(label);
         flow.Controls.Add(child);
@@ -425,6 +422,7 @@ public sealed partial class Ui
                 }
 
                 // Update text color
+                // TODO: shouldn't be setting this in a render method
                 button.ForeColor = textColor;
             }
 
@@ -469,8 +467,10 @@ public sealed partial class Ui
                 color = MyColors.ToolStripPress;
             else if (e.Item.Selected)
                 color = MyColors.ToolStripHover;
+            else if (e.Item.BackColor != Control.DefaultBackColor)
+                color = e.Item.BackColor;
             else
-                color = MyColors.ToolStripBackground;
+                return;
 
             using SolidBrush brush = new(color);
             var oldSmoothingMode = g.SmoothingMode;
@@ -542,7 +542,7 @@ public sealed partial class Ui
                     }
                     else if (
                         (e.Item.Tag is ToolStripButtonTabAppearanceTag && ((ToolStripButton)e.Item).Checked)
-                        || (e.Item is ToolStripDropDownButton b && !b.Selected && e.Item.Tag is bool t && t)
+                        || (e.Item is ToolStripDropDownButton b && ArrowShouldBeBlack(b))
                     )
                     {
                         Bitmap copy = new(image);
@@ -555,6 +555,27 @@ public sealed partial class Ui
 
                 if (disposeImage)
                     image.Dispose();
+            }
+
+            bool ArrowShouldBeBlack(ToolStripDropDownButton b)
+            {
+                const bool WHITE = false;
+                const bool BLACK = true;
+
+                // When hovered, the hover background is a dark gray and the foreground is white.
+                if (b.Selected)
+                    return WHITE;
+
+                // This state also applies to the drop-down button when the user is hovering one of its submenu items.
+                if (b.Pressed)
+                    return WHITE;
+
+                // When the Sort/Filter buttons are indicating that a non-default setting is active, the background
+                // is white and the foreground is black.
+                if (e.Item.Tag is bool t && t)
+                    return BLACK;
+
+                return WHITE;
             }
         }
 
@@ -611,6 +632,12 @@ public sealed partial class Ui
                     TextFormatFlags.VerticalCenter
                 );
             }
+        }
+
+        protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+        {
+            e.ArrowColor = Color.White;
+            base.OnRenderArrow(e);
         }
     }
 

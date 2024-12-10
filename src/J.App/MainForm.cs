@@ -526,7 +526,7 @@ public sealed partial class MainForm : Form
     {
         if (_importControl.ImportInProgress)
         {
-            MessageBox.Show(
+            MessageForm.Show(
                 this,
                 "An import is in progress. Please wait for it to finish before logging out.",
                 "Jackpot",
@@ -937,7 +937,7 @@ public sealed partial class MainForm : Form
     {
         if (_importControl.ImportInProgress)
         {
-            MessageBox.Show(
+            MessageForm.Show(
                 this,
                 "An import is in progress. Please wait for it to finish before exiting.",
                 "Jackpot",
@@ -952,13 +952,13 @@ public sealed partial class MainForm : Form
         var confirm = _preferences.GetBoolean(Preferences.Key.MainForm_ExitConfirmation);
         if (confirm && DialogResult != DialogResult.Retry)
         {
-            var response = MessageBox.Show(
+            var response = MessageForm.Show(
                 this,
                 "Are you sure you want to exit?",
                 "Jackpot",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question,
-                MessageBoxDefaultButton.Button2
+                1
             );
             if (response != DialogResult.OK)
             {
@@ -1056,7 +1056,7 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -1275,10 +1275,12 @@ public sealed partial class MainForm : Form
 #if DEBUG
             // When debugging, it can be annoying for VLC to actually appear every time.
             if (
-                MessageBox.Show(
+                MessageForm.Show(
+                    this,
                     "Proceed?\n\n" + psi.FileName + " " + psi.Arguments,
                     "DEBUG - Open Movie",
-                    MessageBoxButtons.OKCancel
+                    MessageBoxButtons.OKCancel,
+                    MessageBoxIcon.Question
                 ) != DialogResult.OK
             )
             {
@@ -1342,13 +1344,8 @@ public sealed partial class MainForm : Form
         }
 
         if (
-            MessageBox.Show(
-                message,
-                "Delete Movie",
-                MessageBoxButtons.OKCancel,
-                MessageBoxIcon.Question,
-                MessageBoxDefaultButton.Button2
-            ) != DialogResult.OK
+            MessageForm.Show(this, message, "Delete Movie", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, 1)
+            != DialogResult.OK
         )
         {
             return;
@@ -1619,7 +1616,7 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }
@@ -1633,7 +1630,7 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }

@@ -57,7 +57,7 @@ public sealed class ProgressForm : Form
                 return Outcome.Cancellation;
 
             case DialogResult.Abort:
-                MessageBox.Show(
+                MessageForm.Show(
                     owner,
                     f.Exception!.SourceException.Message,
                     "Error",
@@ -99,7 +99,7 @@ public sealed class ProgressForm : Form
                     break;
 
                 case DialogResult.Abort:
-                    MessageBox.Show(
+                    MessageForm.Show(
                         owner,
                         f.Exception!.SourceException.Message,
                         "Error",

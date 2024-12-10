@@ -118,7 +118,7 @@ public sealed class FilterChooseTagForm : Form
     {
         if (_grid.SelectedCells.Count == 0)
         {
-            MessageBox.Show(Text, "Please select a tag.", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+            MessageForm.Show(this, Text, "Please select a tag.", MessageBoxButtons.OK, MessageBoxIcon.Stop);
             return;
         }
 

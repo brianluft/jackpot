@@ -362,7 +362,7 @@ public sealed class ImportControl : UserControl
             if (state == ImportQueue.FileState.Failed)
             {
                 var message = (string)row["error"];
-                MessageBox.Show(message, "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageForm.Show(FindForm()!, message, "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         });
     }
@@ -696,7 +696,7 @@ public sealed class ImportControl : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }

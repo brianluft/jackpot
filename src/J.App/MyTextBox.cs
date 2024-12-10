@@ -185,6 +185,7 @@ public sealed class MyTextBox : UserControl
             {
                 _textBox.WordWrap = WordWrap;
             }
+            UpdateTextBoxBounds();
         }
     }
 

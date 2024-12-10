@@ -409,7 +409,7 @@ public sealed class TagsControl : UserControl
     {
         var tagType = GetSelectedTagType()!.Value;
 
-        var response = MessageBox.Show(
+        var response = MessageForm.Show(
             FindForm(),
             $"Are you sure you want to delete the \"{tagType.PluralName}\" tag group?",
             "Delete",
@@ -476,7 +476,7 @@ public sealed class TagsControl : UserControl
                 ? "Are you sure you want to delete this tag?"
                 : $"Are you sure you want to delete these {tags.Count:#,##0} tags?";
 
-        var response = MessageBox.Show(
+        var response = MessageForm.Show(
             FindForm(),
             message,
             "Delete",

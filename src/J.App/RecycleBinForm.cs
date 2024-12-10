@@ -196,12 +196,13 @@ public sealed class RecycleBinForm : Form
         }
 
         if (
-            MessageBox.Show(
+            MessageForm.Show(
+                this,
                 message,
                 "Permanently Delete",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Question,
-                MessageBoxDefaultButton.Button2
+                1
             ) != DialogResult.OK
         )
         {

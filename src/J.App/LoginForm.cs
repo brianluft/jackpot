@@ -270,7 +270,7 @@ public sealed class LoginForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -314,7 +314,7 @@ public sealed class LoginForm : Form
         var settings = GetAccountSettings();
         var json = JsonSerializer.Serialize(settings);
         Clipboard.SetText(json);
-        MessageBox.Show(
+        MessageForm.Show(
             this,
             "Account settings have been copied to the clipboard in JSON format.",
             "Account Settings",
@@ -335,7 +335,7 @@ public sealed class LoginForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            MessageForm.Show(
                 this,
                 "There was a problem importing account settings from the clipboard.\n\n" + ex.Message,
                 "Error",
