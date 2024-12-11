@@ -5,7 +5,7 @@ public sealed class MessageForm : Form
     private readonly Ui _ui;
     private readonly TableLayoutPanel _table;
     private readonly PictureBox _pictureBox;
-    private readonly Label _label;
+    private readonly MyLabel _label;
     private readonly FlowLayoutPanel _buttonFlow;
 
     private MessageForm(string message, string caption, MessageBoxIcon icon)

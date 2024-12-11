@@ -30,7 +30,7 @@ public sealed class LoginForm : Form
     private readonly PictureBox _b2BucketIconPicture,
         _b2KeyIconPicture,
         _encryptionIconPicture;
-    private readonly Label _encryptionLabel;
+    private readonly MyLabel _encryptionLabel;
     private readonly ContextMenuStrip _toolsMenu;
     private readonly ToolStripMenuItem _copyJsonItem,
         _pasteJsonItem;
@@ -40,7 +40,7 @@ public sealed class LoginForm : Form
         _accountSettingsProvider = accountSettingsProvider;
 
         Ui ui = new(this);
-        Label label;
+        MyLabel label;
 
         Controls.Add(_formTable = ui.NewTable(2, 2));
         {

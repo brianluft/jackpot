@@ -14,7 +14,7 @@ public sealed class ProgressForm : Form
 {
     private readonly CancellationTokenSource _cts = new();
     private readonly TableLayoutPanel _table;
-    private readonly Label _label;
+    private readonly MyLabel _label;
     private readonly ProgressBar _progressBar;
     private readonly FlowLayoutPanel _buttonFlow;
     private readonly Button _cancelButton;

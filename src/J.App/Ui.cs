@@ -245,7 +245,7 @@ public sealed partial class Ui
         return NewLabeledPair(text, child, out _);
     }
 
-    public Control NewLabeledPair<T>(string text, T child, out Label label)
+    public Control NewLabeledPair<T>(string text, T child, out MyLabel label)
         where T : Control
     {
         label = NewLabel(text);
@@ -749,7 +749,7 @@ public sealed partial class Ui
         return new() { Renderer = new MyToolStripRenderer(this), Font = Font };
     }
 
-    public Label NewLabel(string text)
+    public MyLabel NewLabel(string text)
     {
         return new()
         {

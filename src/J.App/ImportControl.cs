@@ -19,7 +19,7 @@ public sealed class ImportControl : UserControl
         _convertFlow,
         _leftButtonsFlow,
         _rightButtonsFlow;
-    private readonly Label _dragonDropLabel,
+    private readonly MyLabel _dragonDropLabel,
         _convertLabel,
         _convertQualityLabel,
         _convertSpeedLabel,

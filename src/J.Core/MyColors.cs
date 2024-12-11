@@ -27,6 +27,8 @@ public static class MyColors
     public static readonly Color DataGridRowBackground = Color.Black;
     public static readonly Color DataGridSelectionForeground = Color.White;
     public static readonly Color DialogBackground = Color.FromArgb(31, 31, 31);
+    public static readonly Color LabelForeground = Color.White;
+    public static readonly Color LabelForegroundDisabled = Color.FromArgb(99, 99, 99);
     public static readonly Color Link = Color.FromArgb(0x92, 0xB1, 0xE2);
     public static readonly Color MainFormBackground = Color.FromArgb(38, 38, 38);
     public static readonly Color MenuItemText = Color.White;

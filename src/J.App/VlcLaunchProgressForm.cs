@@ -8,7 +8,7 @@ namespace J.App;
 public sealed partial class VlcLaunchProgressForm : Form
 {
     private readonly FlowLayoutPanel _flow;
-    private readonly Label _label;
+    private readonly MyLabel _label;
     private readonly ProgressBar _progressBar;
     private readonly ProcessStartInfo _psi;
 
