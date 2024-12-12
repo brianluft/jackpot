@@ -14,8 +14,7 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
     private readonly HashSet<MovieId> _invalidatedMovies = [];
     private bool _invalidatedAll = true;
 
-    public bool Enabled =>
-        preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).EnableLocalM3u8Folder;
+    public bool Enabled => preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess);
 
     public void Invalidate(
         IEnumerable<TagTypeId>? tagTypes = null,
@@ -63,9 +62,7 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
 
             var portNumber = client.Port;
             var sessionPassword = client.SessionPassword;
-            var dir = preferences
-                .GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings)
-                .LocalM3u8FolderPath;
+            var dir = preferences.GetText(Preferences.Key.NetworkSharing_VlcFolderPath);
 
             var movieTags = libraryProvider.GetMovieTags().ToLookup(x => x.TagId, x => x.MovieId);
             var movies = libraryProvider.GetMovies().ToDictionary(x => x.Id);
@@ -261,7 +258,7 @@ public sealed partial class M3u8FolderSync(LibraryProvider libraryProvider, Clie
 
         if (writeFile)
         {
-            var hostname = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings).M3u8Hostname;
+            var hostname = preferences.GetText(Preferences.Key.NetworkSharing_Hostname);
             var bytes = libraryProvider.GetM3u8(movie.Id, portNumber, sessionPassword, hostname);
             File.WriteAllBytes(m3u8FilePath, bytes);
         }

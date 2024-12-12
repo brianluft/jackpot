@@ -163,72 +163,25 @@ public sealed partial class Ui
         return (parent, textBox);
     }
 
-    public (Control Parent, MyTextBox Child) NewLabeledOpenFileTextBox(
-        string text,
-        int unscaledWidth,
-        Action<OpenFileDialog> configure_dialog
-    )
-    {
-        var label = NewLabel(text);
-        label.Margin += GetPadding(0, 0, 0, 4);
-        var textBox = NewTextBox(100);
-        var flow = NewFlowColumn();
-        flow.Dock = DockStyle.Fill;
-        flow.Controls.Add(label);
-        flow.Controls.Add(textBox);
-        var button = NewButton("Browse...");
-        button.Dock = DockStyle.Bottom;
-        button.Margin += GetPadding(4, 0, 0, 0);
-        var table = NewTable(2, 1);
-        table.Width = GetLength(unscaledWidth);
-        table.MaximumSize = GetSize(unscaledWidth, 100);
-        table.ColumnStyles[0].SizeType = SizeType.Percent;
-        table.ColumnStyles[0].Width = 100;
-        table.Controls.Add(flow, 0, 0);
-        table.Controls.Add(button, 1, 0);
-        var form = _parent as Form ?? _parent.FindForm()!;
-        form.Load += delegate
-        {
-            textBox.Width = GetLength(unscaledWidth - 15) - button.Width;
-        };
-        button.Click += delegate
-        {
-            using OpenFileDialog dialog = new();
-            configure_dialog(dialog);
-            if (dialog.ShowDialog() == DialogResult.OK)
-                textBox.Text = dialog.FileName;
-        };
-        return (table, textBox);
-    }
-
     public (Control Parent, MyTextBox Child) NewLabeledOpenFolderTextBox(
         string text,
         int unscaledWidth,
         Action<FolderBrowserDialog> configure_dialog
     )
     {
-        var label = NewLabel(text);
-        label.Margin += GetPadding(0, 0, 0, 4);
-        var textBox = NewTextBox(100);
-        var flow = NewFlowColumn();
-        flow.Dock = DockStyle.Fill;
-        flow.Controls.Add(label);
-        flow.Controls.Add(textBox);
-        var button = NewButton("Browse...");
-        button.Dock = DockStyle.Bottom;
-        button.Margin += GetPadding(4, 0, 0, 0);
-        var table = NewTable(2, 1);
-        table.Width = GetLength(unscaledWidth);
-        table.MaximumSize = GetSize(unscaledWidth, 100);
-        table.ColumnStyles[0].SizeType = SizeType.Percent;
-        table.ColumnStyles[0].Width = 100;
-        table.Controls.Add(flow, 0, 0);
-        table.Controls.Add(button, 1, 0);
-        var form = _parent as Form ?? _parent.FindForm()!;
-        form.Load += delegate
+        MyTextBox textBox;
+        MyButton button;
+
+        var column = NewFlowColumn();
         {
-            textBox.Width = GetLength(unscaledWidth - 15) - button.Width;
-        };
+            column.Controls.Add(textBox = NewTextBox(unscaledWidth));
+
+            column.Controls.Add(button = NewButton("Browse..."));
+            {
+                button.Dock = DockStyle.Right;
+            }
+        }
+
         button.Click += delegate
         {
             using FolderBrowserDialog dialog = new();
@@ -236,7 +189,8 @@ public sealed partial class Ui
             if (dialog.ShowDialog() == DialogResult.OK)
                 textBox.Text = dialog.SelectedPath;
         };
-        return (table, textBox);
+
+        return (NewLabeledPair(text, column), textBox);
     }
 
     public Control NewLabeledPair<T>(string text, T child)
@@ -785,7 +739,7 @@ public sealed partial class Ui
         {
             Dock = DockStyle.Fill,
             SizeMode = TabSizeMode.Fixed,
-            ItemSize = GetSize(unscaledTabWidth, 30),
+            ItemSize = GetSize(unscaledTabWidth, 40),
         };
     }
 

@@ -1,4 +1,5 @@
-﻿using J.Core;
+﻿using System.Diagnostics;
+using J.Core;
 using J.Core.Data;
 
 namespace J.App;
@@ -9,19 +10,29 @@ public sealed class OptionsForm : Form
     private readonly TableLayoutPanel _table;
     private readonly FlowLayoutPanel _buttonFlow,
         _libraryFlow,
-        _m3u8Flow;
+        _sharingFlow,
+        _shareTypesFlow,
+        _shareVlcFlow,
+        _shareBrowserFlow,
+        _browserFlow;
     private readonly TabControl _tabControl;
     private readonly TabPage _libraryTab,
-        _m3u8Page;
+        _sharingPage;
     private readonly ComboBox _playerCombo,
         _windowMaximizeBehaviorCombo,
         _columnCountCombo;
     private readonly Button _okButton,
-        _cancelButton;
-    private readonly CheckBox _enableM3u8FolderCheck,
-        _exitConfirmationCheck;
+        _cancelButton,
+        _browserAddressCopyButton;
+    private readonly CheckBox _shareVlcCheck,
+        _exitConfirmationCheck,
+        _shareBrowserCheck;
     private readonly MyTextBox _m3u8FolderText,
-        _m3u8HostnameText;
+        _hostnameText,
+        _browserAddressText;
+    private readonly LinkLabel _wikiLink;
+    private readonly List<Control> _shareVlcControls = [];
+    private readonly List<Control> _shareBrowserControls = [];
 
     // Movie player to use for playback
     private readonly List<MoviePlayerToUse> _playerValues =
@@ -45,6 +56,7 @@ public sealed class OptionsForm : Form
     {
         _preferences = preferences;
         Ui ui = new(this);
+        Control p;
 
         Controls.Add(_table = ui.NewTable(1, 2));
         {
@@ -97,7 +109,7 @@ public sealed class OptionsForm : Form
                         }
 
                         _libraryFlow.Controls.Add(
-                            _exitConfirmationCheck = ui.NewCheckBox("Prompt to confirm when exiting the app")
+                            _exitConfirmationCheck = ui.NewCheckBox("Confirm when exiting the app")
                         );
                         {
                             _exitConfirmationCheck.Margin += ui.BottomSpacing;
@@ -107,40 +119,106 @@ public sealed class OptionsForm : Form
                     }
                 }
 
-                _tabControl.TabPages.Add(_m3u8Page = ui.NewTabPage("Network Sharing"));
+                _tabControl.TabPages.Add(_sharingPage = ui.NewTabPage("Network Sharing"));
                 {
-                    var m3u8Settings = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
-
-                    _m3u8Page.Controls.Add(_m3u8Flow = ui.NewFlowColumn());
+                    _sharingPage.Controls.Add(_sharingFlow = ui.NewFlowColumn());
                     {
-                        _m3u8Flow.Padding = ui.DefaultPadding;
+                        _sharingFlow.Padding = ui.DefaultPadding;
 
-                        _m3u8Flow.Controls.Add(
-                            ui.NewLabel(
-                                "Jackpot can maintain a folder of M3U8 playlist files for non-Windows\ndevices to play via Windows file sharing."
-                            )
-                        );
-
-                        _m3u8Flow.Controls.Add(
-                            _enableM3u8FolderCheck = ui.NewCheckBox("Store M3U8 files in a local folder")
+                        _sharingFlow.Controls.Add(
+                            _wikiLink = ui.NewLinkLabel("Read the Jackpot wiki for more information on network sharing")
                         );
                         {
-                            _enableM3u8FolderCheck.Margin += ui.TopSpacingBig + ui.BottomSpacing;
-                            _enableM3u8FolderCheck.Checked = m3u8Settings.EnableLocalM3u8Folder;
+                            _wikiLink.Margin = Padding.Empty;
+                            _wikiLink.Click += WikiLink_Click;
                         }
 
-                        Control p;
-                        (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 400, _ => { });
+                        (p, _hostnameText) = ui.NewLabeledTextBox("This PC's IP address or hostname:", 200);
                         {
-                            _m3u8Flow.Controls.Add(p);
-                            p.Margin = ui.BottomSpacing;
-                            _m3u8FolderText.Text = m3u8Settings.LocalM3u8FolderPath;
+                            p.Margin += ui.TopSpacingBig;
+                            _sharingFlow.Controls.Add(p);
+                            var host = preferences.GetText(Preferences.Key.NetworkSharing_Hostname);
+
+                            if (string.IsNullOrWhiteSpace(host) || host == "localhost")
+                            {
+                                host = LanIpFinder.GetLanIpOrEmptyString();
+                            }
+
+                            _hostnameText!.Text = host;
+                            _hostnameText.TextChanged += HostnameText_TextChanged;
                         }
 
-                        (p, _m3u8HostnameText) = ui.NewLabeledTextBox("Host or IP address to use in M3U8 files:", 300);
+                        _sharingFlow.Controls.Add(_shareTypesFlow = ui.NewFlowRow());
                         {
-                            _m3u8Flow.Controls.Add(p);
-                            _m3u8HostnameText.Text = m3u8Settings.M3u8Hostname;
+                            _shareTypesFlow.Controls.Add(_shareVlcFlow = ui.NewFlowColumn());
+                            {
+                                _shareVlcFlow.Controls.Add(_shareVlcCheck = ui.NewCheckBox("Allow VLC access"));
+                                {
+                                    _shareVlcCheck.Margin += ui.TopSpacingBig + ui.BottomSpacing;
+                                    _shareVlcCheck.Checked = preferences.GetBoolean(
+                                        Preferences.Key.NetworkSharing_AllowVlcAccess
+                                    );
+                                    _shareVlcCheck.CheckedChanged += ShareVlcCheck_CheckedChanged;
+                                }
+
+                                _shareVlcFlow.Controls.Add(
+                                    p = ui.NewLabel(
+                                        """
+                                        Jackpot will create an .M3U8 file for each movie.
+                                        If you share this folder using Windows file sharing
+                                        (SMB), the VLC app can play the files.
+                                        """
+                                    )
+                                );
+                                {
+                                    p.Margin += ui.BottomSpacing + ui.GetPadding(19, 0, 0, 0);
+                                    _shareVlcControls.Add(p);
+                                }
+
+                                (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 325, _ => { });
+                                {
+                                    _shareVlcFlow.Controls.Add(p);
+                                    p.Margin += ui.BottomSpacing + ui.GetPadding(19, 0, 0, 0);
+                                    _m3u8FolderText.Text = preferences.GetText(
+                                        Preferences.Key.NetworkSharing_VlcFolderPath
+                                    );
+                                    _shareVlcControls.Add(p);
+                                }
+                            }
+
+                            _shareTypesFlow.Controls.Add(_shareBrowserFlow = ui.NewFlowColumn());
+                            {
+                                _shareBrowserFlow.Margin += ui.GetPadding(15, 0, 0, 0);
+
+                                _shareBrowserFlow.Controls.Add(
+                                    _shareBrowserCheck = ui.NewCheckBox("Allow web browser access")
+                                );
+                                {
+                                    _shareBrowserCheck.Margin += ui.TopSpacingBig;
+                                    _shareBrowserCheck.CheckedChanged += ShareBrowserCheck_CheckedChanged;
+                                }
+
+                                _shareBrowserFlow.Controls.Add(
+                                    p = ui.NewLabeledPair("Address:", _browserFlow = ui.NewFlowColumn())
+                                );
+                                {
+                                    p.Margin += ui.TopSpacing + ui.GetPadding(19, 0, 0, 0);
+
+                                    _browserFlow.Controls.Add(_browserAddressText = ui.NewTextBox(280));
+                                    {
+                                        _browserAddressText.Text = "";
+                                        _browserAddressText.ReadOnly = true;
+                                    }
+
+                                    _browserFlow.Controls.Add(_browserAddressCopyButton = ui.NewButton("Copy"));
+                                    {
+                                        _browserAddressCopyButton.Dock = DockStyle.Right;
+                                        _browserAddressCopyButton.Click += BrowserAddressCopyButton_Click;
+                                    }
+
+                                    _shareBrowserControls.Add(p);
+                                }
+                            }
                         }
                     }
                 }
@@ -163,7 +241,7 @@ public sealed class OptionsForm : Form
 
         Text = "Options";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = Size = ui.GetSize(500, 450);
+        Size = ui.GetSize(775, 580);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -172,20 +250,24 @@ public sealed class OptionsForm : Form
         ShowIcon = false;
         ShowInTaskbar = false;
         Padding = ui.DefaultPadding;
+
+        UpdateShareTab();
     }
 
     private void OkButton_Click(object? sender, EventArgs e)
     {
         try
         {
-            if (_enableM3u8FolderCheck.Checked)
+            if ((_shareVlcCheck.Checked || _shareBrowserCheck.Checked) && string.IsNullOrWhiteSpace(_hostnameText.Text))
+            {
+                throw new Exception("Please enter a hostname or IP address.");
+            }
+
+            if (_shareVlcCheck.Checked)
             {
                 if (string.IsNullOrWhiteSpace(_m3u8FolderText.Text))
                     throw new Exception("Please enter a folder for .M3U8 files.");
             }
-
-            M3u8SyncSettings m3u8SyncSettings =
-                new(_enableM3u8FolderCheck.Checked, _m3u8FolderText.Text, _m3u8HostnameText.Text);
 
             _preferences.WithTransaction(() =>
             {
@@ -198,8 +280,14 @@ public sealed class OptionsForm : Form
                     _windowMaximizeBehaviorValues[_windowMaximizeBehaviorCombo.SelectedIndex]
                 );
                 _preferences.SetInteger(Preferences.Key.Shared_ColumnCount, _columnCountCombo.SelectedIndex + 1);
-                _preferences.SetJson(Preferences.Key.M3u8FolderSync_Settings, m3u8SyncSettings);
                 _preferences.SetBoolean(Preferences.Key.MainForm_ExitConfirmation, _exitConfirmationCheck.Checked);
+                _preferences.SetText(Preferences.Key.NetworkSharing_Hostname, _hostnameText.Text);
+                _preferences.SetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess, _shareVlcCheck.Checked);
+                _preferences.SetText(Preferences.Key.NetworkSharing_VlcFolderPath, _m3u8FolderText.Text);
+                _preferences.SetBoolean(
+                    Preferences.Key.NetworkSharing_AllowWebBrowserAccess,
+                    _shareBrowserCheck.Checked
+                );
             });
 
             DialogResult = DialogResult.OK;
@@ -209,5 +297,54 @@ public sealed class OptionsForm : Form
         {
             MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void BrowserAddressCopyButton_Click(object? sender, EventArgs e)
+    {
+        Clipboard.SetText(_browserAddressText.Text);
+        MessageForm.Show(
+            this,
+            "Address copied to clipboard.",
+            "Information",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information
+        );
+    }
+
+    private void HostnameText_TextChanged(object? sender, EventArgs e)
+    {
+        UpdateShareTab();
+    }
+
+    private void ShareVlcCheck_CheckedChanged(object? sender, EventArgs e)
+    {
+        UpdateShareTab();
+    }
+
+    private void ShareBrowserCheck_CheckedChanged(object? sender, EventArgs e)
+    {
+        UpdateShareTab();
+    }
+
+    private void UpdateShareTab()
+    {
+        _browserAddressText.Text = $"http://{_hostnameText.Text}:777";
+
+        foreach (var c in _shareBrowserControls)
+            c.Enabled = _shareBrowserCheck.Checked;
+
+        foreach (var c in _shareVlcControls)
+            c.Enabled = _shareVlcCheck.Checked;
+    }
+
+    private void WikiLink_Click(object? sender, EventArgs e)
+    {
+        Process.Start(
+            new ProcessStartInfo
+            {
+                FileName = "https://github.com/brianluft/jackpot/wiki/Network-Sharing",
+                UseShellExecute = true,
+            }
+        );
     }
 }

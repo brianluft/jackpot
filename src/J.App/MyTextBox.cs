@@ -10,6 +10,8 @@ public sealed class MyTextBox : UserControl
     private readonly Ui _ui;
     private bool _focused;
 
+    public new event EventHandler? TextChanged;
+
     public MyTextBox(Ui ui)
     {
         _ui = ui;
@@ -45,6 +47,8 @@ public sealed class MyTextBox : UserControl
             _focused = false;
             Invalidate();
         };
+
+        _textBox.TextChanged += TextBox_TextChanged;
 
         MinimumSize = new Size(_ui.GetLength(100), _ui.GetLength(32));
         Padding = _ui.GetPadding(8, 5);
@@ -85,7 +89,7 @@ public sealed class MyTextBox : UserControl
         RectangleF bounds = new(scale, scale, Width - (scale * 2) - 1, Height - (scale * 2) - 1);
 
         using var path = new GraphicsPath();
-        path.AddRoundedRectangle(bounds, cornerRadius);
+        AddRoundedRectangle(path, bounds, cornerRadius);
 
         // Fill with our background color
         using var bgBrush = new SolidBrush(
@@ -105,7 +109,7 @@ public sealed class MyTextBox : UserControl
             new(bounds.Left, bounds.Bottom - bottomHeight, bounds.Width, bottomHeight + (hidpi ? 1 : 0));
         var originalClip = g.Clip;
         var bottomPath = new GraphicsPath();
-        bottomPath.AddRoundedRectangle(bounds, cornerRadius);
+        AddRoundedRectangle(bottomPath, bounds, cornerRadius);
 
         if (_focused)
         {
@@ -213,12 +217,13 @@ public sealed class MyTextBox : UserControl
         Tag = text;
         Invalidate();
     }
-}
 
-// Helper extension method for rounded rectangles
-public static class GraphicsPathExtensions
-{
-    public static void AddRoundedRectangle(this GraphicsPath path, RectangleF bounds, float radius)
+    private void TextBox_TextChanged(object? sender, EventArgs e)
+    {
+        TextChanged?.Invoke(sender, e);
+    }
+
+    public static void AddRoundedRectangle(GraphicsPath path, RectangleF bounds, float radius)
     {
         var diameter = radius * 2;
         RectangleF arc = new(bounds.Location, new SizeF(diameter, diameter));

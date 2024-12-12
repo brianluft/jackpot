@@ -1024,7 +1024,8 @@ public sealed partial class MainForm : Form
 
     private void OptionsButton_Click(object? sender, EventArgs e)
     {
-        var oldM3u8Settings = _preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
+        var shareVlcOld = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess);
+        var shareBrowserOld = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess);
 
         using var f = _serviceProvider.GetRequiredService<OptionsForm>();
         if (f.ShowDialog(this) != DialogResult.OK)
@@ -1032,11 +1033,16 @@ public sealed partial class MainForm : Form
 
         try
         {
-            var newM3u8Settings = _preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
+            var shareVlcNew = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess);
+            var shareBrowserNew = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess);
 
-            if (!oldM3u8Settings.Equals(newM3u8Settings))
+            if (shareVlcOld != shareVlcNew || shareBrowserOld != shareBrowserNew)
             {
                 _client.Restart();
+            }
+
+            if (shareVlcOld != shareVlcNew)
+            {
                 _m3U8FolderSync.InvalidateAll();
                 var outcome = ProgressForm.Do(
                     this,

@@ -23,7 +23,7 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
     private readonly Lock _logLock = new();
     private readonly Queue<string> _log = [];
 
-    public int Port { get; private set; } = -1;
+    public int Port { get; } = 777;
     public string SessionPassword { get; } = Guid.NewGuid().ToString();
 
     public void Start()
@@ -47,11 +47,11 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
                     RedirectStandardOutput = true,
                 };
 
-            Port = FindRandomUnusedPort();
+            var anyNetworkSharing =
+                preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess)
+                || preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess);
 
-            var m3u8Settings = preferences.GetJson<M3u8SyncSettings>(Preferences.Key.M3u8FolderSync_Settings);
-
-            var bindHost = m3u8Settings.EnableLocalM3u8Folder ? "*" : "localhost";
+            var bindHost = anyNetworkSharing ? "*" : "localhost";
             psi.Environment["ASPNETCORE_URLS"] = $"http://{bindHost}:{Port}";
             psi.Environment["JACKPOT_SESSION_PASSWORD"] = SessionPassword;
 
@@ -121,20 +121,6 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
         query["sessionPassword"] = SessionPassword;
         query["movieId"] = movieId.Value;
         return $"http://localhost:{Port}/movie-play.html?{query}";
-    }
-
-    private static int FindRandomUnusedPort()
-    {
-        // Create a TCP/IP socket and bind to a random port assigned by the OS
-        using Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
-
-        // Get the assigned port number
-        var port = ((IPEndPoint)socket.LocalEndPoint!).Port;
-        if (port == 0)
-            throw new Exception("Unable to find a port number.");
-
-        return port;
     }
 
     public async Task ReshuffleAsync()

@@ -26,7 +26,10 @@ public sealed class Preferences : IDisposable
         MainForm_ExitConfirmation,
         Shared_LibraryViewStyle,
         Shared_ColumnCount,
-        M3u8FolderSync_Settings,
+        NetworkSharing_Hostname,
+        NetworkSharing_AllowVlcAccess,
+        NetworkSharing_VlcFolderPath,
+        NetworkSharing_AllowWebBrowserAccess,
     }
 
     public Preferences()
@@ -53,7 +56,10 @@ public sealed class Preferences : IDisposable
             [Key.MainForm_ExitConfirmation] = 0L,
             [Key.Shared_LibraryViewStyle] = LibraryViewStyle.Grid.ToString(),
             [Key.Shared_ColumnCount] = 4L,
-            [Key.M3u8FolderSync_Settings] = JsonSerializer.Serialize(M3u8SyncSettings.Default),
+            [Key.NetworkSharing_Hostname] = LanIpFinder.GetLanIpOrEmptyString(),
+            [Key.NetworkSharing_AllowVlcAccess] = 0L,
+            [Key.NetworkSharing_VlcFolderPath] = "",
+            [Key.NetworkSharing_AllowWebBrowserAccess] = 0L,
         }.ToFrozenDictionary();
 
         // Make sure every default is one of the four supported types.
