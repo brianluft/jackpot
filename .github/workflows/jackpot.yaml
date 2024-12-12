@@ -27,4 +27,4 @@ jobs:
           name: Jackpot
           compression-level: 0
           retention-days: 7
-          path: publish/Jackpot.msix
+          path: publish/Jackpot.msixbundle

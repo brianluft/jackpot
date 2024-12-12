@@ -10,7 +10,7 @@
     Name="BrianLuft.Jackpot"
     Publisher="CN=Brian Luft, O=Brian Luft, S=&quot;Virgin Islands, U.S.&quot;, C=US"
     Version="0.2.0.0"
-    ProcessorArchitecture="x64" />
+    ProcessorArchitecture="(ARCH)" />
     
   <Properties>
     <DisplayName>Jackpot</DisplayName>

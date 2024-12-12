@@ -10,10 +10,23 @@ if (Test-Path $publishDir) {
 }
 
 $buildDir = "$root\publish\build"
-[System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
+
+function Start-Publish
+{
+	if (Test-Path $buildDir) {
+		[System.IO.Directory]::Delete($buildDir, $true) | Out-Null
+	}
+	[System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
+}
 
 $downloadsDir = "$root\downloads"
 [System.IO.Directory]::CreateDirectory($downloadsDir) | Out-Null
+
+$bundleDir = "$root\publish\bundle"
+if (Test-Path $bundleDir) {
+	[System.IO.Directory]::Delete($bundleDir, $true) | Out-Null
+}
+[System.IO.Directory]::CreateDirectory($bundleDir) | Out-Null
 
 # Windows SDK
 $windowsSdkBaseDir = "C:\Program Files (x86)\Windows Kits\10\Redist"
@@ -45,16 +58,8 @@ function Publish-App
 	)
 
 	Write-Host "Publishing $Arch."
-	$dir = "$buildDir\$Arch"
-	[System.IO.Directory]::CreateDirectory($dir) | Out-Null
-	dotnet publish "$root/src/J.App/J.App.csproj" --output "$dir" --self-contained --runtime "win-$Arch" --configuration Release --verbosity quiet
+	dotnet publish "$root/src/J.App/J.App.csproj" --output "$buildDir" --self-contained --runtime "win-$Arch" --configuration Release --verbosity quiet
 	Remove-Item -Path "$dir\*.pdb" -Force
-}
-
-function Publish-Launcher
-{
-	dotnet publish "$root/src/J.Launcher/J.Launcher.csproj" --output "$buildDir" --self-contained --runtime "win-x86" --configuration Release --verbosity quiet
-	Remove-Item -Path "$buildDir\*.pdb" -Force
 }
 
 function Get-FfmpegX64
@@ -112,9 +117,17 @@ function Get-FfmpegArm64
 
 function Copy-MiscFiles
 {
+	param
+	(
+		[Parameter(Mandatory = $true)] [string] $Arch
+	)
+
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
 	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
-	Copy-Item -Path "$root\src\AppxManifest.xml" -Destination "$buildDir\AppxManifest.xml"
+	
+	$manifest = [System.IO.File]::ReadAllText("$root\src\AppxManifest.xml")
+	$manifest = $manifest.Replace('(ARCH)', $Arch)
+	[System.IO.File]::WriteAllText("$buildDir\AppxManifest.xml", $manifest)
 
 	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
 	Copy-Item -Path "$root\src\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
@@ -154,8 +167,13 @@ function Copy-MiscFiles
 
 function New-Msix
 {
+	param
+	(
+		[Parameter(Mandatory = $true)] [string] $Arch
+	)
+
 	Write-Host "Creating MSIX package."
-	$msixFilePath = "$root\publish\Jackpot.msix"
+	$msixFilePath = "$bundleDir\Jackpot-$Arch.msix"
 	if (Test-Path $msixFilePath) { Remove-Item -Path $msixFilePath -Force }
 	Write-Host "`n--- Start: MakeAppx pack ---"
 	& "$makeappx" pack /d "$buildDir" /p "$msixFilePath"
@@ -165,10 +183,26 @@ function New-Msix
 	Write-Host "--- End: MakeAppx pack ---`n"
 }
 
-Copy-MiscFiles
-Publish-Launcher
+Write-Host "=== x64 build ==="
+Start-Publish
+Copy-MiscFiles -Arch "x64"
 Publish-App -Arch "x64"
-Publish-App -Arch "arm64"
 Get-FfmpegX64
+New-Msix -Arch "x64"
+
+Write-Host "=== arm64 build ==="
+Start-Publish
+Copy-MiscFiles -Arch "arm64"
+Publish-App -Arch "arm64"
 Get-FfmpegArm64
-New-Msix
+New-Msix -Arch "arm64"
+
+Write-Host "=== msixbundle ==="
+$msixBundleFilePath = "$root\publish\Jackpot.msixbundle"
+if (Test-Path $msixBundleFilePath) { Remove-Item -Path $msixBundleFilePath -Force }
+Write-Host "`n--- Start: MakeAppx bundle ---"
+& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir"
+if ($LastExitCode -ne 0) {
+	throw "Failed to create MSIX bundle."
+}
+Write-Host "--- End: MakeAppx bundle ---`n"
