@@ -656,6 +656,56 @@ app.MapPost(
     }
 );
 
+if (preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess))
+{
+    app.MapGet(
+        "/",
+        (HttpResponse response) =>
+        {
+            var tagTypes = libraryProvider.GetTagTypes();
+            var html = BrowserIndexPage.GenerateHtml(tagTypes);
+            response.ContentType = "text/html";
+            return html.Content;
+        }
+    );
+
+    app.MapGet(
+        "/browser-movies.html",
+        (HttpResponse response) =>
+        {
+            var movies = libraryProvider.GetMovies().Where(x => !x.Deleted).ToList();
+            var html = BrowserMoviesPage.GenerateHtml(movies, configuredSessionPassword);
+            response.ContentType = "text/html";
+            return html.Content;
+        }
+    );
+
+    app.MapGet(
+        "/browser-tagtype.html",
+        ([FromQuery, Required] string tagTypeId, HttpResponse response) =>
+        {
+            var tagType = libraryProvider.GetTagType(new(tagTypeId));
+            var tags = libraryProvider.GetTags(tagType.Id);
+            var html = BrowserTagTypePage.GenerateHtml(tagType, tags);
+            response.ContentType = "text/html";
+            return html.Content;
+        }
+    );
+
+    app.MapGet(
+        "/browser-tag.html",
+        ([FromQuery, Required] string tagTypeId, [FromQuery, Required] string tagId, HttpResponse response) =>
+        {
+            var tag = libraryProvider.GetTag(new(tagId));
+            var movieIds = libraryProvider.GetMovieIdsWithTag(tag.Id).ToHashSet();
+            var movies = libraryProvider.GetMovies().Where(x => movieIds.Contains(x.Id)).ToList();
+            var html = BrowserTagPage.GenerateHtml(new(tagTypeId), tag, movies, configuredSessionPassword);
+            response.ContentType = "text/html";
+            return html.Content;
+        }
+    );
+}
+
 app.Run();
 
 enum ListPageType

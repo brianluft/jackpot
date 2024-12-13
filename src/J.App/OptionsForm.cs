@@ -171,14 +171,14 @@ public sealed class OptionsForm : Form
                                     )
                                 );
                                 {
-                                    p.Margin += ui.BottomSpacing + ui.GetPadding(19, 0, 0, 0);
+                                    p.Margin += ui.BottomSpacing + ui.GetPadding(18, 0, 0, 0);
                                     _shareVlcControls.Add(p);
                                 }
 
                                 (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 325, _ => { });
                                 {
                                     _shareVlcFlow.Controls.Add(p);
-                                    p.Margin += ui.BottomSpacing + ui.GetPadding(19, 0, 0, 0);
+                                    p.Margin += ui.BottomSpacing + ui.GetPadding(18, 0, 0, 0);
                                     _m3u8FolderText.Text = preferences.GetText(
                                         Preferences.Key.NetworkSharing_VlcFolderPath
                                     );
@@ -196,13 +196,16 @@ public sealed class OptionsForm : Form
                                 {
                                     _shareBrowserCheck.Margin += ui.TopSpacingBig;
                                     _shareBrowserCheck.CheckedChanged += ShareBrowserCheck_CheckedChanged;
+                                    _shareBrowserCheck.Checked = preferences.GetBoolean(
+                                        Preferences.Key.NetworkSharing_AllowWebBrowserAccess
+                                    );
                                 }
 
                                 _shareBrowserFlow.Controls.Add(
                                     p = ui.NewLabeledPair("Address:", _browserFlow = ui.NewFlowColumn())
                                 );
                                 {
-                                    p.Margin += ui.TopSpacing + ui.GetPadding(19, 0, 0, 0);
+                                    p.Margin += ui.TopSpacing + ui.GetPadding(18, 0, 0, 0);
 
                                     _browserFlow.Controls.Add(_browserAddressText = ui.NewTextBox(280));
                                     {
@@ -241,7 +244,7 @@ public sealed class OptionsForm : Form
 
         Text = "Options";
         StartPosition = FormStartPosition.CenterScreen;
-        Size = ui.GetSize(775, 580);
+        Size = ui.GetSize(765, 575);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MinimizeBox = false;
         MaximizeBox = false;
@@ -328,7 +331,8 @@ public sealed class OptionsForm : Form
 
     private void UpdateShareTab()
     {
-        _browserAddressText.Text = $"http://{_hostnameText.Text}:777";
+        if (_browserAddressText is not null)
+            _browserAddressText.Text = $"http://{_hostnameText.Text}:777";
 
         foreach (var c in _shareBrowserControls)
             c.Enabled = _shareBrowserCheck.Checked;
