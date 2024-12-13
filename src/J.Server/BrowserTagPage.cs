@@ -6,7 +6,13 @@ namespace J.Server;
 
 public static class BrowserTagPage
 {
-    public static Html GenerateHtml(TagTypeId tagTypeId, Tag tag, List<Movie> movies, string sessionPassword)
+    public static Html GenerateHtml(
+        TagTypeId tagTypeId,
+        Tag tag,
+        List<Movie> movies,
+        string sessionPassword,
+        string host
+    )
     {
         var html = $$"""
             <!DOCTYPE html>
@@ -15,13 +21,13 @@ public static class BrowserTagPage
                 <meta charset="utf-8">
                 <title>{{WebUtility.HtmlEncode(tag.Name)}}</title>
                 <style>
-                    {{ExternalShared.SharedCss}}
+                    {{BrowserShared.SharedCss}}
                 </style>
             </head>
             <body>
                 <h1>{{WebUtility.HtmlEncode(tag.Name)}}</h1>
                 <ul>
-                    <li><a class="back" href="/browser-tagtype.html?tagTypeId={{WebUtility.HtmlEncode(
+                    <li><a class="back" href="http://{{host}}:777/browser-tagtype.html?tagTypeId={{WebUtility.HtmlEncode(
                 tagTypeId.Value
             )}}">Back</a></li>
                     {{string.Join("\n", movies.OrderBy(x => x.Filename).ThenBy(x => x.DateAdded).Select(MovieLi))}}
@@ -35,7 +41,8 @@ public static class BrowserTagPage
             var query = HttpUtility.ParseQueryString("");
             query["movieId"] = m.Id.Value;
             query["sessionPassword"] = sessionPassword;
-            return $"<li><a class=\"file\" href=\"/movie-play.html?{WebUtility.HtmlEncode(query.ToString())}\">{WebUtility.HtmlEncode(m.Filename)}</a></li>";
+            query["host"] = host;
+            return $"<li><a class=\"file\" href=\"http://{host}:777/movie-play.html?{WebUtility.HtmlEncode(query.ToString())}\">{WebUtility.HtmlEncode(m.Filename)}</a></li>";
         }
 
         return new(html);

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using Amazon.S3;
 using J.Core;
 using J.Core.Data;
@@ -31,17 +32,6 @@ builder.Logging.Configure(options =>
     options.ActivityTrackingOptions = ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId;
 });
 builder.Services.AddSingleton<ConsoleFormatter, CustomConsoleFormatter>();
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-        }
-    );
-});
 
 var app = builder.Build();
 app.UseMiddleware<RequestLoggingMiddleware>();
@@ -452,13 +442,19 @@ app.MapGet(
     async (
         [FromQuery, Required] string movieId,
         [FromQuery, Required] string sessionPassword,
+        [FromQuery] string? host,
         HttpResponse response,
         ServerMovieFileReader movieFileReader,
         CancellationToken cancel
     ) =>
     {
         CheckSessionPassword(sessionPassword);
-        var m3u8 = libraryProvider.GetM3u8(new(movieId), configuredPort, configuredSessionPassword, "localhost");
+        var m3u8 = libraryProvider.GetM3u8(
+            new(movieId),
+            configuredPort,
+            configuredSessionPassword,
+            host ?? "localhost"
+        );
         response.ContentType = "application/vnd.apple.mpegurl";
         await response.StartAsync(cancel);
         await response.Body.WriteAsync(m3u8, cancel);
@@ -637,11 +633,22 @@ app.MapGet(
 
 app.MapGet(
     "/movie-play.html",
-    ([FromQuery, Required] string movieId, [FromQuery, Required] string sessionPassword, HttpResponse response) =>
+    (
+        [FromQuery, Required] string movieId,
+        [FromQuery, Required] string sessionPassword,
+        [FromQuery] string? host,
+        HttpResponse response
+    ) =>
     {
         CheckSessionPassword(sessionPassword);
 
-        var m3u8Url = $"/movie.m3u8?movieId={movieId}&sessionPassword={sessionPassword}";
+        var query = HttpUtility.ParseQueryString("");
+        query["movieId"] = movieId;
+        query["sessionPassword"] = sessionPassword;
+        if (host is not null)
+            query["host"] = host;
+
+        var m3u8Url = $"/movie.m3u8?{query}";
         var movie = libraryProvider.GetMovie(new(movieId));
 
         response.ContentType = "text/html";
@@ -669,12 +676,14 @@ app.MapPost(
 
 if (preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess))
 {
+    var host = preferences.GetText(Preferences.Key.NetworkSharing_Hostname);
+
     app.MapGet(
         "/",
         (HttpResponse response) =>
         {
             var tagTypes = libraryProvider.GetTagTypes();
-            var html = BrowserIndexPage.GenerateHtml(tagTypes);
+            var html = BrowserIndexPage.GenerateHtml(tagTypes, host);
             response.ContentType = "text/html";
             return html.Content;
         }
@@ -685,7 +694,7 @@ if (preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess)
         (HttpResponse response) =>
         {
             var movies = libraryProvider.GetMovies().Where(x => !x.Deleted).ToList();
-            var html = BrowserMoviesPage.GenerateHtml(movies, configuredSessionPassword);
+            var html = BrowserMoviesPage.GenerateHtml(movies, configuredSessionPassword, host);
             response.ContentType = "text/html";
             return html.Content;
         }
@@ -697,7 +706,7 @@ if (preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess)
         {
             var tagType = libraryProvider.GetTagType(new(tagTypeId));
             var tags = libraryProvider.GetTags(tagType.Id);
-            var html = BrowserTagTypePage.GenerateHtml(tagType, tags);
+            var html = BrowserTagTypePage.GenerateHtml(tagType, tags, host);
             response.ContentType = "text/html";
             return html.Content;
         }
@@ -710,7 +719,7 @@ if (preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess)
             var tag = libraryProvider.GetTag(new(tagId));
             var movieIds = libraryProvider.GetMovieIdsWithTag(tag.Id).ToHashSet();
             var movies = libraryProvider.GetMovies().Where(x => movieIds.Contains(x.Id)).ToList();
-            var html = BrowserTagPage.GenerateHtml(new(tagTypeId), tag, movies, configuredSessionPassword);
+            var html = BrowserTagPage.GenerateHtml(new(tagTypeId), tag, movies, configuredSessionPassword, host);
             response.ContentType = "text/html";
             return html.Content;
         }

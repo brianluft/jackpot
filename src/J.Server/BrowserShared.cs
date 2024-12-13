@@ -1,6 +1,6 @@
 ﻿namespace J.Server;
 
-public static class ExternalShared
+public static class BrowserShared
 {
     public static string SharedCss { get; } =
         """
@@ -66,7 +66,7 @@ public static class ExternalShared
             }
 
             .back::before {
-              content: "↩️";
+              content: "⬅️";
             }
 
             .folder::before {

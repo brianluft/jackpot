@@ -1026,6 +1026,7 @@ public sealed partial class MainForm : Form
     {
         var shareVlcOld = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess);
         var shareBrowserOld = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess);
+        var hostOld = _preferences.GetText(Preferences.Key.NetworkSharing_Hostname);
 
         using var f = _serviceProvider.GetRequiredService<OptionsForm>();
         if (f.ShowDialog(this) != DialogResult.OK)
@@ -1035,8 +1036,9 @@ public sealed partial class MainForm : Form
         {
             var shareVlcNew = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess);
             var shareBrowserNew = _preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowWebBrowserAccess);
+            var hostNew = _preferences.GetText(Preferences.Key.NetworkSharing_Hostname);
 
-            if (shareVlcOld != shareVlcNew || shareBrowserOld != shareBrowserNew)
+            if (shareVlcOld != shareVlcNew || shareBrowserOld != shareBrowserNew || hostOld != hostNew)
             {
                 _client.Restart();
             }

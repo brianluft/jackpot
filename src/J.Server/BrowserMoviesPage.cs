@@ -6,7 +6,7 @@ namespace J.Server;
 
 public static class BrowserMoviesPage
 {
-    public static Html GenerateHtml(List<Movie> movies, string sessionPassword)
+    public static Html GenerateHtml(List<Movie> movies, string sessionPassword, string host)
     {
         var html = $$"""
             <!DOCTYPE html>
@@ -15,13 +15,13 @@ public static class BrowserMoviesPage
                 <meta charset="utf-8">
                 <title>Movies</title>
                 <style>
-                    {{ExternalShared.SharedCss}}
+                    {{BrowserShared.SharedCss}}
                 </style>
             </head>
             <body>
                 <h1>Movies</h1>
                 <ul>
-                    <li><a class="back" href="/">Back</a></li>
+                    <li><a class="back" href="http://{{host}}:777/">Back</a></li>
                     {{string.Join("\n", movies.OrderBy(x => x.Filename).ThenBy(x => x.DateAdded).Select(MovieLi))}}
                 </ul>
             </body>
@@ -33,7 +33,8 @@ public static class BrowserMoviesPage
             var query = HttpUtility.ParseQueryString("");
             query["movieId"] = m.Id.Value;
             query["sessionPassword"] = sessionPassword;
-            return $"<li><a class=\"file\" href=\"/movie-play.html?{WebUtility.HtmlEncode(query.ToString())}\">{WebUtility.HtmlEncode(m.Filename)}</a></li>";
+            query["host"] = host;
+            return $"<li><a class=\"file\" href=\"http://{host}:777/movie-play.html?{WebUtility.HtmlEncode(query.ToString())}\">{WebUtility.HtmlEncode(m.Filename)}</a></li>";
         }
 
         return new(html);
