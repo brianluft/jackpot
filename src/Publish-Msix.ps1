@@ -9,12 +9,8 @@ Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
 Write-Host "=== Start $Arch ==="
 
+$srcDir = $PSScriptRoot
 $root = Split-Path -Path $PSScriptRoot -Parent
-
-$publishDir = "$root\$Arch"
-if (Test-Path $publishDir) {
-	[System.IO.Directory]::Delete($publishDir, $true) | Out-Null
-}
 
 $buildDir = "$root\$Arch\build"
 if (Test-Path $buildDir) {
@@ -53,8 +49,15 @@ if (Test-Path $makepri) {
 function Publish-App
 {
 	Write-Host "Publishing $Arch."
-	dotnet publish "$root/src/J.App/J.App.csproj" --output "$buildDir" --self-contained --runtime "win-$Arch" --configuration Release --verbosity quiet
-	Remove-Item -Path "$dir\*.pdb" -Force
+	& dotnet publish "$srcDir/J.App/J.App.csproj" `
+		--output "$buildDir" `
+		--self-contained `
+		--runtime "win-$Arch" `
+		--configuration Release `
+		--verbosity quiet | Out-Host
+	if ($LastExitCode -ne 0) {
+		throw "Failed to publish $Arch."
+	}
 }
 
 function Get-FfmpegX64
@@ -115,21 +118,21 @@ function Copy-MiscFiles
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
 	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
 	
-	$manifest = [System.IO.File]::ReadAllText("$root\src\AppxManifest.xml")
+	$manifest = [System.IO.File]::ReadAllText("$srcDir\AppxManifest.xml")
 	$manifest = $manifest.Replace('(ARCH)', $Arch)
 	[System.IO.File]::WriteAllText("$buildDir\AppxManifest.xml", $manifest)
 
 	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
-	Copy-Item -Path "$root\src\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
-	Copy-Item -Path "$root\src\J.App\Resources\App310x150.png" -Destination "$buildDir\assets\App310x150.png"
-	Copy-Item -Path "$root\src\J.App\Resources\App150x150.png" -Destination "$buildDir\assets\App150x150.png"
-	Copy-Item -Path "$root\src\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.png"
-	Copy-Item -Path "$root\src\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.targetsize-44_altform-unplated.png"
+	Copy-Item -Path "$srcDir\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
+	Copy-Item -Path "$srcDir\J.App\Resources\App310x150.png" -Destination "$buildDir\assets\App310x150.png"
+	Copy-Item -Path "$srcDir\J.App\Resources\App150x150.png" -Destination "$buildDir\assets\App150x150.png"
+	Copy-Item -Path "$srcDir\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.png"
+	Copy-Item -Path "$srcDir\J.App\Resources\App44x44.png" -Destination "$buildDir\assets\App44x44.targetsize-44_altform-unplated.png"
 
 	foreach ($x in 16, 24, 32, 48, 256)
 	{
-		Copy-Item -Path "$root\src\J.App\Resources\App${x}x${x}.png" -Destination "$buildDir\assets\App44x44.targetsize-${x}.png"
-		Copy-Item -Path "$root\src\J.App\Resources\App${x}x${x}.png" -Destination "$buildDir\assets\App44x44.altform-unplated_targetsize-${x}.png"
+		Copy-Item -Path "$srcDir\J.App\Resources\App${x}x${x}.png" -Destination "$buildDir\assets\App44x44.targetsize-${x}.png"
+		Copy-Item -Path "$srcDir\J.App\Resources\App${x}x${x}.png" -Destination "$buildDir\assets\App44x44.altform-unplated_targetsize-${x}.png"
 	}
 
 	Push-Location $buildDir
