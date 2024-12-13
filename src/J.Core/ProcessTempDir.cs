@@ -1,10 +1,11 @@
-﻿using J.Base;
-using IoPath = System.IO.Path;
+﻿using IoPath = System.IO.Path;
 
 namespace J.Core;
 
 public sealed class ProcessTempDir : IDisposable
 {
+    public const string LOCK_FILENAME = "lock";
+
     private FileStream? _lockFile;
     private int _nextNumber = 1;
 
@@ -19,12 +20,7 @@ public sealed class ProcessTempDir : IDisposable
 
         Path = IoPath.Combine(appDir, IoPath.GetRandomFileName());
         Directory.CreateDirectory(Path);
-        _lockFile = new(
-            IoPath.Combine(Path, Constants.TEMP_DIR_LOCK_FILENAME),
-            FileMode.CreateNew,
-            FileAccess.ReadWrite,
-            FileShare.None
-        );
+        _lockFile = new(IoPath.Combine(Path, LOCK_FILENAME), FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
     }
 
     public void Dispose()

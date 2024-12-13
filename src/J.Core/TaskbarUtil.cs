@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace J.Base;
+namespace J.Core;
 
 public static partial class TaskbarUtil
 {

@@ -1,4 +1,6 @@
-﻿namespace J.Base;
+﻿using J.Core;
+
+namespace J.Core;
 
 public static class ProcessTempDirCleaner
 {
@@ -13,7 +15,7 @@ public static class ProcessTempDirCleaner
             {
                 try
                 {
-                    File.Delete(Path.Combine(dir, Constants.TEMP_DIR_LOCK_FILENAME));
+                    File.Delete(Path.Combine(dir, ProcessTempDir.LOCK_FILENAME));
                     Directory.Delete(dir, true);
                 }
                 catch { }

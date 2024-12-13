@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Web;
-using J.Base;
 using J.Core;
 using J.Core.Data;
 using Polly;

@@ -17,8 +17,4 @@
 	<PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\J.Base\J.Base.csproj" />
-  </ItemGroup>
-
 </Project>

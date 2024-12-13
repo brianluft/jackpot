@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace J.Base;
+namespace J.Core;
 
 public static class ApplicationSubProcesses
 {
