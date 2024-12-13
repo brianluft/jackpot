@@ -9,6 +9,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	<AssemblyName>Jackpot</AssemblyName>
 	<ApplicationIcon>Resources\App.ico</ApplicationIcon>
+	<PublishReadyToRun>true</PublishReadyToRun>
 	<Version>0.2.0</Version>
   </PropertyGroup>
 

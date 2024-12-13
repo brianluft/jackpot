@@ -8,4 +8,7 @@
 bin/
 downloads/
 obj/
+x64/
+arm64/
 publish/
+bundle/

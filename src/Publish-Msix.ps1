@@ -1,31 +1,31 @@
+param
+(
+	[Parameter(Mandatory = $true)] [string] $Arch
+)
+
 $ErrorPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
+Write-Host "=== Start $Arch ==="
+
 $root = Split-Path -Path $PSScriptRoot -Parent
 
-$publishDir = "$root\publish"
+$publishDir = "$root\$Arch"
 if (Test-Path $publishDir) {
 	[System.IO.Directory]::Delete($publishDir, $true) | Out-Null
 }
 
-$buildDir = "$root\publish\build"
-
-function Start-Publish
-{
-	if (Test-Path $buildDir) {
-		[System.IO.Directory]::Delete($buildDir, $true) | Out-Null
-	}
-	[System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
+$buildDir = "$root\$Arch\build"
+if (Test-Path $buildDir) {
+	[System.IO.Directory]::Delete($buildDir, $true) | Out-Null
 }
+[System.IO.Directory]::CreateDirectory($buildDir) | Out-Null
 
 $downloadsDir = "$root\downloads"
 [System.IO.Directory]::CreateDirectory($downloadsDir) | Out-Null
 
-$bundleDir = "$root\publish\bundle"
-if (Test-Path $bundleDir) {
-	[System.IO.Directory]::Delete($bundleDir, $true) | Out-Null
-}
+$bundleDir = "$root\bundle"
 [System.IO.Directory]::CreateDirectory($bundleDir) | Out-Null
 
 # Windows SDK
@@ -52,11 +52,6 @@ if (Test-Path $makepri) {
 
 function Publish-App
 {
-	param
-	(
-		[Parameter(Mandatory = $true)] [string] $Arch
-	)
-
 	Write-Host "Publishing $Arch."
 	dotnet publish "$root/src/J.App/J.App.csproj" --output "$buildDir" --self-contained --runtime "win-$Arch" --configuration Release --verbosity quiet
 	Remove-Item -Path "$dir\*.pdb" -Force
@@ -76,7 +71,7 @@ function Get-FfmpegX64
 	}
 
 	Write-Host "Extracting ffmpeg/x64."
-	$dstDir = "$buildDir\x64\ffmpeg\"
+	$dstDir = "$buildDir\ffmpeg\"
 	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
 	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
 
@@ -107,7 +102,7 @@ function Get-FfmpegArm64
 	}
 
 	Write-Host "Extracting ffmpeg/arm64."
-	$dstDir = "$buildDir\arm64\ffmpeg\"
+	$dstDir = "$buildDir\ffmpeg\"
 	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
 	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
 
@@ -117,11 +112,6 @@ function Get-FfmpegArm64
 
 function Copy-MiscFiles
 {
-	param
-	(
-		[Parameter(Mandatory = $true)] [string] $Arch
-	)
-
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
 	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
 	
@@ -167,11 +157,6 @@ function Copy-MiscFiles
 
 function New-Msix
 {
-	param
-	(
-		[Parameter(Mandatory = $true)] [string] $Arch
-	)
-
 	Write-Host "Creating MSIX package."
 	$msixFilePath = "$bundleDir\Jackpot-$Arch.msix"
 	if (Test-Path $msixFilePath) { Remove-Item -Path $msixFilePath -Force }
@@ -183,26 +168,13 @@ function New-Msix
 	Write-Host "--- End: MakeAppx pack ---`n"
 }
 
-Write-Host "=== x64 build ==="
-Start-Publish
-Copy-MiscFiles -Arch "x64"
-Publish-App -Arch "x64"
-Get-FfmpegX64
-New-Msix -Arch "x64"
-
-Write-Host "=== arm64 build ==="
-Start-Publish
-Copy-MiscFiles -Arch "arm64"
-Publish-App -Arch "arm64"
-Get-FfmpegArm64
-New-Msix -Arch "arm64"
-
-Write-Host "=== msixbundle ==="
-$msixBundleFilePath = "$root\publish\Jackpot.msixbundle"
-if (Test-Path $msixBundleFilePath) { Remove-Item -Path $msixBundleFilePath -Force }
-Write-Host "`n--- Start: MakeAppx bundle ---"
-& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir"
-if ($LastExitCode -ne 0) {
-	throw "Failed to create MSIX bundle."
+Copy-MiscFiles
+Publish-App
+if ($Arch -eq "x64") {
+	Get-FfmpegX64
+} elseif ($Arch -eq "arm64") {
+	Get-FfmpegArm64
 }
-Write-Host "--- End: MakeAppx bundle ---`n"
+New-Msix
+
+Write-Host "=== End $Arch ==="

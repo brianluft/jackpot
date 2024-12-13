@@ -19,7 +19,7 @@ jobs:
 
       - name: Publish
         shell: pwsh
-        run: .\src\Publish-Release.ps1
+        run: .\src\Publish-MsixBundle.ps1
 
       - name: Upload
         uses: actions/upload-artifact@v4
