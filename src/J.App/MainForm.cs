@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using System.Web;
 using J.Core;
@@ -13,6 +14,9 @@ namespace J.App;
 
 public sealed partial class MainForm : Form
 {
+    public const int SEARCH_TEXT_SMALL_WIDTH = 125;
+    public const int SEARCH_TEXT_BIG_WIDTH = 200;
+
     private readonly IServiceProvider _serviceProvider;
     private readonly LibraryProviderAdapter _libraryProvider;
     private readonly Client _client;
@@ -59,7 +63,8 @@ public sealed partial class MainForm : Form
         _browserTabButton,
         _importTabButton,
         _tagsTabButton;
-    private readonly ToolStripSeparator _rightmostSeparator;
+    private readonly ToolStripSeparator _rightmostSeparator,
+        _browserNavigationSeparator;
     private readonly MyToolStripTextBox _searchText;
     private readonly MyWebView2 _browser;
     private readonly System.Windows.Forms.Timer _searchDebounceTimer;
@@ -153,7 +158,7 @@ public sealed partial class MainForm : Form
                 _filterClearButton.Click += FilterClearButton_Click;
             }
 
-            _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(200));
+            _toolStrip.Items.Add(_searchText = ui.NewToolStripTextBox(SEARCH_TEXT_BIG_WIDTH));
             {
                 _searchText.Margin += ui.RightSpacing;
                 _searchText.Alignment = ToolStripItemAlignment.Right;
@@ -339,7 +344,7 @@ public sealed partial class MainForm : Form
                 };
             }
 
-            _toolStrip.Items.Add(ui.NewToolStripSeparator());
+            _toolStrip.Items.Add(_browserNavigationSeparator = ui.NewToolStripSeparator());
 
             _toolStrip.Items.Add(_browserTabButton = ui.NewToolStripTabButton("Loading..."));
             {
@@ -441,7 +446,7 @@ public sealed partial class MainForm : Form
 
         Text = "Jackpot Media Library";
         Size = ui.GetSize(1600, 900);
-        MinimumSize = ui.GetSize(1200, 400);
+        MinimumSize = ui.GetSize(900, 400);
         CenterToScreen();
         FormBorderStyle = FormBorderStyle.None;
         Icon = ui.GetIconResource("App.ico");
@@ -596,11 +601,74 @@ public sealed partial class MainForm : Form
             if (title.Length > 100)
                 title = title[..100] + "...";
 
-            _browserTabButton.Text = title?.Replace("&", "&&") ?? "";
+            _browserTabButton.Text = TruncateTitleText(title?.Replace("&", "&&") ?? "", _ui.GetLength(150));
             _browseBackButton.Enabled = _browser.CanGoBack;
             _browseForwardButton.Enabled = _browser.CanGoForward;
         }
         catch { }
+    }
+
+    private string TruncateTitleText(string text, int maxPixelWidth)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        var font = _browserTabButton.Font;
+
+        // Using the Control's context for DPI-aware measurements
+        using var graphics = CreateGraphics();
+
+        // Check if the full text already fits
+        var fullSize = TextRenderer.MeasureText(
+            graphics,
+            text,
+            font,
+            new Size(maxPixelWidth, 0),
+            TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix
+        );
+
+        if (fullSize.Width <= maxPixelWidth)
+            return text;
+
+        // Create text enumerator for proper grapheme cluster handling
+        var enumerator = StringInfo.GetTextElementEnumerator(text);
+        List<string> elements = new(text.Length);
+        while (enumerator.MoveNext())
+        {
+            elements.Add(enumerator.GetTextElement());
+        }
+
+        // Binary search for the longest fitting prefix
+        int left = 0;
+        int right = elements.Count;
+
+        while (left < right)
+        {
+            int mid = (left + right + 1) / 2;
+            string candidate = string.Concat(elements.Take(mid)) + "...";
+            var size = TextRenderer.MeasureText(
+                graphics,
+                candidate,
+                font,
+                new Size(maxPixelWidth, 0),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix
+            );
+
+            if (size.Width <= maxPixelWidth)
+            {
+                left = mid;
+            }
+            else
+            {
+                right = mid - 1;
+            }
+        }
+
+        // If we can't fit even one grapheme cluster plus ellipsis, return just ellipsis
+        if (left == 0)
+            return "...";
+
+        return string.Concat(elements.Take(left)) + "...";
     }
 
     private async Task GoHomeAsync()
@@ -1108,6 +1176,22 @@ public sealed partial class MainForm : Form
                 ApplyFullscreenPreference();
                 _lastWindowState = WindowState;
             }
+
+            var size1 = Width >= _ui.GetLength(1100);
+            var size2 = Width >= _ui.GetLength(1300);
+
+            _viewButton.DisplayStyle = size1 ? ToolStripItemDisplayStyle.ImageAndText : ToolStripItemDisplayStyle.Text;
+            _sortButton.DisplayStyle = size1 ? ToolStripItemDisplayStyle.ImageAndText : ToolStripItemDisplayStyle.Text;
+            _filterButton.DisplayStyle = size1
+                ? ToolStripItemDisplayStyle.ImageAndText
+                : ToolStripItemDisplayStyle.Text;
+            _browserNavigationSeparator.Visible = size1;
+            _searchText.Width = _ui.GetLength(size1 ? SEARCH_TEXT_BIG_WIDTH : SEARCH_TEXT_SMALL_WIDTH);
+
+            _browseBackButton.Visible = size2;
+            _browseForwardButton.Visible = size2;
+            _refreshButton.Visible = size2;
+            _homeButton.Visible = size2;
         }
         catch { }
     }
