@@ -524,7 +524,6 @@ public sealed class ImportControl : UserControl
                 var progressRect = rect;
                 progressRect.Inflate(_ui.GetSize(-1, -1));
                 g.SetClip(progressRect);
-                progress = 1;
                 progressRect.Width = (int)(rect.Width * Math.Clamp(progress, 0, 1));
                 g.FillRectangle(foregroundBrush, progressRect);
                 g.ResetClip();
