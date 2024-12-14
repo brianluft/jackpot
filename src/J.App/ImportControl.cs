@@ -670,6 +670,9 @@ public sealed class ImportControl : UserControl
 
     private void StartButton_Click(object? sender, EventArgs e)
     {
+        _uploadedBytesMonotonic = 0;
+        _uploadedBytesMonotonicStopwatch.Restart();
+        _s3Uploader.Reset();
         ShowMessageBoxOnException(_queue.Start);
     }
 

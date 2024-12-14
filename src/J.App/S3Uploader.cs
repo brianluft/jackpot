@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
 using J.Core;
@@ -41,6 +40,12 @@ public sealed class S3Uploader : IDisposable
             thread.Start();
             _threads[i] = thread;
         }
+    }
+
+    public void Reset()
+    {
+        _ = Interlocked.Exchange(ref _uploadedBytesWithRollbacks, 0);
+        _ = Interlocked.Exchange(ref _uploadedBytesMonotonic, 0);
     }
 
     private void WorkerThread()
