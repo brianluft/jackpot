@@ -1,4 +1,6 @@
-﻿namespace J.App;
+﻿using System.Media;
+
+namespace J.App;
 
 public sealed class MessageForm : Form
 {
@@ -15,7 +17,7 @@ public sealed class MessageForm : Form
 
         var image = icon switch
         {
-            MessageBoxIcon.Error or MessageBoxIcon.Warning => ui.InvertColorsInPlace(
+            MessageBoxIcon.Stop or MessageBoxIcon.Error or MessageBoxIcon.Warning => ui.InvertColorsInPlace(
                 ui.GetScaledBitmapResource("Warning.png", 32, 32)
             ),
             MessageBoxIcon.Question => ui.InvertColorsInPlace(ui.GetScaledBitmapResource("Question.png", 32, 32)),
@@ -98,6 +100,13 @@ public sealed class MessageForm : Form
         f.Shown += delegate
         {
             buttonControls[defaultButtonIndex].Focus();
+
+            if (icon == MessageBoxIcon.Information)
+                SystemSounds.Exclamation.Play();
+            else if (icon is MessageBoxIcon.Stop or MessageBoxIcon.Error or MessageBoxIcon.Warning)
+                SystemSounds.Hand.Play();
+            else if (icon == MessageBoxIcon.Question)
+                SystemSounds.Question.Play();
         };
         f.DialogResult = buttonControls[^1].DialogResult;
         return owner is null ? f.ShowDialog() : f.ShowDialog(owner);
