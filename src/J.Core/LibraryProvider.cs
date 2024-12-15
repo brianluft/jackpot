@@ -122,16 +122,7 @@ public sealed partial class LibraryProvider : IDisposable
 
             if (nextVersion == 1)
             {
-                Execute(
-                    GetResourceText($"Migrate-1.sql"),
-                    x =>
-                    {
-                        x.AddWithValue("@new_tag_type_id1", new TagTypeId().Value);
-                        x.AddWithValue("@new_tag_type_id2", new TagTypeId().Value);
-                        x.AddWithValue("@new_tag_type_id3", new TagTypeId().Value);
-                        x.AddWithValue("@new_tag_type_id4", new TagTypeId().Value);
-                    }
-                );
+                Execute(GetResourceText($"Migrate-1.sql"));
             }
             else if (nextVersion == 2)
             {
@@ -769,7 +760,7 @@ public sealed partial class LibraryProvider : IDisposable
         var changed = await HasRemoteVersionChangedAsync(s3, cancel).ConfigureAwait(false);
         if (changed)
         {
-            await SyncDownAsync(updateProgress, cancel).ConfigureAwait(false);
+            await SyncDownAsync(updateProgress, false, cancel).ConfigureAwait(false);
             throw new Exception(
                 "Another user updated the library at the same time and your change failed. Please try again."
             );
@@ -862,14 +853,14 @@ public sealed partial class LibraryProvider : IDisposable
         return localVersionId != remoteVersionId;
     }
 
-    public async Task<bool> SyncDownAsync(Action<double> updateProgress, CancellationToken cancel)
+    public async Task<bool> SyncDownAsync(Action<double> updateProgress, bool force, CancellationToken cancel)
     {
         var settings = _accountSettingsProvider.Current;
         using var s3 = _accountSettingsProvider.CreateAmazonS3Client();
 
         // Check object version to see if anything has changed.
         var changed = await HasRemoteVersionChangedAsync(s3, cancel).ConfigureAwait(false);
-        if (!changed)
+        if (!force && !changed)
             return false;
 
         // Download from S3.
@@ -905,7 +896,7 @@ public sealed partial class LibraryProvider : IDisposable
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             // The file isn't there. Treat it as an empty library.
-            remote = new([], [], [], []);
+            remote = SyncLibrary.Default;
             etag = "";
         }
 
@@ -1035,7 +1026,21 @@ public sealed partial class LibraryProvider : IDisposable
         List<TagType> TagTypes,
         List<Tag> Tags,
         List<MovieTag> MovieTags
-    );
+    )
+    {
+        public static SyncLibrary Default =>
+            new(
+                [],
+                [
+                    new TagType(new TagTypeId(), 0, "Actor", "Actors"),
+                    new TagType(new TagTypeId(), 1, "Series", "Series"),
+                    new TagType(new TagTypeId(), 1, "Studio", "Studios"),
+                    new TagType(new TagTypeId(), 1, "Category", "Categories"),
+                ],
+                [],
+                []
+            );
+    }
 
     [GeneratedRegex(@"movie(\d+).ts")]
     private static partial Regex TsFilenameRegex();

@@ -14,7 +14,7 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
         await _mutateLock.WaitAsync(cancel).ConfigureAwait(false);
         try
         {
-            await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), cancel).ConfigureAwait(false);
+            await libraryProvider.SyncDownAsync(x => updateProgress(0.4 * x), false, cancel).ConfigureAwait(false);
             action();
             await libraryProvider.SyncUpAsync(x => updateProgress(0.4 + 0.4 * x), cancel).ConfigureAwait(false);
             m3U8FolderSync.Sync(x => updateProgress(0.8 + 0.2 * x), cancel);
@@ -245,5 +245,5 @@ public sealed class LibraryProviderAdapter(LibraryProvider libraryProvider, M3u8
     }
 
     public async Task SyncDownAsync(Action<double> updateProgress, CancellationToken cancel) =>
-        await libraryProvider.SyncDownAsync(updateProgress, cancel).ConfigureAwait(false);
+        await libraryProvider.SyncDownAsync(updateProgress, false, cancel).ConfigureAwait(false);
 }

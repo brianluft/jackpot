@@ -26,7 +26,8 @@ public sealed class LoginForm : Form
         _keyFlow,
         _encryptionFlow;
     private readonly LinkLabel _b2BucketLink,
-        _b2KeyLink;
+        _b2KeyLink,
+        _gettingStartedLink;
     private readonly PictureBox _b2BucketIconPicture,
         _b2KeyIconPicture,
         _encryptionIconPicture;
@@ -270,12 +271,15 @@ public sealed class LoginForm : Form
         }
         catch (Exception ex)
         {
-            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
     private AccountSettings GetAccountSettings()
     {
+        if (string.IsNullOrWhiteSpace(_bucketText.Text))
+            throw new Exception("Please enter a bucket name.");
+
         if (string.IsNullOrWhiteSpace(_endpointText.Text))
             throw new Exception("Please enter an endpoint.");
 
@@ -284,9 +288,6 @@ public sealed class LoginForm : Form
 
         if (string.IsNullOrWhiteSpace(_secretAccessKeyText.Text))
             throw new Exception("Please enter an applicationKey.");
-
-        if (string.IsNullOrWhiteSpace(_bucketText.Text))
-            throw new Exception("Please enter a bucket name.");
 
         if (string.IsNullOrWhiteSpace(_passwordText.Text))
             throw new Exception("Please enter an encryption password.");

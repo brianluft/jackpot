@@ -1,4 +1,6 @@
-﻿using System.Media;
+﻿using System.Diagnostics;
+using System.Media;
+using J.Core;
 
 namespace J.App;
 
@@ -10,7 +12,7 @@ public sealed class MessageForm : Form
     private readonly MyLabel _label;
     private readonly FlowLayoutPanel _buttonFlow;
 
-    private MessageForm(string message, string caption, MessageBoxIcon icon)
+    private MessageForm(string message, string caption, MessageBoxIcon icon, string? wikiUrl)
     {
         Ui ui = new(this);
         _ui = ui;
@@ -25,14 +27,14 @@ public sealed class MessageForm : Form
             _ => throw new Exception("Unsupported message box icon."),
         };
 
-        Controls.Add(_table = ui.NewTable(2, 2));
+        Controls.Add(_table = ui.NewTable(2, 3));
         {
             _table.RowStyles[0].SizeType = SizeType.Percent;
             _table.RowStyles[0].Height = 100;
 
             _table.Controls.Add(_pictureBox = ui.NewPictureBox(image), 0, 0);
             {
-                _table.SetRowSpan(_pictureBox, 2);
+                _table.SetRowSpan(_pictureBox, 3);
                 _pictureBox.Margin += ui.RightSpacing;
             }
 
@@ -41,7 +43,21 @@ public sealed class MessageForm : Form
                 _label.MaximumSize = ui.GetSize(400, 1000);
             }
 
-            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 1, 1);
+            if (wikiUrl is not null)
+            {
+                LinkLabel link;
+
+                _table.Controls.Add(link = ui.NewLinkLabel("Read the Jackpot wiki for help on this error"), 1, 1);
+                {
+                    link.Margin += ui.TopSpacing;
+                    link.LinkClicked += delegate
+                    {
+                        Process.Start(new ProcessStartInfo { FileName = wikiUrl!, UseShellExecute = true });
+                    };
+                }
+            }
+
+            _table.Controls.Add(_buttonFlow = ui.NewFlowRow(), 1, 2);
             {
                 _buttonFlow.Dock = DockStyle.Right;
                 _buttonFlow.Margin += ui.TopSpacingBig;
@@ -72,17 +88,32 @@ public sealed class MessageForm : Form
 
     public static DialogResult Show(
         IWin32Window? owner,
-        string message,
+        Exception exception,
         string caption,
         MessageBoxButtons buttons,
         MessageBoxIcon icon,
         int defaultButtonIndex = 0
     )
     {
+        var wikiUrl = exception is JException jex ? jex.WikiUrl : null;
+        var message = exception is AggregateException aex ? aex.InnerExceptions.First().Message : exception.Message;
+        return Show(owner, message, caption, buttons, icon, defaultButtonIndex, wikiUrl);
+    }
+
+    public static DialogResult Show(
+        IWin32Window? owner,
+        string message,
+        string caption,
+        MessageBoxButtons buttons,
+        MessageBoxIcon icon,
+        int defaultButtonIndex = 0,
+        string? wikiUrl = null
+    )
+    {
         if (buttons is not (MessageBoxButtons.OK or MessageBoxButtons.OKCancel))
             throw new ArgumentException("Unsupported buttons.", nameof(buttons));
 
-        using MessageForm f = new(message, caption, icon);
+        using MessageForm f = new(message, caption, icon, wikiUrl);
 
         List<MyButton> buttonControls = [];
 

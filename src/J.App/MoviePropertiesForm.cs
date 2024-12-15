@@ -302,7 +302,7 @@ public sealed class MoviePropertiesForm : Form
         }
         catch (Exception ex)
         {
-            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

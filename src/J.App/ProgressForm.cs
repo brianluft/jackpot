@@ -59,7 +59,7 @@ public sealed class ProgressForm : Form
             case DialogResult.Abort:
                 MessageForm.Show(
                     owner,
-                    f.Exception!.SourceException.Message,
+                    f.Exception!.SourceException,
                     "Error",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
@@ -101,7 +101,7 @@ public sealed class ProgressForm : Form
                 case DialogResult.Abort:
                     MessageForm.Show(
                         owner,
-                        f.Exception!.SourceException.Message,
+                        f.Exception!.SourceException,
                         "Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error

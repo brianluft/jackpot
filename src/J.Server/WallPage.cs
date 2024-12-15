@@ -272,7 +272,7 @@ public static class WallPage
                                 element.style.height = `${pos.height}px`;
                             }
                             updateVisibleVideos();
-                        }, 150);
+                        }, 25);
                     });
 
                     // Pause and resume videos when browser is hidden or shown

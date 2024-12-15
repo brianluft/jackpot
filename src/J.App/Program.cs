@@ -1,3 +1,6 @@
+using System.Net;
+using Amazon.S3;
+using ICSharpCode.SharpZipLib.Zip;
 using J.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
@@ -177,28 +180,51 @@ public static class Program
                         "Connecting...",
                         (updateProgress, updateMessage, cancel) =>
                         {
-                            _libraryProvider.Connect();
+                            bool didSyncLibrary;
+                            try
+                            {
+                                _libraryProvider.Connect();
 
-                            // Most of the time we don't need to sync the library.
-                            // However, when we do, it can take a huge amount of time.
-                            // SyncDown won't call the progress callback if it doesn't need to sync.
-                            updateMessage("Synchronizing library...");
-                            var didSyncLibrary = _libraryProvider
-                                .SyncDownAsync(x => updateProgress(0.80 * x), cancel)
-                                .GetAwaiter()
-                                .GetResult();
+                                // Most of the time we don't need to sync the library.
+                                // However, when we do, it can take a huge amount of time.
+                                // SyncDown won't call the progress callback if it doesn't need to sync.
+                                updateMessage("Synchronizing library...");
+                                didSyncLibrary = _libraryProvider
+                                    .SyncDownAsync(x => updateProgress(0.80 * x), true, cancel)
+                                    .GetAwaiter()
+                                    .GetResult();
 
-                            var start = didSyncLibrary ? 0.80d : 0d;
-                            var left = 1 - start;
+                                var start = didSyncLibrary ? 0.80d : 0d;
+                                var left = 1 - start;
 
-                            updateMessage("Starting background service...");
-                            _client.Start();
+                                updateMessage("Starting background service...");
+                                _client.Start();
 
-                            updateMessage("Synchronizing network sharing folder...");
-                            _m3u8FolderSync.InvalidateAll();
-                            _m3u8FolderSync.Sync(x => updateProgress(start + left * x), cancel);
+                                updateMessage("Synchronizing network sharing folder...");
+                                _m3u8FolderSync.InvalidateAll();
+                                _m3u8FolderSync.Sync(x => updateProgress(start + left * x), cancel);
 
-                            return Task.CompletedTask;
+                                return Task.CompletedTask;
+                            }
+                            catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+                            {
+                                throw new JException(
+                                    "Access to the bucket was denied. Please check that your application key is correct and that it has read/write permission for your bucket.",
+                                    "https://github.com/brianluft/jackpot/wiki/Troubleshooting:-Access-Denied"
+                                );
+                            }
+                            catch (HttpRequestException ex)
+                                when (ex.HttpRequestError == HttpRequestError.NameResolutionError)
+                            {
+                                throw new JException(
+                                    "Jackpot failed to resolve the endpoint hostname. Please check that the endpoint is correct.",
+                                    "https://github.com/brianluft/jackpot/wiki/Troubleshooting:-Failed-to-Resolve-Endpoint-Hostname"
+                                );
+                            }
+                            catch (ZipException ex) when (ex.Message == "Invalid password for AES")
+                            {
+                                throw new JException("Your encryption password is not correct. Please enter it again.");
+                            }
                         },
                         outcome =>
                         {

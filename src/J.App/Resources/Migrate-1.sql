@@ -12,13 +12,6 @@ CREATE TABLE tag_types (
 	plural_name TEXT NOT NULL
 ) WITHOUT ROWID;
 
-INSERT INTO tag_types (id, sort_index, singular_name, plural_name)
-VALUES
-	(@new_tag_type_id1, 1, 'Actor', 'Actors'),
-	(@new_tag_type_id2, 2, 'Series', 'Series'),
-	(@new_tag_type_id3, 3, 'Studio', 'Studios'),
-	(@new_tag_type_id4, 4, 'Category', 'Categories');
-
 CREATE TABLE tags (
 	id TEXT PRIMARY KEY, -- e.g. 'tag-...'
 	tag_type_id TEXT NOT NULL,

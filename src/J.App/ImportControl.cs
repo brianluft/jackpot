@@ -701,7 +701,7 @@ public sealed class ImportControl : UserControl
         }
         catch (Exception ex)
         {
-            MessageForm.Show(this, ex.Message, "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex, "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }

@@ -1132,7 +1132,7 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -1708,7 +1708,7 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }
@@ -1722,7 +1722,7 @@ public sealed partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageForm.Show(this, ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageForm.Show(this, ex, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
     }
