@@ -26,7 +26,6 @@ public sealed partial class MainForm : Form
     private readonly M3u8FolderSync _m3U8FolderSync;
     private readonly ImportControl _importControl;
     private readonly TagsControl _tagsControl;
-    private readonly ProcessTempDir _processTempDir;
     private readonly Ui _ui;
     private readonly ToolStrip _toolStrip;
     private readonly ToolStripDropDownButton _filterButton,
@@ -83,8 +82,7 @@ public sealed partial class MainForm : Form
         MovieExporter movieExporter,
         M3u8FolderSync m3U8FolderSync,
         ImportControl importControl,
-        TagsControl tagsControl,
-        ProcessTempDir processTempDir
+        TagsControl tagsControl
     )
     {
         _serviceProvider = serviceProvider;
@@ -96,7 +94,6 @@ public sealed partial class MainForm : Form
         _m3U8FolderSync = m3U8FolderSync;
         _importControl = importControl;
         _tagsControl = tagsControl;
-        _processTempDir = processTempDir;
         Ui ui = new(this);
         _ui = ui;
 
@@ -272,7 +269,7 @@ public sealed partial class MainForm : Form
 
                 _menuButton.DropDownItems.Add(ui.NewToolStripSeparator());
 
-                _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Account settings"));
+                _menuButton.DropDownItems.Add(_logOutButton = ui.NewToolStripMenuItem("Account settings..."));
                 {
                     _logOutButton.Click += DisconnectButton_Click;
                 }
