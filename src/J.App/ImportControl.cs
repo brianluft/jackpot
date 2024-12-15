@@ -326,6 +326,12 @@ public sealed class ImportControl : UserControl
         foreach (DataRow x in _queue.DataTable.Rows)
             mibTotal += (double)x["size_mb"];
 
+        // 1% extra for .ts splitting overhead.
+        mibTotal *= 1.01;
+
+        // 2MB extra for the clip in each zip.
+        mibTotal += _queue.DataTable.Rows.Count * 2;
+
         string remainingStr = "\u2014";
         var mibRemaining = mibTotal - mibWithRollback;
         if (mibRemaining > 0 && elapsed.TotalSeconds > 0)
