@@ -2,16 +2,17 @@
 
 <p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif"></a></p>
 
-<h3 align="center">Personal streaming video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage<br><br>
+<h3 align="center">Personal video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage<br><br>
 <b><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></b></h3>
 
 <br>
 
 ## Features
 
+- **Move your movie library into the cloud.** Get rid of that external hard drive.<br><br>
 - **Browse a grid of moving video clips.** A fun, visual way to find something to watch in your collection.<br><br>
 - **Organize your media with custom tags.** Create your own tags and apply them to your videos.<br><br>
-- **Stream videos using the <a href="https://www.videolan.org/vlc/">VLC app</a> on any local device.** Automatically share a folder of <a href="https://en.wikipedia.org/wiki/M3U"><code>.M3U8</code></a> playlist files to allow Apple and Android devices to stream through your PC.<br><br>
+- **Play videos on any local device.** Non-Windows devices can stream through your PC. [Learn more in the wiki.](https://github.com/brianluft/jackpot/wiki/Network-Sharing)<br><br>
 - **End-to-end encryption.** All data in the cloud is stored in AES-encrypted <code>.ZIP</code> files with a password that only you know.<br><br>
 - **No Linux, no Docker, and no complex setup.** Jackpot is a Windows app that comes with everything you need.
 
