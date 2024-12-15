@@ -36,10 +36,10 @@ public sealed class MyWebView2 : WebView2
 
             BeginInvoke(() =>
             {
-                // Don't cache documents.
+                // Avoid caching anything.
                 CoreWebView2.AddWebResourceRequestedFilter(
                     "*",
-                    CoreWebView2WebResourceContext.Document,
+                    CoreWebView2WebResourceContext.All,
                     CoreWebView2WebResourceRequestSourceKinds.All
                 );
 

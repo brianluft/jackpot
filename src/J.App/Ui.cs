@@ -1022,6 +1022,7 @@ public sealed partial class Ui
                 Padding = Padding.Empty,
                 Margin = Padding.Empty,
                 BackColor = MyColors.MainFormBackground,
+                AllowExternalDrop = false,
             };
 
         return browser;

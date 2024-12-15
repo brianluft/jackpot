@@ -371,7 +371,6 @@ public sealed partial class MainForm : Form
             _browser.BringToFront();
             _browser.NavigationCompleted += Browser_NavigationCompleted;
             _browser.WebMessageReceived += Browser_WebMessageReceived;
-            _browser.AllowExternalDrop = false;
         }
 
         Controls.Add(_importControl);
