@@ -480,7 +480,7 @@ public sealed partial class MainForm : Form
             {
                 var filePath = Path.Combine(_processTempDir.Path, "server.log");
                 File.WriteAllLines(filePath, _client.GetLog());
-                Process.Start("notepad.exe", filePath);
+                Process.Start("notepad.exe", filePath)!.Dispose();
             }
             else if (clicked == taskDialogPage.Buttons[1])
             {

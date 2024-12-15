@@ -52,7 +52,7 @@ public sealed class MessageForm : Form
                     link.Margin += ui.TopSpacing;
                     link.LinkClicked += delegate
                     {
-                        Process.Start(new ProcessStartInfo { FileName = wikiUrl!, UseShellExecute = true });
+                        Process.Start(new ProcessStartInfo { FileName = wikiUrl!, UseShellExecute = true })!.Dispose();
                     };
                 }
             }

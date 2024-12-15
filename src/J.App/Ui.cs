@@ -232,6 +232,8 @@ public sealed partial class Ui
             Text = text,
             AutoSize = true,
             LinkColor = MyColors.Link,
+            ActiveLinkColor = MyColors.LinkPressed,
+            VisitedLinkColor = MyColors.Link,
             Margin = Padding.Empty,
         };
     }

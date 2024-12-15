@@ -343,12 +343,14 @@ public sealed class OptionsForm : Form
 
     private void WikiLink_Click(object? sender, EventArgs e)
     {
-        Process.Start(
-            new ProcessStartInfo
-            {
-                FileName = "https://github.com/brianluft/jackpot/wiki/Network-Sharing",
-                UseShellExecute = true,
-            }
-        );
+        Process
+            .Start(
+                new ProcessStartInfo
+                {
+                    FileName = "https://github.com/brianluft/jackpot/wiki/Network-Sharing",
+                    UseShellExecute = true,
+                }
+            )!
+            .Dispose();
     }
 }

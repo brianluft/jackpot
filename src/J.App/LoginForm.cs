@@ -43,12 +43,22 @@ public sealed class LoginForm : Form
         Ui ui = new(this);
         MyLabel label;
 
-        Controls.Add(_formTable = ui.NewTable(2, 2));
+        Controls.Add(_formTable = ui.NewTable(2, 3));
         {
             _formTable.Padding = ui.DefaultPadding;
-            _formTable.Dock = DockStyle.Fill;
 
-            _formTable.Controls.Add(_b2Table = ui.NewTable(2, 3), 0, 0);
+            _formTable.Controls.Add(
+                _gettingStartedLink = ui.NewLinkLabel("Read the “Getting Started” guide on the Jackpot wiki"),
+                0,
+                0
+            );
+            {
+                _formTable.SetColumnSpan(_gettingStartedLink, 2);
+                _gettingStartedLink.Margin += ui.BottomSpacingBig;
+                _gettingStartedLink.LinkClicked += GettingStartedLink_LinkClicked;
+            }
+
+            _formTable.Controls.Add(_b2Table = ui.NewTable(2, 3), 0, 1);
             {
                 _formTable.SetColumnSpan(_b2Table, 2);
                 _b2Table.Padding = ui.LeftSpacing + ui.RightSpacing;
@@ -180,7 +190,7 @@ public sealed class LoginForm : Form
                 }
             }
 
-            _formTable.Controls.Add(_toolsButtonFlow = ui.NewFlowRow(), 0, 1);
+            _formTable.Controls.Add(_toolsButtonFlow = ui.NewFlowRow(), 0, 2);
             {
                 _toolsButtonFlow.Margin = ui.TopSpacingBig;
                 _toolsButtonFlow.Controls.Add(_toolsButton = ui.NewButton("Tools 🞃"));
@@ -189,7 +199,7 @@ public sealed class LoginForm : Form
                 }
             }
 
-            _formTable.Controls.Add(_saveCancelButtonsFlow = ui.NewFlowRow(), 1, 1);
+            _formTable.Controls.Add(_saveCancelButtonsFlow = ui.NewFlowRow(), 1, 2);
             {
                 _saveCancelButtonsFlow.Dock = DockStyle.Right;
                 _saveCancelButtonsFlow.Margin = ui.TopSpacingBig;
@@ -355,5 +365,12 @@ public sealed class LoginForm : Form
     private void ToolsButton_Click(object? sender, EventArgs e)
     {
         _toolsMenu.Show(_toolsButton, 0, _toolsButton.Height);
+    }
+
+    private void GettingStartedLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
+    {
+        ProcessStartInfo psi =
+            new() { FileName = "https://github.com/brianluft/jackpot/wiki/Getting-Started", UseShellExecute = true };
+        Process.Start(psi)!.Dispose();
     }
 }
