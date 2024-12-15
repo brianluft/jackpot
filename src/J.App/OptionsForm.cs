@@ -72,12 +72,12 @@ public sealed class OptionsForm : Form
                         _libraryFlow.Padding = ui.DefaultPadding;
 
                         _libraryFlow.Controls.Add(
-                            ui.NewLabeledPair("Thumbnail &columns:", _columnCountCombo = ui.NewDropDownList(200))
+                            ui.NewLabeledPair("Grid &columns:", _columnCountCombo = ui.NewDropDownList(200))
                         );
                         {
                             _columnCountCombo.Margin += ui.BottomSpacing;
                             _columnCountCombo.Items.AddRange(
-                                Enumerable.Range(1, 8).Select(i => i.ToString()).ToArray()
+                                Enumerable.Range(1, 5).Select(i => i.ToString()).ToArray()
                             );
                             _columnCountCombo.SelectedIndex =
                                 (int)preferences.GetInteger(Preferences.Key.Shared_ColumnCount) - 1;
@@ -109,7 +109,7 @@ public sealed class OptionsForm : Form
                         }
 
                         _libraryFlow.Controls.Add(
-                            _exitConfirmationCheck = ui.NewCheckBox("Confirm when exiting the app")
+                            _exitConfirmationCheck = ui.NewCheckBox("Confirm when e&xiting the app")
                         );
                         {
                             _exitConfirmationCheck.Margin += ui.BottomSpacing;
@@ -133,7 +133,7 @@ public sealed class OptionsForm : Form
                             _wikiLink.Click += WikiLink_Click;
                         }
 
-                        (p, _hostnameText) = ui.NewLabeledTextBox("This PC's IP address or hostname:", 200);
+                        (p, _hostnameText) = ui.NewLabeledTextBox("This PC's IP &address or hostname:", 200);
                         {
                             p.Margin += ui.TopSpacingBig;
                             _sharingFlow.Controls.Add(p);
@@ -152,7 +152,7 @@ public sealed class OptionsForm : Form
                         {
                             _shareTypesFlow.Controls.Add(_shareVlcFlow = ui.NewFlowColumn());
                             {
-                                _shareVlcFlow.Controls.Add(_shareVlcCheck = ui.NewCheckBox("Allow VLC access"));
+                                _shareVlcFlow.Controls.Add(_shareVlcCheck = ui.NewCheckBox("Allow &VLC access"));
                                 {
                                     _shareVlcCheck.Margin += ui.TopSpacingBig + ui.BottomSpacing;
                                     _shareVlcCheck.Checked = preferences.GetBoolean(
@@ -175,7 +175,7 @@ public sealed class OptionsForm : Form
                                     _shareVlcControls.Add(p);
                                 }
 
-                                (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("Folder:", 325, _ => { });
+                                (p, _m3u8FolderText) = ui.NewLabeledOpenFolderTextBox("&Folder:", 325, _ => { });
                                 {
                                     _shareVlcFlow.Controls.Add(p);
                                     p.Margin += ui.BottomSpacing + ui.GetPadding(18, 0, 0, 0);
@@ -191,7 +191,7 @@ public sealed class OptionsForm : Form
                                 _shareBrowserFlow.Margin += ui.GetPadding(15, 0, 0, 0);
 
                                 _shareBrowserFlow.Controls.Add(
-                                    _shareBrowserCheck = ui.NewCheckBox("Allow web browser access")
+                                    _shareBrowserCheck = ui.NewCheckBox("Allow &web browser access")
                                 );
                                 {
                                     _shareBrowserCheck.Margin += ui.TopSpacingBig;
@@ -202,7 +202,7 @@ public sealed class OptionsForm : Form
                                 }
 
                                 _shareBrowserFlow.Controls.Add(
-                                    p = ui.NewLabeledPair("Address:", _browserFlow = ui.NewFlowColumn())
+                                    p = ui.NewLabeledPair("A&ddress:", _browserFlow = ui.NewFlowColumn())
                                 );
                                 {
                                     p.Margin += ui.TopSpacing + ui.GetPadding(18, 0, 0, 0);
