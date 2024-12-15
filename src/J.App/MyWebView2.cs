@@ -12,7 +12,7 @@ public sealed class MyWebView2 : WebView2
         CoreWebView2InitializationCompleted += delegate
         {
             var settings = CoreWebView2.Settings;
-            settings.AreBrowserAcceleratorKeysEnabled = true;
+            settings.AreBrowserAcceleratorKeysEnabled = false;
             settings.AreDefaultContextMenusEnabled = true;
             settings.AreDefaultScriptDialogsEnabled = false;
             settings.AreHostObjectsAllowed = false;
@@ -42,6 +42,7 @@ public sealed class MyWebView2 : WebView2
                     CoreWebView2WebResourceContext.Document,
                     CoreWebView2WebResourceRequestSourceKinds.All
                 );
+
                 CoreWebView2.WebResourceRequested += (sender, e) =>
                 {
                     e.Request.Headers.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -54,5 +55,29 @@ public sealed class MyWebView2 : WebView2
         };
 
         _ = EnsureCoreWebView2Async(Program.SharedCoreWebView2Environment);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        // On F5 or Ctrl+R, reload the page.
+        // On Alt+Left or Alt+Right, navigate back or forward.
+
+        if (e.KeyCode == Keys.F5 || (e.KeyCode == Keys.R && e.Control))
+        {
+            CoreWebView2.Reload();
+            e.Handled = true;
+        }
+        else if (e.Alt && e.KeyCode == Keys.Left)
+        {
+            CoreWebView2.GoBack();
+            e.Handled = true;
+        }
+        else if (e.Alt && e.KeyCode == Keys.Right)
+        {
+            CoreWebView2.GoForward();
+            e.Handled = true;
+        }
+
+        base.OnKeyDown(e);
     }
 }

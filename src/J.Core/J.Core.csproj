@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="3.7.406.2" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.401.2" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.410.6" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.401.13" />
 	<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
 	<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
 	<PackageReference Include="Polly" Version="8.5.0" />
