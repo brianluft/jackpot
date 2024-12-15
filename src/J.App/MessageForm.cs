@@ -11,6 +11,7 @@ public sealed class MessageForm : Form
     private readonly PictureBox _pictureBox;
     private readonly MyLabel _label;
     private readonly FlowLayoutPanel _buttonFlow;
+    private readonly System.Windows.Forms.Timer _timer;
 
     private MessageForm(string message, string caption, MessageBoxIcon icon, string? wikiUrl)
     {
@@ -64,6 +65,9 @@ public sealed class MessageForm : Form
             }
         }
 
+        _timer = new() { Interval = 500, Enabled = false };
+        _timer.Tick += Timer_Tick;
+
         Text = caption;
         StartPosition = FormStartPosition.CenterParent;
         AutoSize = true;
@@ -77,11 +81,28 @@ public sealed class MessageForm : Form
         Padding = ui.DefaultPadding;
     }
 
+    private void Timer_Tick(object? sender, EventArgs e)
+    {
+        _timer.Stop();
+
+        foreach (Control control in _buttonFlow.Controls)
+            control.Enabled = true;
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (_timer.Enabled)
+            e.Cancel = true;
+
+        base.OnFormClosing(e);
+    }
+
     private MyButton AddButton(string text, DialogResult dialogResult)
     {
         var button = _ui.NewButton(text);
         button.DialogResult = dialogResult;
         button.Margin += _ui.ButtonSpacing;
+        button.Enabled = false;
         _buttonFlow.Controls.Add(button);
         return button;
     }
@@ -138,6 +159,8 @@ public sealed class MessageForm : Form
                 SystemSounds.Hand.Play();
             else if (icon == MessageBoxIcon.Question)
                 SystemSounds.Question.Play();
+
+            f._timer.Start();
         };
         f.DialogResult = buttonControls[^1].DialogResult;
         return owner is null ? f.ShowDialog() : f.ShowDialog(owner);
