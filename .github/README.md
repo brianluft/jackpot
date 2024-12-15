@@ -2,8 +2,9 @@
 
 <p align="center"><a href="img/main-screenshot.jpg"><img src="img/main-animation.gif"></a></p>
 
-<h3 align="center">Personal video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage<br><br>
-<b><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></b></h3>
+<h3 align="center">Personal video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</h3>
+
+<p align="center"><b><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></b></p>
 
 <br>
 
