@@ -99,6 +99,7 @@ public sealed class TagForm : Form
         {
             var tag = _libraryProvider.GetTag(id);
             _nameTextBox.Text = tag.Name;
+            _nameTextBox.Select(0, 0);
         }
     }
 }

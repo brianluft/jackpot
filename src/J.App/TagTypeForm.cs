@@ -76,7 +76,7 @@ public sealed class TagTypeForm : Form
         _singularNameText.Text = tagType.SingularName;
         _pluralNameText.Text = tagType.PluralName;
         _singularNameText.Focus();
-        _singularNameText.SelectAll();
+        _singularNameText.Select(0, 0);
         _okButton.Text = "Rename";
     }
 
