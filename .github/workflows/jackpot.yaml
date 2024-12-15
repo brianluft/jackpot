@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: warp-windows-latest-x64-4x
+    runs-on: warp-windows-latest-x64-8x-spot
 
     steps:
       - name: Checkout code
