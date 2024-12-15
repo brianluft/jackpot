@@ -262,7 +262,7 @@ public sealed class TagsControl : UserControl
             _rightData.Rows.Clear();
             foreach (var x in _libraryProvider.GetTags(tagType.Id).OrderBy(x => x.Name).ThenBy(x => x.Id.Value))
             {
-                _rightData.Rows.Add(x.Id, $"{tagType.PluralName}  🞂  {x.Name}");
+                _rightData.Rows.Add(x.Id, $"{x.Name} ({tagType.SingularName})");
             }
         }
         finally
