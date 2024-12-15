@@ -1,6 +1,4 @@
-﻿using J.Core;
-
-namespace J.Core;
+﻿namespace J.Core;
 
 public static class ProcessTempDirCleaner
 {
@@ -16,7 +14,7 @@ public static class ProcessTempDirCleaner
                 try
                 {
                     File.Delete(Path.Combine(dir, ProcessTempDir.LOCK_FILENAME));
-                    Directory.Delete(dir, true);
+                    DeleteDirectory(dir);
                 }
                 catch { }
             }
@@ -25,5 +23,42 @@ public static class ProcessTempDirCleaner
         {
             // We did our best. Don't let it crash the app.
         }
+    }
+
+    private static void DeleteDirectory(string path)
+    {
+        try
+        {
+            foreach (var file in Directory.GetFiles(path))
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
+                catch { }
+
+                try
+                {
+                    File.Delete(file);
+                }
+                catch { }
+            }
+        }
+        catch { }
+
+        try
+        {
+            foreach (var dir in Directory.GetDirectories(path))
+            {
+                DeleteDirectory(dir);
+            }
+        }
+        catch { }
+
+        try
+        {
+            Directory.Delete(path, true);
+        }
+        catch { }
     }
 }
