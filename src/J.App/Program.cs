@@ -53,6 +53,7 @@ public static class Program
         services.AddSingleton<M3u8FolderSync>();
         services.AddSingleton<MyApplicationContext>();
 
+        services.AddTransient<AboutForm>();
         services.AddTransient<AddTagsToMoviesForm>();
         services.AddTransient<FilterChooseTagForm>();
         services.AddTransient<FilterEnterStringForm>();

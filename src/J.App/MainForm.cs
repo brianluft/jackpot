@@ -457,45 +457,8 @@ public sealed partial class MainForm : Form
 
     private void AboutButton_Click(object? sender, EventArgs e)
     {
-        ShowMessageBoxOnException(() =>
-        {
-            var assembly = typeof(MainForm).Assembly;
-            var version = assembly.GetName().Version;
-
-            TaskDialogPage taskDialogPage =
-                new()
-                {
-                    Heading = "Jackpot Media Library",
-                    Caption = "About Jackpot",
-                    Icon = TaskDialogIcon.Information,
-                    Text = $"Version {version}",
-                };
-            taskDialogPage.Buttons.Add("Server log");
-            taskDialogPage.Buttons.Add("License info");
-            taskDialogPage.Buttons.Add(TaskDialogButton.OK);
-            taskDialogPage.DefaultButton = taskDialogPage.Buttons[2];
-            var clicked = TaskDialog.ShowDialog(this, taskDialogPage);
-            if (clicked == taskDialogPage.Buttons[0])
-            {
-                var filePath = Path.Combine(_processTempDir.Path, "server.log");
-                File.WriteAllLines(filePath, _client.GetLog());
-                Process.Start("notepad.exe", filePath)!.Dispose();
-            }
-            else if (clicked == taskDialogPage.Buttons[1])
-            {
-                Process
-                    .Start(
-                        new ProcessStartInfo(
-                            "msedge.exe",
-                            "\"" + Path.Combine(AppContext.BaseDirectory, "Resources", "License.html") + "\""
-                        )
-                        {
-                            UseShellExecute = true,
-                        }
-                    )!
-                    .Dispose();
-            }
-        });
+        using var f = _serviceProvider.GetRequiredService<AboutForm>();
+        f.ShowDialog(this);
     }
 
     protected override void OnLoad(EventArgs e)
