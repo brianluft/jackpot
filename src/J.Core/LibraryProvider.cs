@@ -892,6 +892,13 @@ public sealed partial class LibraryProvider : IDisposable
             cancel.ThrowIfCancellationRequested();
 
             etag = response.ETag;
+
+            if (!changed)
+            {
+                // If force=true, we just wanted to see that we could download and decrypt the file, but we already
+                // know nothing changed so we don't have to proceed to compare.
+                return false;
+            }
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
