@@ -6,16 +6,8 @@ public enum FilterFieldType
     TagType,
 }
 
-public readonly record struct FilterField(FilterFieldType Type, TagTypeId? TagTypeId)
+public readonly record struct FilterField(FilterFieldType Type, TagTypeId? TagTypeId, string DisplayName)
 {
-    public string GetDisplayName(TagType? tagType) =>
-        Type switch
-        {
-            FilterFieldType.Filename => "Filename",
-            FilterFieldType.TagType => tagType!.Value.SingularName,
-            _ => throw new Exception($"Unexpected {nameof(Type)}."),
-        };
-
     public bool IsOperatorApplicable(FilterOperator o) =>
         Type switch
         {

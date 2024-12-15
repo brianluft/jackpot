@@ -14,7 +14,7 @@ public readonly record struct FilterRule(
         TagType? filterFieldTagType = null;
         if (Field.Type == FilterFieldType.TagType)
             filterFieldTagType = tagTypes[Field.TagTypeId!];
-        StringBuilder sb = new($"{Field.GetDisplayName(filterFieldTagType)} {Operator.GetDisplayName(false)}");
+        StringBuilder sb = new($"{Field.DisplayName} {Operator.GetDisplayName(false)}");
 
         if (TagValues is not null)
         {

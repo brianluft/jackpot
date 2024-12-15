@@ -601,22 +601,25 @@ public sealed partial class MainForm : Form
             if (title.Length > 100)
                 title = title[..100] + "...";
 
-            _browserTabButton.Text = TruncateTitleText(title?.Replace("&", "&&") ?? "", _ui.GetLength(150));
+            _browserTabButton.Text = TruncateText(
+                title?.Replace("&", "&&") ?? "",
+                _toolStrip,
+                _browserTabButton.Font,
+                _ui.GetLength(150)
+            );
             _browseBackButton.Enabled = _browser.CanGoBack;
             _browseForwardButton.Enabled = _browser.CanGoForward;
         }
         catch { }
     }
 
-    private string TruncateTitleText(string text, int maxPixelWidth)
+    private string TruncateText(string text, Control control, Font font, int maxPixelWidth)
     {
         if (string.IsNullOrEmpty(text))
             return text;
 
-        var font = _browserTabButton.Font;
-
         // Using the Control's context for DPI-aware measurements
-        using var graphics = CreateGraphics();
+        using var graphics = control.CreateGraphics();
 
         // Check if the full text already fits
         var fullSize = TextRenderer.MeasureText(
@@ -947,8 +950,22 @@ public sealed partial class MainForm : Form
         List<FilterField> filterFields = [];
         foreach (var tagType in tagTypes.Values.OrderByDescending(x => x.SortIndex))
         {
+            var shortPluralLower = TruncateText(
+                tagType.PluralName.ToLower(),
+                _toolStrip,
+                _menuButton.Font,
+                _ui.GetLength(200)
+            );
+            var shortSingular = TruncateText(tagType.SingularName, _toolStrip, _menuButton.Font, _ui.GetLength(200));
+            var shortSingularLower = TruncateText(
+                tagType.SingularName.ToLower(),
+                _toolStrip,
+                _menuButton.Font,
+                _ui.GetLength(200)
+            );
+
             // Add menu item to the main menu for viewing the list page.
-            var menuItem = _ui.NewToolStripMenuItem($"Browse {tagType.PluralName.ToLower()}");
+            var menuItem = _ui.NewToolStripMenuItem($"Browse {shortPluralLower}");
             _menuButton.DropDownItems.Insert(1, menuItem);
             menuItem.Click += async delegate
             {
@@ -962,18 +979,18 @@ public sealed partial class MainForm : Form
             };
 
             // Add filter menu item
-            FilterField filterField = new(FilterFieldType.TagType, tagType.Id);
+            FilterField filterField = new(FilterFieldType.TagType, tagType.Id, shortSingular);
             filterFields.Add(filterField);
 
             // Add sort menu item
-            var sortItem = _ui.NewToolStripMenuItem($"By {tagType.SingularName.ToLower()}");
+            var sortItem = _ui.NewToolStripMenuItem($"By {shortSingularLower}");
             sortItem.Tag = tagType.Id;
             sortItem.Click += SortItem_Click;
             _sortButton.DropDownItems.Insert(lastIndex + 1, sortItem);
         }
 
         // Add a filter field for the filename, which is special.
-        filterFields.Add(new(FilterFieldType.Filename, null));
+        filterFields.Add(new(FilterFieldType.Filename, null, "Filename"));
 
         // Update the filter menu.
         var filterOperators = Enum.GetValues<FilterOperator>();
@@ -982,7 +999,7 @@ public sealed partial class MainForm : Form
             TagType? filterFieldTagType = null;
             if (filterField.TagTypeId is not null)
                 filterFieldTagType = tagTypes[filterField.TagTypeId];
-            var fieldItem = _ui.NewToolStripMenuItem(filterField.GetDisplayName(filterFieldTagType));
+            var fieldItem = _ui.NewToolStripMenuItem(filterField.DisplayName);
             _filterButton.DropDownItems.Insert(0, fieldItem);
 
             foreach (var filterOperator in filterOperators)
@@ -1177,8 +1194,8 @@ public sealed partial class MainForm : Form
                 _lastWindowState = WindowState;
             }
 
-            var size1 = Width >= _ui.GetLength(1100);
-            var size2 = Width >= _ui.GetLength(1300);
+            var size1 = Width >= _ui.GetLength(1150);
+            var size2 = Width >= _ui.GetLength(1350);
 
             _viewButton.DisplayStyle = size1 ? ToolStripItemDisplayStyle.ImageAndText : ToolStripItemDisplayStyle.Text;
             _sortButton.DisplayStyle = size1 ? ToolStripItemDisplayStyle.ImageAndText : ToolStripItemDisplayStyle.Text;

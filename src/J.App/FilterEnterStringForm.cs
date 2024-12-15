@@ -54,7 +54,7 @@ public sealed class FilterEnterStringForm : Form
 
     public void Initialize(FilterField filterField, FilterOperator filterOperator)
     {
-        Text = $"{filterField.GetDisplayName(null)} {filterOperator.GetDisplayName(true)}";
+        Text = $"{filterField.DisplayName} {filterOperator.GetDisplayName(true)}";
     }
 
     private void OkButton_Click(object? sender, EventArgs e)
