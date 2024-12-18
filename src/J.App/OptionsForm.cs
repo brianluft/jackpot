@@ -40,9 +40,25 @@ public sealed class OptionsForm : Form
         MoviePlayerToUse.Automatic,
         MoviePlayerToUse.Integrated,
         MoviePlayerToUse.WebBrowser,
+        MoviePlayerToUse.ChromeIncognitoTab,
+        MoviePlayerToUse.ChromeIncognitoWindow,
+        MoviePlayerToUse.EdgeInPrivateTab,
+        MoviePlayerToUse.EdgeInPrivateWindow,
+        MoviePlayerToUse.FirefoxPrivateTab,
         MoviePlayerToUse.Vlc,
     ];
-    private readonly string[] _playerNames = ["Automatic", "Integrated player", "Web browser", "VLC"];
+    private readonly string[] _playerNames =
+    [
+        "Automatic",
+        "Integrated player",
+        "Default web browser",
+        "Chrome (incognito, new tab)",
+        "Chrome (incognito, new window)",
+        "Edge (InPrivate, new tab)",
+        "Edge (InPrivate, new window)",
+        "Firefox (private)",
+        "VLC",
+    ];
 
     // Window maximize behavior
     private readonly List<WindowMaximizeBehavior> _windowMaximizeBehaviorValues =
@@ -72,7 +88,7 @@ public sealed class OptionsForm : Form
                         _libraryFlow.Padding = ui.DefaultPadding;
 
                         _libraryFlow.Controls.Add(
-                            ui.NewLabeledPair("Grid &columns:", _columnCountCombo = ui.NewDropDownList(200))
+                            ui.NewLabeledPair("Grid &columns:", _columnCountCombo = ui.NewDropDownList(100))
                         );
                         {
                             _columnCountCombo.Margin += ui.BottomSpacing;
@@ -84,7 +100,7 @@ public sealed class OptionsForm : Form
                         }
 
                         _libraryFlow.Controls.Add(
-                            ui.NewLabeledPair("Movie &player app:", _playerCombo = ui.NewDropDownList(200))
+                            ui.NewLabeledPair("Movie &player app:", _playerCombo = ui.NewDropDownList(250))
                         );
                         {
                             _playerCombo.Margin += ui.BottomSpacing;
@@ -96,7 +112,7 @@ public sealed class OptionsForm : Form
                         _libraryFlow.Controls.Add(
                             ui.NewLabeledPair(
                                 "&Maximized window style:",
-                                _windowMaximizeBehaviorCombo = ui.NewDropDownList(200)
+                                _windowMaximizeBehaviorCombo = ui.NewDropDownList(165)
                             )
                         );
                         {

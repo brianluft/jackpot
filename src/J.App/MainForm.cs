@@ -1371,6 +1371,48 @@ public sealed partial class MainForm : Form
             using var p = Process.Start(new ProcessStartInfo { FileName = playerUrl, UseShellExecute = true });
             _ = p;
         }
+        else if (which is MoviePlayerToUse.ChromeIncognitoWindow or MoviePlayerToUse.ChromeIncognitoTab)
+        {
+            var playerUrl = _client.GetMoviePlayerUrl(movieId);
+            var psi = new ProcessStartInfo
+            {
+                FileName = "chrome.exe",
+                Arguments =
+                    which == MoviePlayerToUse.ChromeIncognitoWindow
+                        ? $"--incognito --new-window --app=\"{playerUrl}\""
+                        : $"--incognito --new-tab \"{playerUrl}\"",
+                UseShellExecute = true,
+            };
+            using var p = Process.Start(psi);
+            _ = p;
+        }
+        else if (which is MoviePlayerToUse.EdgeInPrivateWindow or MoviePlayerToUse.EdgeInPrivateTab)
+        {
+            var playerUrl = _client.GetMoviePlayerUrl(movieId);
+            var psi = new ProcessStartInfo
+            {
+                FileName = "msedge.exe",
+                Arguments =
+                    which == MoviePlayerToUse.EdgeInPrivateWindow
+                        ? $"--inprivate --new-window --app=\"{playerUrl}\""
+                        : $"--inprivate --new-tab \"{playerUrl}\"",
+                UseShellExecute = true,
+            };
+            using var p = Process.Start(psi);
+            _ = p;
+        }
+        else if (which == MoviePlayerToUse.FirefoxPrivateTab)
+        {
+            var playerUrl = _client.GetMoviePlayerUrl(movieId);
+            var psi = new ProcessStartInfo
+            {
+                FileName = "firefox.exe",
+                Arguments = $"-private-window \"{playerUrl}\"",
+                UseShellExecute = true,
+            };
+            using var p = Process.Start(psi);
+            _ = p;
+        }
 
         static bool IsVlcInstalled()
         {

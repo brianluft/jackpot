@@ -6,4 +6,9 @@ public enum MoviePlayerToUse
     Vlc,
     Integrated,
     WebBrowser,
+    ChromeIncognitoTab,
+    ChromeIncognitoWindow,
+    EdgeInPrivateTab,
+    EdgeInPrivateWindow,
+    FirefoxPrivateTab,
 }
