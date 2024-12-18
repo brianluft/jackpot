@@ -9,7 +9,7 @@
   <Identity
     Name="BrianLuft.Jackpot"
     Publisher="CN=Brian Luft, O=Brian Luft, S=&quot;Virgin Islands, U.S.&quot;, C=US"
-    Version="0.3.0.0"
+    Version="1.0.0.0"
     ProcessorArchitecture="(ARCH)" />
     
   <Properties>

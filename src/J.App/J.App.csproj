@@ -10,7 +10,7 @@
 	<AssemblyName>Jackpot</AssemblyName>
 	<ApplicationIcon>Resources\App.ico</ApplicationIcon>
 	<PublishReadyToRun>true</PublishReadyToRun>
-	<Version>0.3.0</Version>
+	<Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
