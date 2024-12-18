@@ -37,7 +37,7 @@ public static class MoviePlayerPage
             </head>
             <body>
                 <div class="video-container">
-                    <video id="player" controls autoplay muted></video>
+                    <video id="player" controls autoplay></video>
                 </div>
 
                 <script>

@@ -14,6 +14,11 @@ public static class Program
     [STAThread]
     public static void Main()
     {
+        Environment.SetEnvironmentVariable(
+            "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+            "--autoplay-policy=no-user-gesture-required"
+        );
+
         TaskbarUtil.SetTaskbarAppId();
 
 #pragma warning disable WFO5001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
