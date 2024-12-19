@@ -6,11 +6,10 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap rescap desktop">
   
-  <!-- For the store, we must use the app id they assign us. -->
-  <!-- For the store, the CN here must match our Microsoft developer account. -->
+  <!-- For the store, we must use the Name and Publisher they assign us. -->
   <Identity
     Name="BrianR.Luft.JackpotMediaLibrary"
-    Publisher="CN=Brian R. Luft"
+    Publisher="CN=2E3E18CB-7AB8-47DC-9592-ED269ABB3D7C"
     Version="1.0.0.0"
     ProcessorArchitecture="(ARCH)" />
     
