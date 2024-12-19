@@ -6,14 +6,17 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap rescap desktop">
   
+  <!-- For the store, we must use the app id they assign us. -->
+  <!-- For the store, the CN here must match our Microsoft developer account. -->
   <Identity
-    Name="BrianLuft.Jackpot"
-    Publisher="CN=Brian Luft, O=Brian Luft, S=&quot;Virgin Islands, U.S.&quot;, C=US"
+    Name="BrianR.Luft.JackpotMediaLibrary"
+    Publisher="CN=Brian R. Luft"
     Version="1.0.0.0"
     ProcessorArchitecture="(ARCH)" />
     
   <Properties>
-    <DisplayName>Jackpot</DisplayName>
+    <!-- For the store, the DisplayName must match the app name we reserved. -->
+    <DisplayName>Jackpot Media Library</DisplayName>
     <!-- For the store, the PublisherDisplayName here must match our Microsoft developer account. -->
     <PublisherDisplayName>Brian R. Luft</PublisherDisplayName>
     <Logo>assets\App.png</Logo>
@@ -32,11 +35,11 @@
   
   <Applications>
     <Application 
-      Id="BrianLuft.Jackpot"
+      Id="BrianR.Luft.JackpotMediaLibrary"
       Executable="Jackpot.exe"
       EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Jackpot"
+        DisplayName="Jackpot Media Library"
         Description="Personal cloud media library"
         BackgroundColor="transparent"
         Square150x150Logo="assets\App150x150.png"
