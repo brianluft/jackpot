@@ -6,6 +6,7 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   IgnorableNamespaces="uap rescap desktop">
   
+  <!-- For sideloading, the Publisher here must match our code signing certificate. -->
   <Identity
     Name="BrianLuft.Jackpot"
     Publisher="CN=Brian Luft, O=Brian Luft, S=&quot;Virgin Islands, U.S.&quot;, C=US"

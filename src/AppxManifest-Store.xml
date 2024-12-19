@@ -8,13 +8,14 @@
   
   <Identity
     Name="BrianLuft.Jackpot"
-    Publisher="CN=Brian R. Luft, O=Brian R. Luft, S=&quot;Virgin Islands, U.S.&quot;, C=US"
+    Publisher="CN=Brian Luft, O=Brian Luft, S=&quot;Virgin Islands, U.S.&quot;, C=US"
     Version="1.0.0.0"
     ProcessorArchitecture="(ARCH)" />
     
   <Properties>
     <DisplayName>Jackpot</DisplayName>
-    <PublisherDisplayName>Brian Luft</PublisherDisplayName>
+    <!-- For the store, the PublisherDisplayName here must match our Microsoft developer account. -->
+    <PublisherDisplayName>Brian R. Luft</PublisherDisplayName>
     <Logo>assets\App.png</Logo>
   </Properties>
   
