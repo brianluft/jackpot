@@ -14,10 +14,10 @@ function Mirror-Directory
 
     Write-Host "Mirroring $Source to $Destination."
 
-    $sourceDir = Get-Item -Path $source
     [System.IO.Directory]::CreateDirectory($Destination) | Out-Null
     $destinationDir = Get-Item -Path $destination
 
+    $sourceDir = Get-Item -Path $source
     $sourceFiles = Get-ChildItem -Path $source -Recurse
     foreach ($sourceFile in $sourceFiles) {
         $destinationFile = $sourceFile.FullName.Replace($sourceDir.FullName, $destinationDir.FullName)
@@ -66,19 +66,36 @@ $arm64job = Start-Job -Name "arm64" -ScriptBlock {
 Receive-Job -Job $x64job -Wait -AutoRemoveJob
 Receive-Job -Job $arm64job -Wait -AutoRemoveJob
 
-if (-not (Test-Path "$bundleDir\Jackpot-x64.msix")) {
-    throw "Failed to create x64 MSIX."
+if (-not (Test-Path "$bundleDir\Store\Jackpot-x64.msix")) {
+    throw "Failed to create x64 Store MSIX."
 }
 
-if (-not (Test-Path "$bundleDir\Jackpot-arm64.msix")) {
-    throw "Failed to create arm64 MSIX."
+if (-not (Test-Path "$bundleDir\Sideload\Jackpot-x64.msix")) {
+    throw "Failed to create x64 Sideload MSIX."
 }
 
-# Make bundle
-$msixBundleFilePath = "$root\publish\Jackpot.msixbundle"
+if (-not (Test-Path "$bundleDir\Store\Jackpot-arm64.msix")) {
+    throw "Failed to create arm64 Store MSIX."
+}
+
+if (-not (Test-Path "$bundleDir\Sideload\Jackpot-arm64.msix")) {
+    throw "Failed to create arm64 Sideload MSIX."
+}
+
+# Make sideload bundle
+$msixBundleFilePath = "$root\publish\Jackpot-Sideload.msixbundle"
 if (Test-Path $msixBundleFilePath) { Remove-Item -Path $msixBundleFilePath -Force }
 
-& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir"
+& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir\Sideload"
 if ($LastExitCode -ne 0) {
-	throw "Failed to create MSIX bundle."
+	throw "Failed to create Sideload MSIX bundle."
+}
+
+# Make store bundle
+$msixBundleFilePath = "$root\publish\Jackpot-Store.msixbundle"
+if (Test-Path $msixBundleFilePath) { Remove-Item -Path $msixBundleFilePath -Force }
+
+& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir\Store"
+if ($LastExitCode -ne 0) {
+	throw "Failed to create Store MSIX bundle."
 }

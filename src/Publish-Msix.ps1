@@ -118,10 +118,6 @@ function Copy-MiscFiles
 	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
 	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
 	
-	$manifest = [System.IO.File]::ReadAllText("$srcDir\AppxManifest.xml")
-	$manifest = $manifest.Replace('(ARCH)', $Arch)
-	[System.IO.File]::WriteAllText("$buildDir\AppxManifest.xml", $manifest)
-
 	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
 	Copy-Item -Path "$srcDir\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
 	Copy-Item -Path "$srcDir\J.App\Resources\App310x150.png" -Destination "$buildDir\assets\App310x150.png"
@@ -160,15 +156,29 @@ function Copy-MiscFiles
 
 function New-Msix
 {
-	Write-Host "Creating MSIX package."
-	$msixFilePath = "$bundleDir\Jackpot-$Arch.msix"
+	param
+	(
+		[Parameter(Mandatory = $true)] [string] $AppxManifestSuffix
+	)
+
+	Write-Host "Creating MSIX package ($AppxManifestSuffix)."
+
+	$dir = "$bundleDir\$AppxManifestSuffix"
+	[System.IO.Directory]::CreateDirectory($dir) | Out-Null
+
+	$msixFilePath = "$dir\Jackpot-$Arch.msix"
 	if (Test-Path $msixFilePath) { Remove-Item -Path $msixFilePath -Force }
-	Write-Host "`n--- Start: MakeAppx pack ---"
+
+	$manifest = [System.IO.File]::ReadAllText("$srcDir\AppxManifest-$AppxManifestSuffix.xml")
+	$manifest = $manifest.Replace('(ARCH)', $Arch)
+	[System.IO.File]::WriteAllText("$buildDir\AppxManifest.xml", $manifest)
+
+	Write-Host "`n--- Start: MakeAppx pack ($AppxManifestSuffix) ---"
 	& "$makeappx" pack /d "$buildDir" /p "$msixFilePath"
 	if ($LastExitCode -ne 0) {
-		throw "Failed to create MSIX package."
+		throw "Failed to create MSIX package ($AppxManifestSuffix)."
 	}
-	Write-Host "--- End: MakeAppx pack ---`n"
+	Write-Host "--- End: MakeAppx pack ($AppxManifestSuffix) ---`n"
 }
 
 Copy-MiscFiles
@@ -178,6 +188,7 @@ if ($Arch -eq "x64") {
 } elseif ($Arch -eq "arm64") {
 	Get-FfmpegArm64
 }
-New-Msix
+New-Msix -AppxManifestSuffix "Store"
+New-Msix -AppxManifestSuffix "Sideload"
 
 Write-Host "=== End $Arch ==="
