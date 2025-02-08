@@ -4,7 +4,7 @@
 
 <h3 align="center">Personal video hub powered by <a href="https://www.backblaze.com/cloud-storage">Backblaze B2</a> cloud storage</h3>
 
-<p align="center"><b><a href="https://github.com/electroly/jackpot/releases">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></b></p>
+<p align="center"><b><a href="https://apps.microsoft.com/detail/9NZCV15W7XVJ?hl=en-us&gl=US&ocid=pdpshare">Download</a> &bull; <a href="https://github.com/electroly/jackpot/wiki/Getting-Started">Getting Started</a></b></p>
 
 <br>
 
