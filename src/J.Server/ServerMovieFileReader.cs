@@ -39,13 +39,12 @@ public sealed class ServerMovieFileReader(LibraryProvider libraryProvider, IAmaz
         return ServerPolicy
             .Policy.ExecuteAsync(async () =>
             {
-                GetObjectRequest request =
-                    new()
-                    {
-                        BucketName = path.Bucket,
-                        Key = path.Key,
-                        ByteRange = new(offsetLength.Offset, offsetLength.Offset + offsetLength.Length - 1),
-                    };
+                GetObjectRequest request = new()
+                {
+                    BucketName = path.Bucket,
+                    Key = path.Key,
+                    ByteRange = new(offsetLength.Offset, offsetLength.Offset + offsetLength.Length - 1),
+                };
 
                 using var response = await s3.GetObjectAsync(request);
                 using var stream = response.ResponseStream;

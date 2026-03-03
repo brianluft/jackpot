@@ -391,8 +391,8 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        ShowMessageBoxOnException(
-            () => _preferences.SetText(Preferences.Key.ImportControl_VideoQuality, (string)_qualityCombo.SelectedItem!)
+        ShowMessageBoxOnException(() =>
+            _preferences.SetText(Preferences.Key.ImportControl_VideoQuality, (string)_qualityCombo.SelectedItem!)
         );
     }
 
@@ -401,9 +401,8 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        ShowMessageBoxOnException(
-            () =>
-                _preferences.SetText(Preferences.Key.ImportControl_CompressionLevel, (string)_speedCombo.SelectedItem!)
+        ShowMessageBoxOnException(() =>
+            _preferences.SetText(Preferences.Key.ImportControl_CompressionLevel, (string)_speedCombo.SelectedItem!)
         );
     }
 
@@ -412,8 +411,8 @@ public sealed class ImportControl : UserControl
         if (_initializing)
             return;
 
-        ShowMessageBoxOnException(
-            () => _preferences.SetText(Preferences.Key.ImportControl_AudioBitrate, (string)_audioCombo.SelectedItem!)
+        ShowMessageBoxOnException(() =>
+            _preferences.SetText(Preferences.Key.ImportControl_AudioBitrate, (string)_audioCombo.SelectedItem!)
         );
     }
 

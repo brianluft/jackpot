@@ -211,14 +211,13 @@ public sealed partial class Ui
 
     public MyButton NewButton(string text, DialogResult? dialogResult = null)
     {
-        MyButton button =
-            new()
-            {
-                Text = text,
-                AutoSize = true,
-                Padding = GetPadding(24, 8),
-                MinimumSize = GetSize(88, 0),
-            };
+        MyButton button = new()
+        {
+            Text = text,
+            AutoSize = true,
+            Padding = GetPadding(24, 8),
+            MinimumSize = GetSize(88, 0),
+        };
         if (dialogResult.HasValue)
             button.DialogResult = dialogResult.Value;
         return button;
@@ -263,16 +262,15 @@ public sealed partial class Ui
 
     public TableLayoutPanel NewTable(int columns, int rows)
     {
-        TableLayoutPanel table =
-            new()
-            {
-                RowCount = rows,
-                ColumnCount = columns,
-                AutoSize = true,
-                Padding = Padding.Empty,
-                Margin = Padding.Empty,
-                Dock = DockStyle.Fill,
-            };
+        TableLayoutPanel table = new()
+        {
+            RowCount = rows,
+            ColumnCount = columns,
+            AutoSize = true,
+            Padding = Padding.Empty,
+            Margin = Padding.Empty,
+            Dock = DockStyle.Fill,
+        };
         for (int i = 0; i < columns; i++)
             table.ColumnStyles.Add(new(SizeType.AutoSize));
         for (var i = 0; i < rows; i++)
@@ -796,29 +794,28 @@ public sealed partial class Ui
 
     public DataGridView NewDataGridView()
     {
-        DoubleBufferedDataGridView grid =
-            new()
-            {
-                Dock = DockStyle.Fill,
-                AutoGenerateColumns = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AllowUserToOrderColumns = false,
-                AllowUserToResizeColumns = true,
-                AllowUserToResizeRows = false,
-                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = true,
-                ReadOnly = true,
-                BorderStyle = BorderStyle.Fixed3D,
-                CellBorderStyle = DataGridViewCellBorderStyle.None,
-                GridColor = MyColors.DataGridLines,
-                BackgroundColor = MyColors.DataGridBackground,
-                Font = Font,
-            };
+        DoubleBufferedDataGridView grid = new()
+        {
+            Dock = DockStyle.Fill,
+            AutoGenerateColumns = false,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+            AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
+            AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            AllowUserToOrderColumns = false,
+            AllowUserToResizeColumns = true,
+            AllowUserToResizeRows = false,
+            ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+            RowHeadersVisible = false,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            MultiSelect = true,
+            ReadOnly = true,
+            BorderStyle = BorderStyle.Fixed3D,
+            CellBorderStyle = DataGridViewCellBorderStyle.None,
+            GridColor = MyColors.DataGridLines,
+            BackgroundColor = MyColors.DataGridBackground,
+            Font = Font,
+        };
         grid.AlternatingRowsDefaultCellStyle.BackColor = MyColors.DataGridAlternateRowBackground;
         grid.DefaultCellStyle.BackColor = MyColors.DataGridRowBackground;
         grid.DefaultCellStyle.Padding += GetPadding(5, 0, 0, 0);
@@ -952,15 +949,14 @@ public sealed partial class Ui
 
     public MyTextBox NewWordWrapTextbox(int unscaledWidth, int unscaledHeight)
     {
-        MyTextBox textBox =
-            new(this)
-            {
-                Size = GetSize(unscaledWidth, unscaledHeight),
-                Font = TextBoxFont,
-                Multiline = true,
-                WordWrap = true,
-                CueFont = BigFont,
-            };
+        MyTextBox textBox = new(this)
+        {
+            Size = GetSize(unscaledWidth, unscaledHeight),
+            Font = TextBoxFont,
+            Multiline = true,
+            WordWrap = true,
+            CueFont = BigFont,
+        };
 
         textBox.KeyDown += static (sender, e) =>
         {
@@ -1015,15 +1011,14 @@ public sealed partial class Ui
 
     public MyWebView2 NewWebView2()
     {
-        MyWebView2 browser =
-            new()
-            {
-                Dock = DockStyle.Fill,
-                Padding = Padding.Empty,
-                Margin = Padding.Empty,
-                BackColor = MyColors.MainFormBackground,
-                AllowExternalDrop = false,
-            };
+        MyWebView2 browser = new()
+        {
+            Dock = DockStyle.Fill,
+            Padding = Padding.Empty,
+            Margin = Padding.Empty,
+            BackColor = MyColors.MainFormBackground,
+            AllowExternalDrop = false,
+        };
 
         return browser;
     }

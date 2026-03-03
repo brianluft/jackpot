@@ -31,13 +31,12 @@ public readonly record struct CompleteWindowState(
         var scale = form.DeviceDpi / 96d;
         Point scaledLocation = new((int)(UnscaledLocation.X * scale), (int)(UnscaledLocation.Y * scale));
         Size scaledSize = new((int)(UnscaledSize.Width * scale), (int)(UnscaledSize.Height * scale));
-        Rectangle scaledRestoreBounds =
-            new(
-                (int)(UnscaledRestoreBounds.X * scale),
-                (int)(UnscaledRestoreBounds.Y * scale),
-                (int)(UnscaledRestoreBounds.Width * scale),
-                (int)(UnscaledRestoreBounds.Height * scale)
-            );
+        Rectangle scaledRestoreBounds = new(
+            (int)(UnscaledRestoreBounds.X * scale),
+            (int)(UnscaledRestoreBounds.Y * scale),
+            (int)(UnscaledRestoreBounds.Width * scale),
+            (int)(UnscaledRestoreBounds.Height * scale)
+        );
 
         // Ensure the window will be visible on at least one screen
         var screens = Screen.AllScreens;

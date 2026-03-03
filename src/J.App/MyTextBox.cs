@@ -105,8 +105,12 @@ public sealed class MyTextBox : UserControl
 
         // Draw bottom border
         var bottomHeight = 2 * scale;
-        RectangleF bottomRect =
-            new(bounds.Left, bounds.Bottom - bottomHeight, bounds.Width, bottomHeight + (hidpi ? 1 : 0));
+        RectangleF bottomRect = new(
+            bounds.Left,
+            bounds.Bottom - bottomHeight,
+            bounds.Width,
+            bottomHeight + (hidpi ? 1 : 0)
+        );
         var originalClip = g.Clip;
         var bottomPath = new GraphicsPath();
         AddRoundedRectangle(bottomPath, bounds, cornerRadius);

@@ -1,28 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-	<AssemblyName>Jackpot.Server</AssemblyName>
-	<ApplicationIcon>..\J.App\Resources\App.ico</ApplicationIcon>
-	<ServerGarbageCollection>false</ServerGarbageCollection>
-	<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
-	<RetainVMGarbageCollection>false</RetainVMGarbageCollection>
-	<GCLargeObjectHeapCompactionMode>1</GCLargeObjectHeapCompactionMode>
+    <AssemblyName>Jackpot.Server</AssemblyName>
+    <ApplicationIcon>..\J.App\Resources\App.ico</ApplicationIcon>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    <GCLargeObjectHeapCompactionMode>1</GCLargeObjectHeapCompactionMode>
   </PropertyGroup>
 
   <ItemGroup>
-	<!-- Allow access to System.Security.Cryptography.ProtectedData -->
+    <!-- Allow access to System.Security.Cryptography.ProtectedData -->
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\J.Core\J.Core.csproj" />
   </ItemGroup>
-    
+
   <ItemGroup>
     <None Update="static\favicon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -43,5 +42,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>

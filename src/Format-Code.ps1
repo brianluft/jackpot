@@ -5,7 +5,7 @@ $src = "$root\src"
 Push-Location $src
 try
 {
-    dotnet tool run dotnet-csharpier .
+    dotnet tool run csharpier format .
 }
 finally
 {

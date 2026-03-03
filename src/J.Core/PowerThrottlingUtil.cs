@@ -41,13 +41,12 @@ public static partial class PowerThrottlingUtil
             //    "HighQoS
             //    Turn EXECUTION_SPEED throttling off.
             //    ControlMask selects the mechanism and StateMask is set to zero as mechanisms should be turned off."
-            NativeMethods.PROCESS_POWER_THROTTLING_STATE powerThrottling =
-                new()
-                {
-                    Version = NativeMethods.PROCESS_POWER_THROTTLING_CURRENT_VERSION,
-                    ControlMask = NativeMethods.PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
-                    StateMask = 0,
-                };
+            NativeMethods.PROCESS_POWER_THROTTLING_STATE powerThrottling = new()
+            {
+                Version = NativeMethods.PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+                ControlMask = NativeMethods.PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
+                StateMask = 0,
+            };
 
             var success = NativeMethods.SetProcessInformation(
                 hProcess,

@@ -210,13 +210,12 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
         await _policy
             .ExecuteAsync(async () =>
             {
-                GetObjectRequest request =
-                    new()
-                    {
-                        BucketName = bucket,
-                        Key = key,
-                        ByteRange = new(offsetLength.Offset, offsetLength.Offset + offsetLength.Length - 1),
-                    };
+                GetObjectRequest request = new()
+                {
+                    BucketName = bucket,
+                    Key = key,
+                    ByteRange = new(offsetLength.Offset, offsetLength.Offset + offsetLength.Length - 1),
+                };
 
                 using var response = await s3.GetObjectAsync(request).ConfigureAwait(false);
                 using var responseStream = response.ResponseStream;
@@ -231,13 +230,12 @@ public sealed class SyncMovieFileReader(string bucket, Password password, string
         return await _policy
             .ExecuteAsync(async () =>
             {
-                GetObjectRequest request =
-                    new()
-                    {
-                        BucketName = bucket,
-                        Key = key,
-                        ByteRange = new(offsetLength.Offset, offsetLength.Offset + offsetLength.Length - 1),
-                    };
+                GetObjectRequest request = new()
+                {
+                    BucketName = bucket,
+                    Key = key,
+                    ByteRange = new(offsetLength.Offset, offsetLength.Offset + offsetLength.Length - 1),
+                };
 
                 using var response = await s3.GetObjectAsync(request).ConfigureAwait(false);
                 using var responseStream = response.ResponseStream;

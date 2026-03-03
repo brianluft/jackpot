@@ -768,8 +768,12 @@ public sealed partial class LibraryProvider : IDisposable
         updateProgress(0.05);
 
         // Export library to JSON.
-        SyncLibrary library =
-            new(Movies: GetMovies(), TagTypes: GetTagTypes(), Tags: GetTags(), MovieTags: GetMovieTags());
+        SyncLibrary library = new(
+            Movies: GetMovies(),
+            TagTypes: GetTagTypes(),
+            Tags: GetTags(),
+            MovieTags: GetMovieTags()
+        );
         var json = JsonSerializer.Serialize(library);
         using MemoryStream jsonMemoryStream = new(Encoding.UTF8.GetBytes(json));
 

@@ -33,16 +33,15 @@ public sealed class Client(IHttpClientFactory httpClientFactory, Preferences pre
             var dir = Path.GetDirectoryName(typeof(Client).Assembly.Location!)!;
             var exe = Path.Combine(dir, "Jackpot.Server.exe");
 
-            ProcessStartInfo psi =
-                new()
-                {
-                    FileName = exe,
-                    WorkingDirectory = dir,
-                    UseShellExecute = false,
-                    CreateNoWindow = false,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                };
+            ProcessStartInfo psi = new()
+            {
+                FileName = exe,
+                WorkingDirectory = dir,
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+            };
 
             var anyNetworkSharing =
                 preferences.GetBoolean(Preferences.Key.NetworkSharing_AllowVlcAccess)

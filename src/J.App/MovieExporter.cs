@@ -36,13 +36,12 @@ public sealed class MovieExporter(AccountSettingsProvider accountSettingsProvide
 
         using TransferUtility transferUtility = new(s3, new TransferUtilityConfig { ConcurrentServiceRequests = 4 });
 
-        TransferUtilityDownloadRequest request =
-            new()
-            {
-                BucketName = accountSettingsProvider.Current.Bucket,
-                FilePath = encFilePath,
-                Key = movie.S3Key,
-            };
+        TransferUtilityDownloadRequest request = new()
+        {
+            BucketName = accountSettingsProvider.Current.Bucket,
+            FilePath = encFilePath,
+            Key = movie.S3Key,
+        };
 
         request.WriteObjectProgressEvent += (sender, e) =>
         {

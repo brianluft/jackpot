@@ -39,22 +39,21 @@ public static class Ffmpeg
     {
         cancel.ThrowIfCancellationRequested();
 
-        ProcessStartInfo psi =
-            new()
-            {
+        ProcessStartInfo psi = new()
+        {
 #if DEBUG
-                // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
-                FileName = filename ?? "ffmpeg.exe",
+            // For debug builds, use ffmpeg.exe in PATH since the ffmpeg install gets inserted only for releases.
+            FileName = filename ?? "ffmpeg.exe",
 #else
-                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", filename ?? "ffmpeg.exe"),
+            FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg", filename ?? "ffmpeg.exe"),
 #endif
-                Arguments = arguments,
-                WorkingDirectory = "C:\\",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
+            Arguments = arguments,
+            WorkingDirectory = "C:\\",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
 
         using var p = Process.Start(psi)!;
         ApplicationSubProcesses.Add(p);

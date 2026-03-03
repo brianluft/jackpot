@@ -61,13 +61,12 @@ public sealed class MovieEncoder(AccountSettingsProvider accountSettingsProvider
         // Include metadata about the original file.
         cancel.ThrowIfCancellationRequested();
         FileInfo sourceFileInfo = new(movieFilePath);
-        SourceFileMetadata meta =
-            new(
-                Path.GetFileName(movieFilePath),
-                sourceFileInfo.Length,
-                sourceFileInfo.CreationTimeUtc,
-                sourceFileInfo.LastWriteTimeUtc
-            );
+        SourceFileMetadata meta = new(
+            Path.GetFileName(movieFilePath),
+            sourceFileInfo.Length,
+            sourceFileInfo.CreationTimeUtc,
+            sourceFileInfo.LastWriteTimeUtc
+        );
         File.WriteAllText(Path.Combine(tempDir.Path, "meta.json"), JsonSerializer.Serialize(meta));
 
         // Make an archive file.

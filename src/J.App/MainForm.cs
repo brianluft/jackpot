@@ -1332,13 +1332,12 @@ public sealed partial class MainForm : Form
 
         if (which == MoviePlayerToUse.Vlc)
         {
-            ProcessStartInfo psi =
-                new()
-                {
-                    FileName = "vlc.exe",
-                    Arguments = $"--fullscreen --loop --high-priority --no-video-title-show -- \"{url}\"",
-                    UseShellExecute = true,
-                };
+            ProcessStartInfo psi = new()
+            {
+                FileName = "vlc.exe",
+                Arguments = $"--fullscreen --loop --high-priority --no-video-title-show -- \"{url}\"",
+                UseShellExecute = true,
+            };
 
 #if DEBUG
             // When debugging, it can be annoying for VLC to actually appear every time.
@@ -1512,15 +1511,14 @@ public sealed partial class MainForm : Form
         var movieIds = _movieContextMenuIds;
 
         // Prompt for output directory.
-        using FolderBrowserDialog b =
-            new()
-            {
-                AutoUpgradeEnabled = true,
-                Description = "Select Output Directory",
-                ShowNewFolderButton = true,
-                RootFolder = Environment.SpecialFolder.Desktop,
-                UseDescriptionForTitle = true,
-            };
+        using FolderBrowserDialog b = new()
+        {
+            AutoUpgradeEnabled = true,
+            Description = "Select Output Directory",
+            ShowNewFolderButton = true,
+            RootFolder = Environment.SpecialFolder.Desktop,
+            UseDescriptionForTitle = true,
+        };
         if (b.ShowDialog(this) != DialogResult.OK)
             return;
         var outDir = b.SelectedPath;

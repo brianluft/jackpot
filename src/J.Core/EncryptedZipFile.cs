@@ -68,13 +68,12 @@ public static class EncryptedZipFile
         CompressionMethod? method = null
     )
     {
-        ZipEntry entry =
-            new(entryName)
-            {
-                DateTime = entryTime,
-                AESKeySize = 256,
-                CompressionMethod = method ?? CompressionMethod.Stored,
-            };
+        ZipEntry entry = new(entryName)
+        {
+            DateTime = entryTime,
+            AESKeySize = 256,
+            CompressionMethod = method ?? CompressionMethod.Stored,
+        };
 
         zipStream.PutNextEntry(entry);
 

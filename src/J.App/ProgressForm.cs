@@ -40,14 +40,13 @@ public sealed class ProgressForm : Form
         Func<Action<double>, Action<string>, CancellationToken, Task> action
     )
     {
-        using ProgressForm f =
-            new(
-                (updateProgress, updateMessage, cancel) =>
-                {
-                    updateMessage(text);
-                    action(updateProgress, updateMessage, cancel).GetAwaiter().GetResult();
-                }
-            );
+        using ProgressForm f = new(
+            (updateProgress, updateMessage, cancel) =>
+            {
+                updateMessage(text);
+                action(updateProgress, updateMessage, cancel).GetAwaiter().GetResult();
+            }
+        );
 
         var result = owner is null ? f.ShowDialog() : f.ShowDialog(owner);
 
@@ -78,17 +77,16 @@ public sealed class ProgressForm : Form
         Action<Outcome> continuation
     )
     {
-        ProgressForm f =
-            new(
-                (updateProgress, updateMessage, cancel) =>
-                {
-                    updateMessage(text);
-                    action(updateProgress, updateMessage, cancel).GetAwaiter().GetResult();
-                }
-            )
+        ProgressForm f = new(
+            (updateProgress, updateMessage, cancel) =>
             {
-                ShowInTaskbar = true,
-            };
+                updateMessage(text);
+                action(updateProgress, updateMessage, cancel).GetAwaiter().GetResult();
+            }
+        )
+        {
+            ShowInTaskbar = true,
+        };
 
         f.FormClosed += delegate
         {

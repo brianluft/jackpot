@@ -40,13 +40,12 @@ public sealed class AccountSettingsProvider
         if (!endpoint.StartsWith("http"))
             endpoint = "https://" + endpoint;
 
-        AmazonS3Config config =
-            new()
-            {
-                ServiceURL = endpoint,
-                Timeout = TimeSpan.FromSeconds(30),
-                MaxErrorRetry = 3,
-            };
+        AmazonS3Config config = new()
+        {
+            ServiceURL = endpoint,
+            Timeout = TimeSpan.FromSeconds(30),
+            MaxErrorRetry = 3,
+        };
         return new AmazonS3Client(_current.AccessKeyId, _current.SecretAccessKey, config);
     }
 

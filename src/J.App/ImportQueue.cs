@@ -290,8 +290,10 @@ public sealed class ImportQueue : IDisposable
             UpdateRow(row, FileState.Working, "Inspecting", 0d);
             var needsConversion = !Ffmpeg.IsCompatibleCodec(filePath);
 
-            ImportProgress importProgress =
-                new(progress => UpdateRowProgress(row, progress), message => UpdateRowMessage(row, message));
+            ImportProgress importProgress = new(
+                progress => UpdateRowProgress(row, progress),
+                message => UpdateRowMessage(row, message)
+            );
 
             cancel.ThrowIfCancellationRequested();
             if (needsConversion)

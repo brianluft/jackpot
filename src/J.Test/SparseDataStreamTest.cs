@@ -60,13 +60,12 @@ public class SparseDataStreamTest
         List<SparseDataStream.Range> dataRanges = [new(10, [1, 2, 3]), new(50, [4, 5, 6])];
 
         // Act
-        SparseDataStream stream =
-            new(length, dataRanges)
-            {
-                Position =
-                    7 // Position outside the sparse range but no Read is performed
-                ,
-            };
+        SparseDataStream stream = new(length, dataRanges)
+        {
+            Position =
+                7 // Position outside the sparse range but no Read is performed
+            ,
+        };
 
         // Assert
         Assert.AreEqual(7, stream.Position);

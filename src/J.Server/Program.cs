@@ -182,8 +182,15 @@ Html GetTagListPage(
     }
     if (untaggedMovie is not null)
     {
-        PageBlock block =
-            new(untaggedMovie.Value.Id, null, tagType.Id, $"(No {tagType.SingularName})", DateTimeOffset.Now, [], []);
+        PageBlock block = new(
+            untaggedMovie.Value.Id,
+            null,
+            tagType.Id,
+            $"(No {tagType.SingularName})",
+            DateTimeOffset.Now,
+            [],
+            []
+        );
         blocks.Add(block);
     }
 

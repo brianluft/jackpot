@@ -259,15 +259,19 @@ public sealed class LoginForm : Form
 
     private void B2KeyLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
-        ProcessStartInfo psi =
-            new("msedge.exe", "\"https://secure.backblaze.com/app_keys.htm\"") { UseShellExecute = true };
+        ProcessStartInfo psi = new("msedge.exe", "\"https://secure.backblaze.com/app_keys.htm\"")
+        {
+            UseShellExecute = true,
+        };
         Process.Start(psi)!.Dispose();
     }
 
     private void B2BucketLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
-        ProcessStartInfo psi =
-            new("msedge.exe", "\"https://secure.backblaze.com/b2_buckets.htm\"") { UseShellExecute = true };
+        ProcessStartInfo psi = new("msedge.exe", "\"https://secure.backblaze.com/b2_buckets.htm\"")
+        {
+            UseShellExecute = true,
+        };
         Process.Start(psi)!.Dispose();
     }
 
@@ -369,8 +373,11 @@ public sealed class LoginForm : Form
 
     private void GettingStartedLink_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
     {
-        ProcessStartInfo psi =
-            new() { FileName = "https://github.com/brianluft/jackpot/wiki/Getting-Started", UseShellExecute = true };
+        ProcessStartInfo psi = new()
+        {
+            FileName = "https://github.com/brianluft/jackpot/wiki/Getting-Started",
+            UseShellExecute = true,
+        };
         Process.Start(psi)!.Dispose();
     }
 }

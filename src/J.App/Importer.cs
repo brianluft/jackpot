@@ -64,35 +64,36 @@ public sealed class Importer(
             cancel
         );
 
-        Movie movie =
-            new(
-                Id: new MovieId(),
-                Filename: Path.GetFileNameWithoutExtension(sourceFilePath),
-                S3Key: s3Key,
-                DateAdded: DateTimeOffset.Now,
-                Deleted: false
-            );
+        Movie movie = new(
+            Id: new MovieId(),
+            Filename: Path.GetFileNameWithoutExtension(sourceFilePath),
+            S3Key: s3Key,
+            DateAdded: DateTimeOffset.Now,
+            Deleted: false
+        );
 
-        MovieFile zipHeaderFile =
-            new(movie.Id, "", zipIndex.ZipHeader, ReadFileByteRange(encodedFullMovieFilePath, zipIndex.ZipHeader));
+        MovieFile zipHeaderFile = new(
+            movie.Id,
+            "",
+            zipIndex.ZipHeader,
+            ReadFileByteRange(encodedFullMovieFilePath, zipIndex.ZipHeader)
+        );
 
         var m3u8Entry = zipIndex.Entries.Single(x => x.Name == "movie.m3u8");
-        MovieFile m3u8File =
-            new(
-                movie.Id,
-                "movie.m3u8",
-                m3u8Entry.OffsetLength,
-                ReadEntry(encodedFullMovieFilePath, "movie.m3u8", password)
-            );
+        MovieFile m3u8File = new(
+            movie.Id,
+            "movie.m3u8",
+            m3u8Entry.OffsetLength,
+            ReadEntry(encodedFullMovieFilePath, "movie.m3u8", password)
+        );
 
         var clipEntry = zipIndex.Entries.Single(x => x.Name == "clip.mp4");
-        MovieFile clipFile =
-            new(
-                movie.Id,
-                "clip.mp4",
-                clipEntry.OffsetLength,
-                ReadEntry(encodedFullMovieFilePath, "clip.mp4", password)
-            );
+        MovieFile clipFile = new(
+            movie.Id,
+            "clip.mp4",
+            clipEntry.OffsetLength,
+            ReadEntry(encodedFullMovieFilePath, "clip.mp4", password)
+        );
 
         var otherFiles = zipIndex
             .Entries.Where(x => x.Name != "movie.m3u8" && x.Name != "clip.mp4")
