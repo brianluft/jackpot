@@ -14,6 +14,25 @@ public static class Program
     [STAThread]
     public static void Main()
     {
+        ApplicationConfiguration.Initialize();
+
+        try
+        {
+            MainCore();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Jackpot experienced an internal error and must close.\n\nError message:\n\"{ex.Message}\"",
+                "Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
+    }
+
+    private static void MainCore()
+    {
         Environment.SetEnvironmentVariable(
             "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
             "--autoplay-policy=no-user-gesture-required"
@@ -90,7 +109,6 @@ public static class Program
         // Set SharedCoreWebView2Environment right away.
         _ = serviceProvider.GetRequiredService<CoreWebView2Environment>();
 
-        ApplicationConfiguration.Initialize();
         Application.Run(serviceProvider.GetRequiredService<MyApplicationContext>());
     }
 
