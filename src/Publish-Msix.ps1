@@ -115,9 +115,8 @@ function Get-FfmpegArm64
 
 function Copy-MiscFiles
 {
-	Copy-Item -Path "$root\COPYING" -Destination "$buildDir\COPYING"
-	Copy-Item -Path "$root\NOTICE" -Destination "$buildDir\NOTICE"
-	
+	Copy-Item -Path "$root\LICENSE" -Destination "$buildDir\LICENSE"
+
 	[System.IO.Directory]::CreateDirectory("$buildDir\assets") | Out-Null
 	Copy-Item -Path "$srcDir\J.App\Resources\App.png" -Destination "$buildDir\assets\App.png"
 	Copy-Item -Path "$srcDir\J.App\Resources\App310x150.png" -Destination "$buildDir\assets\App310x150.png"
