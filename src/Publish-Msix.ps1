@@ -27,9 +27,9 @@ $bundleDir = "$root\bundle"
 # Windows SDK
 $windowsSdkBaseDir = "C:\Program Files (x86)\Windows Kits\10\Redist"
 $windowsSdkVersion = `
-    Get-ChildItem -Path $windowsSdkBaseDir | 
-    Where-Object { $_.Name -match '^10\.0\.\d+\.\d+$' } | 
-    Sort-Object Name -Descending | 
+    Get-ChildItem -Path $windowsSdkBaseDir |
+    Where-Object { $_.Name -match '^10\.0\.\d+\.\d+$' } |
+    Sort-Object Name -Descending |
     Select-Object -First 1 -ExpandProperty Name
 
 $makeappx = "C:\Program Files (x86)\Windows Kits\10\bin\$windowsSdkVersion\x64\makeappx.exe"
@@ -155,29 +155,21 @@ function Copy-MiscFiles
 
 function New-Msix
 {
-	param
-	(
-		[Parameter(Mandatory = $true)] [string] $AppxManifestSuffix
-	)
+	Write-Host "Creating MSIX package."
 
-	Write-Host "Creating MSIX package ($AppxManifestSuffix)."
-
-	$dir = "$bundleDir\$AppxManifestSuffix"
-	[System.IO.Directory]::CreateDirectory($dir) | Out-Null
-
-	$msixFilePath = "$dir\Jackpot-$Arch.msix"
+	$msixFilePath = "$bundleDir\Jackpot-$Arch.msix"
 	if (Test-Path $msixFilePath) { Remove-Item -Path $msixFilePath -Force }
 
-	$manifest = [System.IO.File]::ReadAllText("$srcDir\AppxManifest-$AppxManifestSuffix.xml")
+	$manifest = [System.IO.File]::ReadAllText("$srcDir\AppxManifest.xml")
 	$manifest = $manifest.Replace('(ARCH)', $Arch)
 	[System.IO.File]::WriteAllText("$buildDir\AppxManifest.xml", $manifest)
 
-	Write-Host "`n--- Start: MakeAppx pack ($AppxManifestSuffix) ---"
+	Write-Host "`n--- Start: MakeAppx pack ---"
 	& "$makeappx" pack /d "$buildDir" /p "$msixFilePath"
 	if ($LastExitCode -ne 0) {
-		throw "Failed to create MSIX package ($AppxManifestSuffix)."
+		throw "Failed to create MSIX package."
 	}
-	Write-Host "--- End: MakeAppx pack ($AppxManifestSuffix) ---`n"
+	Write-Host "--- End: MakeAppx pack ---`n"
 }
 
 Copy-MiscFiles
@@ -187,7 +179,6 @@ if ($Arch -eq "x64") {
 } elseif ($Arch -eq "arm64") {
 	Get-FfmpegArm64
 }
-New-Msix -AppxManifestSuffix "Store"
-New-Msix -AppxManifestSuffix "Sideload"
+New-Msix
 
 Write-Host "=== End $Arch ==="

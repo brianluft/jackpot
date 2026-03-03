@@ -40,9 +40,9 @@ if (Test-Path $bundleDir) {
 # Windows SDK
 $windowsSdkBaseDir = "C:\Program Files (x86)\Windows Kits\10\Redist"
 $windowsSdkVersion = `
-    Get-ChildItem -Path $windowsSdkBaseDir | 
-    Where-Object { $_.Name -match '^10\.0\.\d+\.\d+$' } | 
-    Sort-Object Name -Descending | 
+    Get-ChildItem -Path $windowsSdkBaseDir |
+    Where-Object { $_.Name -match '^10\.0\.\d+\.\d+$' } |
+    Sort-Object Name -Descending |
     Select-Object -First 1 -ExpandProperty Name
 
 $makeappx = "C:\Program Files (x86)\Windows Kits\10\bin\$windowsSdkVersion\x64\makeappx.exe"
@@ -66,36 +66,22 @@ $arm64job = Start-Job -Name "arm64" -ScriptBlock {
 Receive-Job -Job $x64job -Wait -AutoRemoveJob
 Receive-Job -Job $arm64job -Wait -AutoRemoveJob
 
-if (-not (Test-Path "$bundleDir\Store\Jackpot-x64.msix")) {
-    throw "Failed to create x64 Store MSIX."
+if (-not (Test-Path "$bundleDir\Jackpot-x64.msix")) {
+    throw "Failed to create x64 MSIX."
 }
 
-if (-not (Test-Path "$bundleDir\Sideload\Jackpot-x64.msix")) {
-    throw "Failed to create x64 Sideload MSIX."
+if (-not (Test-Path "$bundleDir\Jackpot-arm64.msix")) {
+    throw "Failed to create arm64 MSIX."
 }
 
-if (-not (Test-Path "$bundleDir\Store\Jackpot-arm64.msix")) {
-    throw "Failed to create arm64 Store MSIX."
-}
+# Make bundle
+$publishDir = "$root\publish"
+[System.IO.Directory]::CreateDirectory($publishDir) | Out-Null
 
-if (-not (Test-Path "$bundleDir\Sideload\Jackpot-arm64.msix")) {
-    throw "Failed to create arm64 Sideload MSIX."
-}
-
-# Make sideload bundle
-$msixBundleFilePath = "$root\publish\Jackpot-Sideload.msixbundle"
+$msixBundleFilePath = "$publishDir\Jackpot.msixbundle"
 if (Test-Path $msixBundleFilePath) { Remove-Item -Path $msixBundleFilePath -Force }
 
-& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir\Sideload"
+& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir"
 if ($LastExitCode -ne 0) {
-	throw "Failed to create Sideload MSIX bundle."
-}
-
-# Make store bundle
-$msixBundleFilePath = "$root\publish\Jackpot-Store.msixbundle"
-if (Test-Path $msixBundleFilePath) { Remove-Item -Path $msixBundleFilePath -Force }
-
-& "$makeappx" bundle /p "$msixBundleFilePath" /d "$bundleDir\Store"
-if ($LastExitCode -ne 0) {
-	throw "Failed to create Store MSIX bundle."
+	throw "Failed to create MSIX bundle."
 }

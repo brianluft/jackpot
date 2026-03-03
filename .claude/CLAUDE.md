@@ -48,4 +48,4 @@ Full MSIX packaging: `src/Publish-MsixBundle.ps1` (requires Windows SDK).
 
 ## CI/CD
 
-GitHub Actions on WarpBuild Windows runner. Builds x64 + arm64 MSIX bundles (Store and Sideload variants). Tests are not run in CI.
+GitHub Actions on WarpBuild Windows runner. Builds x64 + arm64 MSIX bundle distributed via GitHub Releases. Tests are not run in CI.

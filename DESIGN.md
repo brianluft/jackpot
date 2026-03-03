@@ -53,7 +53,7 @@ A personal video library application that stores movies in S3-compatible cloud s
 - **License:** 0BSD
 - **CI:** GitHub Actions on WarpBuild Windows runner (`warp-windows-latest-x64-8x`)
 - **Architectures:** x64 and arm64, built in parallel
-- **Distribution:** MSIX bundles for Microsoft Store and sideload
+- **Distribution:** Sideload MSIX bundle via GitHub Releases
 - **FFmpeg:** Downloaded at build time from GitHub releases (GPL builds)
 - **Formatting:** CSharpier v0.29.2 (`src/.config/dotnet-tools.json`, run via `src/Format-Code.ps1`)
-- **Version:** Hardcoded `1.0.0.0` in AppxManifest files
+- **Version:** Hardcoded `1.0.0.0` in `src/AppxManifest.xml`
