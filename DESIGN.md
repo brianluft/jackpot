@@ -49,11 +49,11 @@ A personal video library application that stores movies in S3-compatible cloud s
 
 ## Build and Distribution
 
-- **Solution:** `src/jackpot.sln` (Visual Studio 2022, .NET 10)
+- **Solution:** `src/jackpot.sln` (Visual Studio 2026, .NET 10)
 - **License:** 0BSD
-- **CI:** GitHub Actions on WarpBuild Windows runner (`warp-windows-latest-x64-8x`)
+- **CI:** GitHub Actions on Windows runner
 - **Architectures:** x64 and arm64, built in parallel
 - **Distribution:** Sideload MSIX bundle via GitHub Releases
 - **FFmpeg:** Downloaded at build time from GitHub releases (GPL builds)
-- **Formatting:** CSharpier v0.29.2 (`src/.config/dotnet-tools.json`, run via `src/Format-Code.ps1`)
-- **Version:** Hardcoded `1.0.0.0` in `src/AppxManifest.xml`
+- **Formatting:** CSharpier (`src/.config/dotnet-tools.json`, run via `src/Format-Code.ps1`)
+- **Version:** Hardcoded in `src/AppxManifest.xml`
