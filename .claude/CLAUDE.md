@@ -4,7 +4,7 @@ A Windows desktop app for managing a personal video library stored in S3-compati
 
 ## Quick Orientation
 
-- **Solution:** `src/jackpot.sln` (.NET 9, C#, Windows-only)
+- **Solution:** `src/jackpot.sln` (.NET 10, C#, Windows-only)
 - **J.Core** (`src/J.Core/`) - Shared library: domain model, SQLite data access, S3 operations, AES-256 encrypted ZIP handling, preferences, system utilities
 - **J.App** (`src/J.App/`) - WinForms desktop app with embedded WebView2 browser. Entry point: `Program.cs`. Assembly: `Jackpot.exe`
 - **J.Server** (`src/J.Server/`) - ASP.NET Core HTTP server spawned as a subprocess by J.App. Serves HTML to WebView2, streams decrypted video. Assembly: `Jackpot.Server.exe`

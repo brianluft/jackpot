@@ -4,7 +4,7 @@ Unit and integration tests for J.Core components.
 
 ## Target
 
-- `net9.0-windows`
+- `net10.0-windows`
 - **MSTest** 3.6.4 (`MSTest.TestFramework`, `MSTest.TestAdapter`)
 - `Microsoft.NET.Test.Sdk` 17.12.0
 - `coverlet.collector` 6.0.2 for code coverage

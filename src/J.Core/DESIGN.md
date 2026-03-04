@@ -4,7 +4,7 @@ Shared library providing data access, cloud storage, encryption, and system util
 
 ## Target
 
-- `net9.0-windows`, nullable enabled, unsafe blocks allowed
+- `net10.0-windows`, nullable enabled, unsafe blocks allowed
 
 ## Dependencies
 

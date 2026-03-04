@@ -4,7 +4,7 @@ ASP.NET Core HTTP server that serves media content and UI pages to the embedded 
 
 ## Target
 
-- `net9.0-windows`, SDK `Microsoft.NET.Sdk.Web`, output `WinExe`, assembly name `Jackpot.Server`
+- `net10.0-windows`, SDK `Microsoft.NET.Sdk.Web`, output `WinExe`, assembly name `Jackpot.Server`
 - GC tuned for low memory: server GC off, concurrent GC on, LOH compaction enabled
 
 ## Dependencies

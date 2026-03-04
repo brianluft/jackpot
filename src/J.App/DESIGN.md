@@ -4,7 +4,7 @@ Windows Forms desktop application - the main entry point for Jackpot. Provides t
 
 ## Target
 
-- `net9.0-windows`, WinForms, output `WinExe`, assembly name `Jackpot`
+- `net10.0-windows`, WinForms, output `WinExe`, assembly name `Jackpot`
 - `PublishReadyToRun = true`, unsafe blocks allowed
 
 ## Dependencies
