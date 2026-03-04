@@ -24,7 +24,7 @@ Full MSIX packaging: `src/Publish-MsixBundle.ps1` (requires Windows SDK).
 
 ## Code Style
 
-- **Formatter:** CSharpier v0.29.2 - run `dotnet tool run dotnet-csharpier .` from `src/`
+- **Formatter:** CSharpier - run `.\Format-Code.ps1` from `src/`
 - **CA2007** is enforced as an error in J.App and J.Core - always use `ConfigureAwait(false)` on awaited tasks
 - **No XAML or designer files** - all UI is constructed in code using the `Ui` factory class
 - **DPI-aware** - all pixel values go through `ui.GetLength()` / `ui.GetSize()` (scales by `DeviceDpi / 96`)
