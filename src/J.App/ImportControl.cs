@@ -340,7 +340,7 @@ public sealed class ImportControl : UserControl
             if (averageMibPerSecond > 0)
             {
                 var remaining = TimeSpan.FromSeconds(mibRemaining / averageMibPerSecond);
-                remainingStr = remaining.Humanize(2, minUnit: Humanizer.Localisation.TimeUnit.Second);
+                remainingStr = remaining.Humanize(2, minUnit: Humanizer.TimeUnit.Second);
             }
         }
 
@@ -351,7 +351,7 @@ public sealed class ImportControl : UserControl
 
         _statsLabel.Text = $"""
             Uploaded: {mibWithRollback:#,##0} MB{uploadedTotalStr}{mbpsText}
-            Elapsed: {elapsed.Humanize(2, minUnit: Humanizer.Localisation.TimeUnit.Second)}
+            Elapsed: {elapsed.Humanize(2, minUnit: Humanizer.TimeUnit.Second)}
             Remaining: {remainingStr}
             """;
     }
