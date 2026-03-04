@@ -38,7 +38,6 @@ public class SparseDataStreamTest
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void Read_ShouldThrowExceptionWhenReadingOutsideSparseRange()
     {
         // Arrange
@@ -49,7 +48,7 @@ public class SparseDataStreamTest
 
         // Act
         stream.Position = 5;
-        stream.ReadExactly(buffer, 0, 3);
+        Assert.ThrowsExactly<InvalidOperationException>(() => stream.ReadExactly(buffer, 0, 3));
     }
 
     [TestMethod]
@@ -93,7 +92,6 @@ public class SparseDataStreamTest
     }
 
     [TestMethod]
-    [ExpectedException(typeof(ArgumentOutOfRangeException))]
     public void Read_ShouldThrowExceptionWhenReadingBeyondStreamLength()
     {
         // Arrange
@@ -104,7 +102,7 @@ public class SparseDataStreamTest
 
         // Act
         stream.Position = 98;
-        stream.ReadExactly(buffer, 0, 4); // Attempting to read beyond the stream length
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => stream.ReadExactly(buffer, 0, 4));
     }
 
     [TestMethod]
@@ -151,13 +149,12 @@ public class SparseDataStreamTest
     }
 
     [TestMethod]
-    [ExpectedException(typeof(NotSupportedException))]
     public void SetLength_ShouldThrowNotSupportedException()
     {
         // Arrange
         SparseDataStream stream = new(100, []);
 
         // Act
-        stream.SetLength(200); // Not supported for SparseDataStream
+        Assert.ThrowsExactly<NotSupportedException>(() => stream.SetLength(200));
     }
 }
