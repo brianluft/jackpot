@@ -45,6 +45,7 @@ public sealed partial class MainForm : Form
         _sortDescendingButton,
         _movieContextOpenButton,
         _movieContextAddTagButton,
+        _movieContextRemoveTagButton,
         _movieContextDeleteButton,
         _movieContextExportButton,
         _movieContextPropertiesButton,
@@ -420,6 +421,11 @@ public sealed partial class MainForm : Form
             _movieContextMenu.Items.Add(_movieContextAddTagButton = ui.NewToolStripMenuItem("Add tag..."));
             {
                 _movieContextAddTagButton.Click += MovieContextAddTagButton_Click;
+            }
+
+            _movieContextMenu.Items.Add(_movieContextRemoveTagButton = ui.NewToolStripMenuItem("Remove tag..."));
+            {
+                _movieContextRemoveTagButton.Click += MovieContextRemoveTagButton_Click;
             }
 
             _movieContextMenu.Items.Add(_movieContextExportButton = ui.NewToolStripMenuItem("Export to MP4..."));
@@ -1296,6 +1302,11 @@ public sealed partial class MainForm : Form
         ShowMessageBoxOnException(() => AddTagToMovies(_movieContextMenuIds));
     }
 
+    private void MovieContextRemoveTagButton_Click(object? sender, EventArgs e)
+    {
+        ShowMessageBoxOnException(() => RemoveTagFromMovies(_movieContextMenuIds));
+    }
+
     private void MovieContextPropertiesButton_Click(object? sender, EventArgs e)
     {
         if (_movieContextMenuIds.Count != 1)
@@ -1476,6 +1487,14 @@ public sealed partial class MainForm : Form
     private void AddTagToMovies(List<MovieId> movieContextMenuIds)
     {
         using var f = _serviceProvider.GetRequiredService<AddTagsToMoviesForm>();
+        f.Initialize(movieContextMenuIds);
+        if (f.ShowDialog(this) == DialogResult.OK)
+            _browser.Reload();
+    }
+
+    private void RemoveTagFromMovies(List<MovieId> movieContextMenuIds)
+    {
+        using var f = _serviceProvider.GetRequiredService<RemoveTagsFromMoviesForm>();
         f.Initialize(movieContextMenuIds);
         if (f.ShowDialog(this) == DialogResult.OK)
             _browser.Reload();

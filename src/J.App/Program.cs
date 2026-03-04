@@ -93,6 +93,7 @@ public static class Program
         services.AddTransient<MoviePropertiesForm>();
         services.AddTransient<OptionsForm>();
         services.AddTransient<RecycleBinForm>();
+        services.AddTransient<RemoveTagsFromMoviesForm>();
         services.AddTransient<TagForm>();
         services.AddTransient<TagsControl>();
         services.AddTransient<TagTypeForm>();
