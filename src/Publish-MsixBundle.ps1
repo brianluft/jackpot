@@ -14,19 +14,12 @@ function Mirror-Directory
 
     Write-Host "Mirroring $Source to $Destination."
 
-    [System.IO.Directory]::CreateDirectory($Destination) | Out-Null
-    $destinationDir = Get-Item -Path $destination
-
-    $sourceDir = Get-Item -Path $source
-    $sourceFiles = Get-ChildItem -Path $source -Recurse
-    foreach ($sourceFile in $sourceFiles) {
-        $destinationFile = $sourceFile.FullName.Replace($sourceDir.FullName, $destinationDir.FullName)
-        $destinationFileDir = Split-Path -Path $destinationFile -Parent
-        if (!(Test-Path $destinationFileDir)) {
-            [System.IO.Directory]::CreateDirectory($destinationFileDir) | Out-Null
-        }
-        Copy-Item -Path $sourceFile.FullName -Destination $destinationFile -Force
+    if (Test-Path $Destination)
+    {
+        Remove-Item -Force -Recurse $Destination
     }
+
+    Copy-Item -Path $Source -Destination $Destination -Force -Recurse
 }
 
 Mirror-Directory "$root\src" "$root\x64"
