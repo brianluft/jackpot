@@ -3,7 +3,7 @@ param
 	[Parameter(Mandatory = $true)] [string] $Arch
 )
 
-$ErrorPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 

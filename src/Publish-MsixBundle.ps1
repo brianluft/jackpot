@@ -1,4 +1,4 @@
-$ErrorPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 $root = Split-Path -Path $PSScriptRoot -Parent
