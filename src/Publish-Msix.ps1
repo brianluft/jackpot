@@ -7,6 +7,26 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
+# --- FFmpeg mirror configuration (pinned versions) ---
+
+# x64: https://github.com/BtbN/FFmpeg-Builds/releases
+$ffmpegX64Url = "https://brianluft-mirror.com/BtbN/FFmpeg-Builds/ffmpeg-master-latest-win64-gpl-shared-20260306.zip"
+$ffmpegX64Hash = "045F21FDF6411BD141CF7CDBA0659414D7ACA1ADCF66038B0B83243AD6F11501"
+
+# arm64: https://github.com/tordona/ffmpeg-win-arm64/releases
+$ffmpegArm64Url = "https://brianluft-mirror.com/tordona/ffmpeg-win-arm64/ffmpeg-master-latest-essentials-shared-win-arm64-20260307.7z"
+$ffmpegArm64Hash = "CC3579C815A06C73AA771EB58CE1953C603707CFF8FBF455C63D4C1987BF2333"
+
+# 7-Zip 9.20 (x86, runs on all architectures): https://www.7-zip.org/download.html
+$7zaOldUrl = "https://brianluft-mirror.com/7zip/7za920.zip"
+$7zaOldHash = "2A3AFE19C180F8373FA02FF00254D5394FEC0349F5804E0AD2F6067854FF28AC"
+
+# 7-Zip 26.00 Extra (needed for modern 7z compression): https://www.7-zip.org/download.html
+$7zaNewUrl = "https://brianluft-mirror.com/7zip/7z2600-extra.7z"
+$7zaNewHash = "1CC38A9E3777CE0E4BBF84475672888A581D400633B0448FD973A7A6AA56CFDC"
+
+# --- End configuration ---
+
 Write-Host "=== Start $Arch ==="
 
 $srcDir = $PSScriptRoot
@@ -60,18 +80,28 @@ function Publish-App
 	}
 }
 
-function Get-FfmpegX64
+function Get-CachedDownload([string] $Url, [string] $ExpectedHash)
 {
-	$url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
-	$zipFilePath = "$downloadsDir\ffmpeg-x64.zip"
-	if (-not (Test-Path $zipFilePath))
+	$fileName = [System.IO.Path]::GetFileName([System.Uri]::new($Url).AbsolutePath)
+	$filePath = "$downloadsDir\$fileName"
+	if (-not (Test-Path $filePath))
 	{
-		Write-Host "Downloading ffmpeg/x64."
-		& curl.exe -Lso "$zipFilePath" "$url" | Out-Host
+		Write-Host "Downloading $fileName."
+		& curl.exe -Lso "$filePath" "$Url" | Out-Host
 		if ($LastExitCode -ne 0) {
-			throw "Failed to download ffmpeg/x64."
+			throw "Failed to download $Url"
 		}
 	}
+	$actualHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
+	if ($actualHash -ne $ExpectedHash) {
+		throw "Hash mismatch for $fileName. Expected: $ExpectedHash, Actual: $actualHash"
+	}
+	return $filePath
+}
+
+function Get-FfmpegX64
+{
+	$zipFilePath = Get-CachedDownload $ffmpegX64Url $ffmpegX64Hash
 
 	Write-Host "Extracting ffmpeg/x64."
 	$dstDir = "$buildDir\ffmpeg\"
@@ -93,21 +123,44 @@ function Get-FfmpegX64
 
 function Get-FfmpegArm64
 {
-	$url = "https://github.com/dvhh/ffmpeg-wos-arm64-build/releases/download/main/ffmpeg-wos-arm64.zip"
-	$zipFilePath = "$downloadsDir\ffmpeg-arm64.zip"
-	if (-not (Test-Path $zipFilePath))
-	{
-		Write-Host "Downloading ffmpeg/arm64."
-		& curl.exe -Lso "$zipFilePath" "$url" | Out-Host
-		if ($LastExitCode -ne 0) {
-			throw "Failed to download ffmpeg/arm64."
-		}
+	# Step 1: Get old 7za (distributed as a .zip we can extract natively).
+	$7zaOldZip = Get-CachedDownload $7zaOldUrl $7zaOldHash
+	$7zaOldDir = "$buildDir\7za-old"
+	[System.IO.Directory]::CreateDirectory($7zaOldDir) | Out-Null
+	[System.IO.Compression.ZipFile]::ExtractToDirectory($7zaOldZip, $7zaOldDir)
+	$7zaOld = "$7zaOldDir\7za.exe"
+
+	# Step 2: Get newer 7za (distributed as .7z, extract with old 7za). Use x64 build for simplicity.
+	$7zaNew7z = Get-CachedDownload $7zaNewUrl $7zaNewHash
+	$7zaNewDir = "$buildDir\7za-new"
+	[System.IO.Directory]::CreateDirectory($7zaNewDir) | Out-Null
+	& "$7zaOld" x "$7zaNew7z" -o"$7zaNewDir" -y | Out-Null
+	if ($LastExitCode -ne 0) {
+		throw "Failed to extract 7z2600-extra."
+	}
+	$7zaNew = "$7zaNewDir\x64\7za.exe"
+
+	# Step 3: Extract ffmpeg arm64 .7z with the newer 7za.
+	$ffmpeg7z = Get-CachedDownload $ffmpegArm64Url $ffmpegArm64Hash
+	$ffmpegTempDir = "$buildDir\ffmpeg-temp"
+	[System.IO.Directory]::CreateDirectory($ffmpegTempDir) | Out-Null
+	Write-Host "Extracting ffmpeg/arm64."
+	& "$7zaNew" x "$ffmpeg7z" -o"$ffmpegTempDir" -y | Out-Null
+	if ($LastExitCode -ne 0) {
+		throw "Failed to extract ffmpeg/arm64."
 	}
 
-	Write-Host "Extracting ffmpeg/arm64."
+	# Move the bin contents to the final ffmpeg directory.
 	$dstDir = "$buildDir\ffmpeg\"
 	[System.IO.Directory]::CreateDirectory($dstDir) | Out-Null
-	[System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $dstDir)
+	$ffmpegDir = Get-ChildItem -Path $ffmpegTempDir -Directory | Select-Object -First 1
+	$ffmpegBinDir = "$($ffmpegDir.FullName)\bin"
+	Move-Item -Path "$ffmpegBinDir\*" -Destination $dstDir -Force
+
+	# Clean up temp directories
+	Remove-Item -Path $ffmpegTempDir -Recurse -Force
+	Remove-Item -Path $7zaOldDir -Recurse -Force
+	Remove-Item -Path $7zaNewDir -Recurse -Force
 
 	# Delete stuff we don't need
 	Remove-Item -Path "$dstDir\ffplay.exe" -Force
