@@ -171,18 +171,21 @@ public sealed class MyTextBox : UserControl
 #pragma warning restore CS8765 // Nullability of type of parameter doesn't match overridden member (possibly because of nullability attributes).
     }
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public char PasswordChar
     {
         get => _textBox.PasswordChar;
         set => _textBox.PasswordChar = value;
     }
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ReadOnly
     {
         get => _textBox.ReadOnly;
         set => _textBox.ReadOnly = value;
     }
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Multiline
     {
         get => _textBox.Multiline;
@@ -197,6 +200,7 @@ public sealed class MyTextBox : UserControl
         }
     }
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool WordWrap
     {
         get => _textBox.WordWrap;

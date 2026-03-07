@@ -1,4 +1,5 @@
-﻿using J.Core;
+﻿using System.ComponentModel;
+using J.Core;
 
 namespace J.App;
 
@@ -6,6 +7,7 @@ public class MyLabel : Label
 {
     private bool _enabled = true;
 
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public new bool Enabled
     {
         get => _enabled;
