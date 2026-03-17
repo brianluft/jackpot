@@ -30,7 +30,7 @@ Prices are in U.S. dollars.
 <table>
 <tr>
 <td align="right"><i>Storage:</i></td>
-<td>$6 / TB / month</td>
+<td>$6.95 / TB / month</td>
 </tr>
 <tr>
 <td align="right"><i>Free streaming:</i></td>
